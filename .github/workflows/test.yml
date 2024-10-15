@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+    - name: Ubuntu build dependencies
+      run: apt update && apt install -y clang cmake
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt
-    - name: Ubuntu build dependencies
-      run: apt update && apt install -y clang cmake
     - name: Check Style
       run: cargo fmt --check
 
@@ -29,10 +29,10 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
       - name: Ubuntu build dependencies
         if: matrix.platform == 'ubuntu-latest'
         run: apt update && apt install -y clang cmake
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build
 
@@ -52,7 +52,6 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
       - name: Install cuda toolkit
         uses: Jimver/cuda-toolkit@v0.2.18
       - name: Install Windows dependencies
@@ -61,6 +60,7 @@ jobs:
       - name: Ubuntu build dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: apt update && apt install -y clang cmake
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build
         env:
           CUDA_COMPUTE_CAP: "75" 
