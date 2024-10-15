@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::{copy, create_dir_all, read_dir},
+    fs::{create_dir_all, read_dir},
     path::PathBuf,
 };
 
@@ -36,24 +36,14 @@ fn main() {
     // Bindgen
     let bindings = bindgen::Builder::default().header("wrapper.h");
 
-    let bindings = bindings
+    bindings
         .clang_arg("-I./stable-diffusion.cpp")
         .clang_arg("-I./stable-diffusion.cpp/ggml/include")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .generate();
-
-    match bindings {
-        Ok(b) => {
-            b.write_to_file(out.join("bindings.rs"))
-                .expect("Couldn't write bindings!");
-        }
-        Err(e) => {
-            println!("cargo:warning=Unable to generate bindings: {}", e);
-            println!("cargo:warning=Using bundled bindings.rs, which may be out of date");
-            // copy src/bindings.rs to OUT_DIR
-            copy("src/bindings.rs", out.join("bindings.rs")).expect("Unable to copy bindings.rs");
-        }
-    }
+        .generate()
+        .unwrap()
+        .write_to_file(out.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
 
     // stop if we're on docs.rs
     if env::var("DOCS_RS").is_ok() {
@@ -81,8 +71,11 @@ fn main() {
             println!("cargo:rustc-link-search=/opt/cuda/lib64");
             println!("cargo:rustc-link-search=/opt/cuda/lib64/stubs");
         }
-        
+
         config.define("SD_CUBLAS", "ON");
+        if let Ok(target) = env::var("CUDA_COMPUTE_CAP") {
+            config.define("CUDA_COMPUTE_CAP", target);
+        }
     }
 
     #[cfg(feature = "hipblas")]
@@ -93,21 +86,20 @@ fn main() {
 
         if target.contains("msvc") {
             panic!("Due to a problem with the last revision of the ROCm 5.7 library, it is not possible to compile the library for the windows environment.\nSee https://github.com/ggerganov/whisper.cpp/issues/2202 for more details.")
-
         } else {
             println!("cargo:rerun-if-env-changed=HIP_PATH");
 
             let hip_path = match env::var("HIP_PATH") {
-                Ok(path) =>PathBuf::from(path),
+                Ok(path) => PathBuf::from(path),
                 Err(_) => PathBuf::from("/opt/rocm"),
             };
             let hip_lib_path = hip_path.join("lib");
 
-            println!("cargo:rustc-link-search={}",hip_lib_path.display());
+            println!("cargo:rustc-link-search={}", hip_lib_path.display());
         }
 
         config.define("SD_HIPBLAS", "ON");
-        if let Ok(target) =  env::var("AMDGPU_TARGETS") {
+        if let Ok(target) = env::var("AMDGPU_TARGETS") {
             config.define("AMDGPU_TARGETS", target);
         }
     }
