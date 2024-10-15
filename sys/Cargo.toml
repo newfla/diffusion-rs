@@ -1,0 +1,49 @@
+[package]
+name = "diffusion-rs-sys"
+version = "0.1.0"
+edition = "2021"
+description = "Rust bindings for stable-diffusion.cpp (FFI bindings)"
+license = "MIT"
+documentation = "https://docs.rs/diffusion-rs-sys"
+repository = "https://github.com/newfla/diffusion-rs"
+links = "stable-diffusion"
+include = [
+    "stable-diffusion.cpp/LICENSE",
+    "stable-diffusion.cpp/CMakeLists.txt",
+    "stable-diffusion.cpp/stable-diffusion.cpp",
+    "stable-diffusion.cpp/stable-diffusion.h",
+    "stable-diffusion.cpp/ggml/src/ggml.c",
+    "stable-diffusion.cpp/ggml/src/ggml-alloc.c",
+    "stable-diffusion.cpp/ggml/src/ggml-backend.c",
+    "stable-diffusion.cpp/ggml/src/ggml-cuda.cu",
+    "stable-diffusion.cpp/ggml/src/ggml-impl.h",
+    "stable-diffusion.cpp/ggml/src/ggml-metal.m",
+    "stable-diffusion.cpp/ggml/src/ggml-metal.metal",
+    "stable-diffusion.cpp/ggml/src/ggml-quants.h",
+    "stable-diffusion.cpp/ggml/src/ggml-quants.c",
+    "stable-diffusion.cpp/ggml/include/ggml.h",
+    "stable-diffusion.cpp/ggml/include/ggml-alloc.h",
+    "stable-diffusion.cpp/ggml/include/ggml-backend.h",
+    "stable-diffusion.cpp/ggml/include/ggml-backend-impl.h",
+    "stable-diffusion.cpp/ggml/include/ggml-cuda.h",
+    "stable-diffusion.cpp/ggml/include/ggml-metal.h",
+    "src/*.rs",
+    "build.rs",
+    "wrapper.h",
+]
+
+[dependencies]
+
+[features]
+cublas = []
+hipblas = []
+metal = []
+vulkan = []
+sycl = []
+flashattn = []
+
+[build-dependencies]
+cmake = "0.1.51"
+bindgen = "0.70.1"
+cfg-if = "1.0.0"
+fs_extra = "1.3.0"

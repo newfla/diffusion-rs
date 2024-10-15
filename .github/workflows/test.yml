@@ -1,0 +1,64 @@
+name: test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo-fmt:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+    - name: Check Style
+      run: cargo fmt --check
+
+  cargo-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run tests
+        run: cargo test
+
+  build-no_feature:
+    runs-on: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build
+
+  build-metal:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --features metal
+
+  build-cuda:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-2019]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cuda toolkit
+        uses: Jimver/cuda-toolkit@v0.2.18
+      - name: install msvc deps (windows)
+        if: matrix.platform == 'windows-2019'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build
+        env:
+          CUDA_COMPUTE_CAP: "75" 
+        run: cargo build --features cublas
+  
