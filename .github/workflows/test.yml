@@ -125,9 +125,7 @@ jobs:
               sudo apt install -y rocm
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
-        run: |
-          source /opt/intel/oneapi/setvars.sh 
-          cargo build --features hipblas
+        run: cargo build --features hipblas
 
   build-sycl:
     runs-on: ubuntu-22.04
