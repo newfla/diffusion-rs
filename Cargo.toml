@@ -1,0 +1,22 @@
+[workspace]
+members = ["sys"]
+
+[package]
+name = "diffusion-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Rust bindings for stable-diffusion.cpp"
+license = "MIT"
+documentation = "https://docs.rs/diffusion-rs"
+repository = "https://github.com/newfla/diffusion-rs"
+
+[dependencies]
+diffusion-rs-sys = { path = "sys", version = "0.1.0" }
+
+[features]
+cublas = ["diffusion-rs-sys/cublas"]
+hipblas = ["diffusion-rs-sys/hipblas"]
+metal = ["diffusion-rs-sys/metal"]
+vulkan = ["diffusion-rs-sys/vulkan"]
+sycl = ["diffusion-rs-sys/sycl"]
+flashattn = ["diffusion-rs-sys/flashattn"]

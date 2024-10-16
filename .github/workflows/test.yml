@@ -1,0 +1,157 @@
+name: test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo-fmt:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+            submodules: 'recursive'
+    - name: Ubuntu build dependencies
+      run: sudo apt update && sudo apt install -y clang cmake
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+    - name: Check Style
+      run: cargo fmt --check
+
+  build-no-features:
+    needs: cargo-fmt
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:  [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Ubuntu build dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: sudo apt update && sudo apt install -y clang cmake
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build
+
+  build-vulkan:
+    needs: build-no-features
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: sudo apt update && sudo apt install -y clang cmake
+      - name: Install vulkan sdk
+        uses: humbletim/install-vulkan-sdk@c2aa128094d42ba02959a660f03e0a4e012192f9
+        with:
+          version: 1.3.250.1
+          cache: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --features vulkan
+
+
+  build-metal:
+    needs: build-no-features
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --features metal
+
+  build-cuda:
+    needs: build-no-features
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Install cuda toolkit
+        uses: Jimver/cuda-toolkit@v0.2.18
+      - name: Install Windows dependencies
+        if: matrix.platform == 'windows-2022'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Ubuntu build dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: sudo apt update && sudo apt install -y clang cmake
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        env:
+          CUDA_COMPUTE_CAP: "75" 
+        run: cargo build --features cublas
+
+  build-rocm:
+    needs: build-no-features
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Free Disk Space (Ubuntu) for Rocm
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+      - name: Ubuntu build dependencies
+        run: sudo apt update && sudo apt install -y clang cmake ninja-build
+      - name: Install Rocm Toolkit
+        run: |
+              wget https://repo.radeon.com/amdgpu-install/6.1.2/ubuntu/jammy/amdgpu-install_6.1.60102-1_all.deb
+              sudo apt install ./amdgpu-install_6.1.60102-1_all.deb
+              sudo apt update
+              sudo apt install -y rocm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        env:
+          AMDGPU_TARGETS: "gfx1100" 
+        run: cargo build --features hipblas
+
+  build-sycl:
+    needs: build-no-features
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Ubuntu build dependencies
+        run: sudo apt update && sudo apt install -y clang cmake
+      - name: Install oneAPI Toolkit
+        run: |
+          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+          | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+          | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt update && sudo apt install -y intel-basekit intel-hpckit
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: |
+          source /opt/intel/oneapi/setvars.sh 
+          cargo build --features sycl
+  
