@@ -136,8 +136,17 @@ fn main() {
 
     #[cfg(feature = "sycl")]
     {
+        env::var("ONEAPI_ROOT").expect("Please load the oneAPi environment before building. See https://github.com/ggerganov/llama.cpp/blob/master/docs/backend/SYCL.md");
+
+        if target.contains("msvc") {
+            config.generator("Ninja");
+            config.define("CMAKE_C_COMPILER", "cl");
+            config.define("CMAKE_CXX_COMPILER", "icx");
+        } else {
+            config.define("CMAKE_C_COMPILER", "icx");
+            config.define("CMAKE_CXX_COMPILER", "icpx");
+        }
         config.define("SD_SYCL", "ON");
-        panic!("Not yet supported!");
     }
 
     #[cfg(feature = "flashattn")]
