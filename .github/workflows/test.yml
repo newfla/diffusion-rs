@@ -99,6 +99,26 @@ jobs:
           CUDA_COMPUTE_CAP: "75" 
         run: cargo build --features cublas
 
+  build-rocm:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Ubuntu build dependencies
+        run: sudo apt update && sudo apt install -y clang cmake
+      - name: Install Rocm Toolkit
+        run: |
+              wget https://repo.radeon.com/amdgpu-install/6.1.2/ubuntu/jammy/amdgpu-install_6.1.60102-1_all.deb
+              sudo apt install ./amdgpu-install_6.1.60102-1_all.deb
+              sudo apt update
+              sudo apt install -y rocm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: |
+          source /opt/intel/oneapi/setvars.sh 
+          cargo build --features hipblas
+
   build-sycl:
     runs-on: ubuntu-22.04
     steps:
