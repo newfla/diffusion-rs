@@ -23,7 +23,8 @@ jobs:
     - name: Check Style
       run: cargo fmt --check
 
-  build:
+  build-no-features:
+    needs: cargo-fmt
     strategy:
       fail-fast: false
       matrix:
@@ -41,11 +42,11 @@ jobs:
         run: cargo build
 
   build-vulkan:
+    needs: build-no-features
     strategy:
       fail-fast: false
       matrix:
         platform: [macos-latest, ubuntu-latest, windows-latest]
-
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +67,7 @@ jobs:
 
 
   build-metal:
+    needs: build-no-features
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +78,7 @@ jobs:
         run: cargo build --features metal
 
   build-cuda:
+    needs: build-no-features
     strategy:
       fail-fast: false
       matrix:
@@ -100,6 +103,7 @@ jobs:
         run: cargo build --features cublas
 
   build-rocm:
+    needs: build-no-features
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -130,6 +134,7 @@ jobs:
         run: cargo build --features hipblas
 
   build-sycl:
+    needs: build-no-features
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
