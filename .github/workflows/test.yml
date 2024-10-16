@@ -105,6 +105,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+      - name: Free Disk Space (Ubuntu) for Rocm
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - name: Ubuntu build dependencies
         run: sudo apt update && sudo apt install -y clang cmake
       - name: Install Rocm Toolkit
