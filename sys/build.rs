@@ -86,21 +86,20 @@ fn main() {
         println!("cargo:rustc-link-lib=rocblas");
         println!("cargo:rustc-link-lib=amdhip64");
 
-        if target.contains("msvc") {
-            panic!("Not yet supported!");
+        config.generator("Ninja");
+        config.define("CMAKE_C_COMPILER", "clang");
+        config.define("CMAKE_CXX_COMPILER", "clang++");
+        let hip_lib_path = if target.contains("msvc") {
+            let hip_path = env::var("HIP_PATH").expect("Missing HIP_PATH env variable");
+            PathBuf::from(hip_path).join("lib")
         } else {
-            config.generator("Ninja");
-            config.define("CMAKE_C_COMPILER", "clang");
-            config.define("CMAKE_CXX_COMPILER", "clang++");
             let hip_path = match env::var("HIP_PATH") {
                 Ok(path) => PathBuf::from(path),
                 Err(_) => PathBuf::from("/opt/rocm"),
             };
-            let hip_lib_path = hip_path.join("lib");
-
-            println!("cargo:rustc-link-search={}", hip_lib_path.display());
-        }
-
+            hip_path.join("lib")
+        };
+        println!("cargo:rustc-link-search={}", hip_lib_path.display());
         config.define("SD_HIPBLAS", "ON");
         if let Ok(target) = env::var("AMDGPU_TARGETS") {
             config.define("AMDGPU_TARGETS", target);

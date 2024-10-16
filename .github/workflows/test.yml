@@ -53,7 +53,7 @@ jobs:
           submodules: 'recursive'
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
-        run: sudo apt update && sudo apt install -y clang cmake ninja-build
+        run: sudo apt update && sudo apt install -y clang cmake
       - name: Install vulkan sdk
         uses: humbletim/install-vulkan-sdk@c2aa128094d42ba02959a660f03e0a4e012192f9
         with:
@@ -116,7 +116,7 @@ jobs:
           docker-images: true
           swap-storage: true
       - name: Ubuntu build dependencies
-        run: sudo apt update && sudo apt install -y clang cmake
+        run: sudo apt update && sudo apt install -y clang cmake ninja-build
       - name: Install Rocm Toolkit
         run: |
               wget https://repo.radeon.com/amdgpu-install/6.1.2/ubuntu/jammy/amdgpu-install_6.1.60102-1_all.deb
@@ -125,6 +125,8 @@ jobs:
               sudo apt install -y rocm
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
+        env:
+          AMDGPU_TARGETS: "gfx1100" 
         run: cargo build --features hipblas
 
   build-sycl:
