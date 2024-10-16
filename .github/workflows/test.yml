@@ -40,6 +40,32 @@ jobs:
       - name: Build
         run: cargo build
 
+  build-vulkan:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: sudo apt update && sudo apt install -y clang cmake ninja-build
+      - name: install vulkan sdk
+        if: matrix.platform == 'macos-latest'
+        uses: humbletim/install-vulkan-sdk@v1.1.1
+        with:
+          version: latest
+          cache: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --features vulkan
+
+
   build-metal:
     runs-on: macos-latest
     steps:
