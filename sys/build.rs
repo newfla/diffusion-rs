@@ -56,6 +56,7 @@ fn main() {
     //Enable cmake feature flags
     #[cfg(feature = "cublas")]
     {
+        println!("cargo:rerun-if-env-changed=CUDA_PATH");
         println!("cargo:rustc-link-lib=cublas");
         println!("cargo:rustc-link-lib=cudart");
         println!("cargo:rustc-link-lib=cublasLt");
@@ -80,15 +81,17 @@ fn main() {
 
     #[cfg(feature = "hipblas")]
     {
+        println!("cargo:rerun-if-env-changed=HIP_PATH");
         println!("cargo:rustc-link-lib=hipblas");
         println!("cargo:rustc-link-lib=rocblas");
         println!("cargo:rustc-link-lib=amdhip64");
 
         if target.contains("msvc") {
-            panic!("Due to a problem with the last revision of the ROCm 5.7 library, it is not possible to compile the library for the windows environment.\nSee https://github.com/ggerganov/whisper.cpp/issues/2202 for more details.")
+            panic!("Not yet supported!");
         } else {
-            println!("cargo:rerun-if-env-changed=HIP_PATH");
-
+            config.generator("Ninja");
+            config.define("CMAKE_C_COMPILER", "clang");
+            config.define("CMAKE_CXX_COMPILER", "clang++");
             let hip_path = match env::var("HIP_PATH") {
                 Ok(path) => PathBuf::from(path),
                 Err(_) => PathBuf::from("/opt/rocm"),

@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-22.04, windows-2019]
+        platform: [ubuntu-22.04, windows-2022]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +63,7 @@ jobs:
       - name: Install cuda toolkit
         uses: Jimver/cuda-toolkit@v0.2.18
       - name: Install Windows dependencies
-        if: matrix.platform == 'windows-2019'
+        if: matrix.platform == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Ubuntu build dependencies
         if: matrix.platform == 'ubuntu-22.04'
