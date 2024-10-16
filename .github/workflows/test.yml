@@ -118,5 +118,5 @@ jobs:
       - name: Build
         run: |
           source /opt/intel/oneapi/setvars.sh 
-          cargo build --features cublas
+          cargo build --features sycl
   
