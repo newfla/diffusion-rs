@@ -40,26 +40,32 @@ fn main() {
             )
         });
 
-        remove_default_params_stb(&diffusion_root.join("thirdparty/stb_image_write.h")).unwrap_or_else(|e| {
-            panic!(
-                "Failed to remove default parameters from stb: {}",
-                e
-            )
-        });
+        remove_default_params_stb(&diffusion_root.join("thirdparty/stb_image_write.h"))
+            .unwrap_or_else(|e| panic!("Failed to remove default parameters from stb: {}", e));
     }
 
     // Bindgen
-    let bindings = bindgen::Builder::default().header("wrapper.h");
+    if env::var("DIFFUSION_SKIP_BINDINGS").is_ok() {
+        fs::copy("src/bindings.rs", out.join("bindings.rs")).expect("Failed to copy bindings.rs");
+    } else {
+        let bindings = bindgen::Builder::default()
+            .header("wrapper.h")
+            .clang_arg("-I./stable-diffusion.cpp")
+            .clang_arg("-I./stable-diffusion.cpp/ggml/include")
+            .rustified_non_exhaustive_enum(".*")
+            .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+            .generate()
+            .unwrap()
+            .write_to_file(out.join("bindings.rs"));
 
-    bindings
-        .clang_arg("-I./stable-diffusion.cpp")
-        .clang_arg("-I./stable-diffusion.cpp/ggml/include")
-        .rustified_non_exhaustive_enum(".*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .generate()
-        .unwrap()
-        .write_to_file(out.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+        if let Err(e) = bindings {
+            println!("cargo:warning=Unable to generate bindings: {}", e);
+            println!("cargo:warning=Using bundled bindings.rs, which may be out of date");
+            // copy src/bindings.rs to OUT_DIR
+            fs::copy("src/bindings.rs", out.join("bindings.rs"))
+                .expect("Unable to copy bindings.rs");
+        }
+    }
 
     // stop if we're on docs.rs
     if env::var("DOCS_RS").is_ok() {
@@ -183,7 +189,7 @@ fn main() {
 
     // Build stb write image
     let mut builder = cc::Build::new();
-   
+
     builder.file(stb_write_image_src).compile("stbwriteimage");
 
     add_link_search_path(&out.join("lib")).unwrap();
@@ -221,5 +227,5 @@ fn get_cpp_link_stdlib(target: &str) -> Option<&'static str> {
 fn remove_default_params_stb(file: &Path) -> std::io::Result<()> {
     let data = fs::read_to_string(file)?;
     let new_data = data.replace("const char* parameters = NULL", "const char* parameters");
-    fs::write(file,new_data)
+    fs::write(file, new_data)
 }

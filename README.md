@@ -12,8 +12,19 @@ Rust bindings to https://github.com/leejet/stable-diffusion.cpp
 
 ❔️: Not tested, should be supported 
 
+## Troubleshooting
+
+* Something other than Windows/Linux isn't working!
+    * I don't have a way to test these platforms, so I can't really help you.
+* I get a panic during binding generation build!
+    * You can attempt to fix it yourself, or you can set the `DIFFUSION_SKIP_BINDINGS` environment variable.
+      This skips attempting to build the bindings whatsoever and copies the existing ones. They may be out of date,
+      but it's better than nothing.
+        * `DIFFUSION_SKIP_BINDINGS=1 cargo build`
+    * If you can fix the issue, please open a PR!
+
 ## Roadmap
 1. ~~Ensure that the underline cpp library compiles on supported platforms~~
-2. Build an easy to use library with models download and async interface
+2. Build an easy to use library with model presets
 3. Automatic library publishing on crates.io by gh actions
 4. _Maybe_ prebuilt CLI app binaries
