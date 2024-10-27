@@ -509,7 +509,7 @@ mod tests {
         let config = ConfigBuilder::default()
             .model(model_path)
             .prompt("a lovely duck drinking water from a bottle")
-            .output(PathBuf::from("./"))
+            .output(PathBuf::from("./output_1.png"))
             .upscale_model(upscaler_path)
             .upscale_repeats(1)
             .batch_count(1)
