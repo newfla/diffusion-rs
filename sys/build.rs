@@ -173,7 +173,6 @@ fn main() {
     #[cfg(feature = "flashattn")]
     {
         config.define("SD_FLASH_ATTN", "ON");
-        panic!("Broken in 2024/09/02 release!");
     }
 
     // Build stable-diffusion
