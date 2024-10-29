@@ -19,27 +19,27 @@ pub enum Preset {
     /// <https://huggingface.co/stabilityai/stable-diffusion-2-1> model.
     ///  Vae-tiling enabled. 768x768.
     StableDiffusion2_1,
-    /// Requires access right to <https://huggingface.co/stabilityai/stable-diffusion-3-medium> providing a token via [crate::util::set_hf_token]
+    /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3-medium> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. 30 steps.
     StableDiffusion3MediumFp16,
-    /// Requires access right to <https://huggingface.co/stabilityai/stable-diffusion-3.5-medium> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4.5. 28 steps.
+    /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-medium> providing a token via [crate::util::set_hf_token]
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4.5. 40 steps.
     StableDiffusion3_5MediumFp16,
-    /// Requires access right to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large> providing a token via [crate::util::set_hf_token]
+    /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4.5. 28 steps.
     StableDiffusion3_5LargeFp16,
-    /// Requires access right to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large-turbo> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER].  4 steps.
+    /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large-turbo> providing a token via [crate::util::set_hf_token]
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 0. 4 steps.
     StableDiffusion3_5LargeTurboFp16,
     SDXLBase1_0,
     /// cfg_scale 1. guidance 0. 4 Steps
     SDTurbo,
     /// cfg_scale 1. guidance 0. 4 Steps
     SDXLTurbo1_0Fp16,
-    ///  Requires access right to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. 28 steps.
     Flux1Dev(api::WeightType),
-    ///  Requires access right to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. 4 steps.
     Flux1Schnell(api::WeightType),
 }
@@ -64,7 +64,7 @@ impl Preset {
         };
         ConfigBox {
             prompt: prompt.to_owned(),
-            config_builder: config_builder,
+            config_builder,
             modifiers: Vec::new(),
         }
     }

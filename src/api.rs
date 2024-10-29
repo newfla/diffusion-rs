@@ -77,6 +77,10 @@ pub struct Config {
     #[builder(default = "Default::default()")]
     clip_l: CLibPath,
 
+    /// path to the clip-g text encoder
+    #[builder(default = "Default::default()")]
+    clip_g: CLibPath,
+
     /// Path to the the t5xxl text encoder
     #[builder(default = "Default::default()")]
     t5xxl: CLibPath,
@@ -268,6 +272,7 @@ impl Config {
         new_sd_ctx(
             self.model.as_ptr(),
             self.clip_l.as_ptr(),
+            self.clip_g.as_ptr(),
             self.t5xxl.as_ptr(),
             self.diffusion_model.as_ptr(),
             self.vae.as_ptr(),

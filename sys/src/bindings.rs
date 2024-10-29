@@ -1121,6 +1121,7 @@ extern "C" {
     pub fn new_sd_ctx(
         model_path: *const ::std::os::raw::c_char,
         clip_l_path: *const ::std::os::raw::c_char,
+        clip_g_path: *const ::std::os::raw::c_char,
         t5xxl_path: *const ::std::os::raw::c_char,
         diffusion_model_path: *const ::std::os::raw::c_char,
         vae_path: *const ::std::os::raw::c_char,

@@ -191,7 +191,7 @@ pub fn stable_diffusion_3_5(
 ) -> Result<ConfigBuilder, ApiError> {
     let model_path = download_file_hf_hub(
         format!("stabilityai/stable-diffusion-3.5-{model}").as_str(),
-        format!("sd3.5_-{file_model}.safetensors").as_str(),
+        format!("sd3.5_{file_model}.safetensors").as_str(),
     )?;
 
     let clip_g_path = download_file_hf_hub(
@@ -212,6 +212,7 @@ pub fn stable_diffusion_3_5(
     config
         .diffusion_model(model_path)
         .clip_l(clip_l_path)
+        .clip_g(clip_g_path)
         .t5xxl(t5xxl_path)
         .vae_tiling(true)
         .cfg_scale(cfg_scale)
