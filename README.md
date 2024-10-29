@@ -1,5 +1,5 @@
 # diffusion-rs
-Rust bindings to https://github.com/leejet/stable-diffusion.cpp
+Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 
 ## Features Matrix
 | | Windows | Mac | Linux |
@@ -11,6 +11,17 @@ Rust bindings to https://github.com/leejet/stable-diffusion.cpp
 |sycl| ❔️ | ❌️ | ✅️ |
 
 ❔️: Not tested, should be supported 
+
+## Usage 
+``` rust no_run
+use diffusion_rs::{api::{txt2img, ConfigBuilder}, preset::Preset};
+let config_builder: ConfigBuilder = Preset::SDXLBase1_0
+        .build("a lovely duck drinking water from a bottle")
+        .try_into()
+        .unwrap();
+let config = config_builder.build().unwrap();
+txt2img(config).unwrap();
+```
 
 ## Troubleshooting
 

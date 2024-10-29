@@ -49,7 +49,7 @@ pub enum DiffusionError {
 #[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
 /// Ignore the lower X layers of CLIP network
 pub enum ClipSkip {
-    /// Will be [clip_skip_t::None] for SD1.x, [clip_skip_t::OneLayer] for SD2.x
+    /// Will be [ClipSkip::None] for SD1.x, [ClipSkip::OneLayer] for SD2.x
     #[default]
     Unspecified = 0,
     None = 1,
@@ -318,6 +318,12 @@ impl From<&str> for CLibString {
     }
 }
 
+impl From<String> for CLibString {
+    fn from(value: String) -> Self {
+        Self(CString::new(value).unwrap())
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct CLibPath(CString);
 
@@ -375,6 +381,7 @@ unsafe fn upscale(
     }
 }
 
+/// Generate an image with a prompt
 pub fn txt2img(config: Config) -> Result<(), DiffusionError> {
     unsafe {
         let sd_ctx = config.build_sd_ctx(true);
@@ -446,16 +453,9 @@ pub fn txt2img(config: Config) -> Result<(), DiffusionError> {
 mod tests {
     use std::path::PathBuf;
 
-    use hf_hub::api::sync::{Api, ApiError};
-
-    use crate::raw::ConfigBuilderError;
+    use crate::{api::ConfigBuilderError, util::download_file_hf_hub};
 
     use super::{txt2img, ConfigBuilder};
-
-    fn download_file_hf_hub(model: &str, file: &str) -> Result<PathBuf, ApiError> {
-        let repo = Api::new()?.model(model.to_string());
-        repo.get(file)
-    }
 
     #[test]
     fn test_required_args_txt2img() {
