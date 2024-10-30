@@ -1,7 +1,7 @@
 use std::{
     env,
-    fs::{create_dir_all, read_dir},
-    path::PathBuf,
+    fs::{self, create_dir_all, read_dir},
+    path::{Path, PathBuf},
 };
 
 use cmake::Config;
@@ -21,6 +21,7 @@ fn main() {
     // Copy stable-diffusion code into the build script directory
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     let diffusion_root = out.join("stable-diffusion.cpp/");
+    let stb_write_image_src = diffusion_root.join("thirdparty/stb_image_write.c");
 
     if !diffusion_root.exists() {
         create_dir_all(&diffusion_root).unwrap();
@@ -31,19 +32,40 @@ fn main() {
                 e
             )
         });
+        fs::copy("./stb_image_write.c", &stb_write_image_src).unwrap_or_else(|e| {
+            panic!(
+                "Failed to copy stb_image_write to {}: {}",
+                stb_write_image_src.display(),
+                e
+            )
+        });
+
+        remove_default_params_stb(&diffusion_root.join("thirdparty/stb_image_write.h"))
+            .unwrap_or_else(|e| panic!("Failed to remove default parameters from stb: {}", e));
     }
 
     // Bindgen
-    let bindings = bindgen::Builder::default().header("wrapper.h");
+    if env::var("DIFFUSION_SKIP_BINDINGS").is_ok() {
+        fs::copy("src/bindings.rs", out.join("bindings.rs")).expect("Failed to copy bindings.rs");
+    } else {
+        let bindings = bindgen::Builder::default()
+            .header("wrapper.h")
+            .clang_arg("-I./stable-diffusion.cpp")
+            .clang_arg("-I./stable-diffusion.cpp/ggml/include")
+            .rustified_non_exhaustive_enum(".*")
+            .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+            .generate()
+            .unwrap()
+            .write_to_file(out.join("bindings.rs"));
 
-    bindings
-        .clang_arg("-I./stable-diffusion.cpp")
-        .clang_arg("-I./stable-diffusion.cpp/ggml/include")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .generate()
-        .unwrap()
-        .write_to_file(out.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+        if let Err(e) = bindings {
+            println!("cargo:warning=Unable to generate bindings: {}", e);
+            println!("cargo:warning=Using bundled bindings.rs, which may be out of date");
+            // copy src/bindings.rs to OUT_DIR
+            fs::copy("src/bindings.rs", out.join("bindings.rs"))
+                .expect("Unable to copy bindings.rs");
+        }
+    }
 
     // stop if we're on docs.rs
     if env::var("DOCS_RS").is_ok() {
@@ -151,20 +173,27 @@ fn main() {
     #[cfg(feature = "flashattn")]
     {
         config.define("SD_FLASH_ATTN", "ON");
-        panic!("Broken in 2024/09/02 release!");
     }
 
+    // Build stable-diffusion
     config
         .profile("Release")
         .define("SD_BUILD_SHARED_LIBS", "OFF")
         .define("SD_BUILD_EXAMPLES", "OFF")
+        .define("GGML_OPENMP", "OFF")
         .very_verbose(true)
         .pic(true);
 
     let destination = config.build();
 
+    // Build stb write image
+    let mut builder = cc::Build::new();
+
+    builder.file(stb_write_image_src).compile("stbwriteimage");
+
     add_link_search_path(&out.join("lib")).unwrap();
     add_link_search_path(&out.join("build")).unwrap();
+    add_link_search_path(&out).unwrap();
 
     println!("cargo:rustc-link-search=native={}", destination.display());
     println!("cargo:rustc-link-lib=static=stable-diffusion");
@@ -192,4 +221,10 @@ fn get_cpp_link_stdlib(target: &str) -> Option<&'static str> {
     } else {
         Some("stdc++")
     }
+}
+
+fn remove_default_params_stb(file: &Path) -> std::io::Result<()> {
+    let data = fs::read_to_string(file)?;
+    let new_data = data.replace("const char* parameters = NULL", "const char* parameters");
+    fs::write(file, new_data)
 }
