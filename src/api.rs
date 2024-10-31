@@ -81,7 +81,7 @@ pub struct Config {
     #[builder(default = "Default::default()")]
     clip_g: CLibPath,
 
-    /// Path to the the t5xxl text encoder
+    /// Path to the t5xxl text encoder
     #[builder(default = "Default::default()")]
     t5xxl: CLibPath,
 
@@ -231,7 +231,7 @@ impl ConfigBuilder {
     fn n_threads(&mut self, value: i32) -> &mut Self {
         unsafe {
             self.n_threads = if value <= 0 {
-                Some(get_num_physical_cores() as i32)
+                Some(get_num_physical_cores())
             } else {
                 Some(value)
             }

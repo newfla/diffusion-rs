@@ -7,7 +7,7 @@ use std::{
 use cmake::Config;
 use fs_extra::dir;
 
-// Heavily ispired by https://github.com/tazz4843/whisper-rs/blob/master/sys/build.rs
+// Inspired by https://github.com/tazz4843/whisper-rs/blob/master/sys/build.rs
 
 fn main() {
     // Link C++ standard library
@@ -200,7 +200,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=ggml");
 }
 
-fn add_link_search_path(dir: &std::path::Path) -> std::io::Result<()> {
+fn add_link_search_path(dir: &Path) -> std::io::Result<()> {
     if dir.is_dir() {
         println!("cargo:rustc-link-search={}", dir.display());
         for entry in read_dir(dir)? {

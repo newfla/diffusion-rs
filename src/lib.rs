@@ -2,10 +2,10 @@
 /// Safer wrapper around stable-diffusion.cpp bindings
 pub mod api;
 
-/// Presets that automatically downlaod models from <https://huggingface.co/>
+/// Presets that automatically download models from <https://huggingface.co/>
 pub mod preset;
 
-/// Add additional resources to [crate::preset::Preset]
+/// Add additional resources to [preset::Preset]
 pub mod modifier;
 pub(crate) mod preset_builder;
 
