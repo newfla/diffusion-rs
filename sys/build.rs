@@ -17,6 +17,7 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=wrapper.h");
+    println!("cargo:rerun-if-changed=stb_image_write.c");
 
     // Copy stable-diffusion code into the build script directory
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());

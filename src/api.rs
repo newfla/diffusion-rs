@@ -15,7 +15,6 @@ use libc::free;
 use thiserror::Error;
 
 use diffusion_rs_sys::free_sd_ctx;
-use diffusion_rs_sys::get_num_physical_cores;
 use diffusion_rs_sys::new_sd_ctx;
 use diffusion_rs_sys::sd_ctx_t;
 use diffusion_rs_sys::stbi_write_png_custom;
@@ -62,7 +61,7 @@ pub enum ClipSkip {
 pub struct Config {
     /// Number of threads to use during computation (default: 0).
     /// If n_ threads <= 0, then threads will be set to the number of CPU physical cores.
-    #[builder(default = "0", setter(custom))]
+    #[builder(default = "num_cpus::get_physical() as i32", setter(custom))]
     n_threads: i32,
 
     /// Path to full model
@@ -228,13 +227,9 @@ pub struct Config {
 }
 
 impl ConfigBuilder {
-    fn n_threads(&mut self, value: i32) -> &mut Self {
-        unsafe {
-            self.n_threads = if value <= 0 {
-                Some(get_num_physical_cores())
-            } else {
-                Some(value)
-            }
+    pub fn n_threads(&mut self, value: i32) -> &mut Self {
+        if value > 0 {
+            self.n_threads = Some(value);
         }
         self
     }
