@@ -228,9 +228,11 @@ pub struct Config {
 
 impl ConfigBuilder {
     pub fn n_threads(&mut self, value: i32) -> &mut Self {
-        if value > 0 {
-            self.n_threads = Some(value);
-        }
+        self.n_threads = if value > 0 {
+            Some(value)
+        } else {
+            Some(num_cpus::get_physical() as i32)
+        };
         self
     }
 
