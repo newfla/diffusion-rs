@@ -1,7 +1,8 @@
+use derive_builder::Builder;
 use hf_hub::api::sync::ApiError;
 
 use crate::{
-    api::{self, ConfigBuilder},
+    api::{self, Config, ConfigBuilder, ConfigBuilderError},
     preset_builder::{
         flux_1_dev, flux_1_schnell, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16,
         stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
@@ -45,14 +46,6 @@ pub enum Preset {
 }
 
 impl Preset {
-    pub fn build(self, prompt: &str) -> ConfigBox {
-        ConfigBox {
-            prompt: prompt.to_owned(),
-            preset: self,
-            modifiers: Vec::new(),
-        }
-    }
-
     fn try_config_builder(self) -> Result<ConfigBuilder, ApiError> {
         match self {
             Preset::StableDiffusion1_4 => stable_diffusion_1_4(),
@@ -74,25 +67,42 @@ impl Preset {
 /// Helper functions that modifies the [ConfigBuilder] See [crate::modifier]
 pub type Modifier = fn(ConfigBuilder) -> Result<ConfigBuilder, ApiError>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Builder)]
+#[builder(
+    name = "PresetBuilder",
+    setter(into),
+    build_fn(name = "internal_build", private, error = "ConfigBuilderError")
+)]
 /// Helper struct for [ConfigBuilder]
-pub struct ConfigBox {
-    pub(crate) prompt: String,
-    pub(crate) preset: Preset,
-    pub(crate) modifiers: Vec<fn(ConfigBuilder) -> Result<ConfigBuilder, ApiError>>,
+pub struct PresetConfig {
+    prompt: String,
+    preset: Preset,
+    #[builder(private, default = "Vec::new()")]
+    modifiers: Vec<fn(ConfigBuilder) -> Result<ConfigBuilder, ApiError>>,
 }
 
-impl ConfigBox {
+impl PresetBuilder {
     /// Add modifier that will apply in sequence
     pub fn with_modifier(&mut self, f: Modifier) {
-        self.modifiers.push(f);
+        if self.modifiers.is_none() {
+            self.modifiers = Some(Vec::new());
+        }
+        self.modifiers.as_mut().unwrap().push(f);
+    }
+
+    pub fn build(&mut self) -> Result<Config, ConfigBuilderError> {
+        let preset = self.internal_build()?;
+        let config: ConfigBuilder = preset
+            .try_into()
+            .map_err(|err: ApiError| ConfigBuilderError::ValidationError(err.to_string()))?;
+        config.build()
     }
 }
 
-impl TryFrom<ConfigBox> for ConfigBuilder {
+impl TryFrom<PresetConfig> for ConfigBuilder {
     type Error = ApiError;
 
-    fn try_from(value: ConfigBox) -> Result<Self, Self::Error> {
+    fn try_from(value: PresetConfig) -> Result<Self, Self::Error> {
         let mut config_builder = value.preset.try_config_builder()?;
         for m in value.modifiers {
             config_builder = m(config_builder)?;
@@ -105,17 +115,19 @@ impl TryFrom<ConfigBox> for ConfigBuilder {
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::{self, txt2img, ConfigBuilder},
+        api::{self, txt2img},
         util::set_hf_token,
     };
 
-    use super::Preset;
+    use super::{Preset, PresetBuilder};
     static PROMPT: &str = "a lovely duck drinking water from a bottle";
 
     fn run(preset: Preset) {
-        let config_builder: ConfigBuilder = preset.build(PROMPT).try_into().unwrap();
-
-        let config = config_builder.build().unwrap();
+        let config = PresetBuilder::default()
+            .preset(preset)
+            .prompt(PROMPT)
+            .build()
+            .unwrap();
         txt2img(config).unwrap();
     }
 
