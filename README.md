@@ -14,12 +14,12 @@ Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 
 ## Usage 
 ``` rust no_run
-use diffusion_rs::{api::{txt2img, ConfigBuilder}, preset::Preset};
-let config_builder: ConfigBuilder = Preset::SDXLBase1_0
-        .build("a lovely duck drinking water from a bottle")
-        .try_into()
-        .unwrap();
-let config = config_builder.build().unwrap();
+use diffusion_rs::{api::txt2img, preset::{Preset,PresetBuilder}};
+let config = PresetBuilder::default()
+            .preset(Preset::SDXLTurbo1_0Fp16)
+            .prompt("a lovely duck drinking water from a bottle")
+            .build()
+            .unwrap();
 txt2img(config).unwrap();
 ```
 

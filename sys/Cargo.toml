@@ -8,29 +8,11 @@ documentation = "https://docs.rs/diffusion-rs-sys"
 repository = "https://github.com/newfla/diffusion-rs"
 links = "stable-diffusion"
 include = [
-    "stable-diffusion.cpp/LICENSE",
-    "stable-diffusion.cpp/CMakeLists.txt",
-    "stable-diffusion.cpp/stable-diffusion.cpp",
-    "stable-diffusion.cpp/stable-diffusion.h",
-    "stable-diffusion.cpp/ggml/thirdparty/stb_image_write.h",
-    "stable-diffusion.cpp/ggml/src/ggml.c",
-    "stable-diffusion.cpp/ggml/src/ggml-alloc.c",
-    "stable-diffusion.cpp/ggml/src/ggml-backend.c",
-    "stable-diffusion.cpp/ggml/src/ggml-cuda.cu",
-    "stable-diffusion.cpp/ggml/src/ggml-impl.h",
-    "stable-diffusion.cpp/ggml/src/ggml-metal.m",
-    "stable-diffusion.cpp/ggml/src/ggml-metal.metal",
-    "stable-diffusion.cpp/ggml/src/ggml-quants.h",
-    "stable-diffusion.cpp/ggml/src/ggml-quants.c",
-    "stable-diffusion.cpp/ggml/include/ggml.h",
-    "stable-diffusion.cpp/ggml/include/ggml-alloc.h",
-    "stable-diffusion.cpp/ggml/include/ggml-backend.h",
-    "stable-diffusion.cpp/ggml/include/ggml-backend-impl.h",
-    "stable-diffusion.cpp/ggml/include/ggml-cuda.h",
-    "stable-diffusion.cpp/ggml/include/ggml-metal.h",
+    "stable-diffusion.cpp/",
     "src/*.rs",
     "build.rs",
     "wrapper.h",
+    "stb_image_write.c",
 ]
 
 [dependencies]
