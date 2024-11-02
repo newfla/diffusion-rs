@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-            submodules: 'recursive'
+        submodules: 'recursive'
     - name: Ubuntu build dependencies
       run: sudo apt update && sudo apt install -y clang cmake
     - uses: dtolnay/rust-toolchain@stable
@@ -40,6 +40,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build
+      - name: Test (ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: cargo test
 
   build-vulkan:
     needs: build-no-features

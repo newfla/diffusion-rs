@@ -2,15 +2,23 @@
 members = ["sys"]
 resolver = "2"
 
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/newfla/diffusion-rs"
+keywords = ["ai", "stable-diffusion", "flux"]
 
 [package]
 name = "diffusion-rs"
-version = "0.1.0"
-edition = "2021"
-description = "Rust bindings for stable-diffusion.cpp"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+description = "High level API for stable-diffusion.cpp"
 documentation = "https://docs.rs/diffusion-rs"
-repository = "https://github.com/newfla/diffusion-rs"
+
 
 [dependencies]
 derive_builder = "0.20.2"
