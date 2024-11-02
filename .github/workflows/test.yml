@@ -40,6 +40,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build
+      - name: Test (ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: cargo test
 
   build-vulkan:
     needs: build-no-features
