@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 keywords.workspace = true
+description = "Rust bindings for stable-diffusion.cpp (FFI bindings)"
 documentation = "https://docs.rs/diffusion-rs-sys"
 links = "stable-diffusion"
 include = [
