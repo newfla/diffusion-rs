@@ -1,4 +1,7 @@
 # diffusion-rs
+[![Latest version](https://img.shields.io/crates/v/diffusion-rs.svg)](https://crates.io/crates/diffusion-rs)
+[![Documentation](https://docs.rs/diffusion-rs/badge.svg)](https://docs.rs/diffusion-rs)
+
 Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 
 ## Features Matrix

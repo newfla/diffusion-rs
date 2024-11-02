@@ -1,11 +1,11 @@
 [package]
 name = "diffusion-rs-sys"
-version = "0.1.0"
-edition = "2021"
-description = "Rust bindings for stable-diffusion.cpp (FFI bindings)"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
 documentation = "https://docs.rs/diffusion-rs-sys"
-repository = "https://github.com/newfla/diffusion-rs"
 links = "stable-diffusion"
 include = [
     "stable-diffusion.cpp/",
