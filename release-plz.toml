@@ -18,10 +18,10 @@ git_release_enable = false
 pr_labels = ["release"]
 
 # disallow updating repositories with uncommitted changes
-allow_dirty = false
+allow_dirty = true
 
 # disallow packaging with uncommitted changes
-publish_allow_dirty = false
+publish_allow_dirty = true
 
 # disable running `cargo-semver-checks`
 semver_check = false
