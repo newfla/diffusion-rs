@@ -14,11 +14,12 @@ pub fn set_hf_token(token: &str) {
     *data = token.to_owned();
 }
 
-pub(crate) fn download_file_hf_hub(model: &str, file: &str) -> Result<PathBuf, ApiError> {
+/// Download file from huggingface hub
+pub fn download_file_hf_hub(repo: &str, file: &str) -> Result<PathBuf, ApiError> {
     let token = TOKEN.get().map(|token| token.read().unwrap().to_owned());
     let repo = ApiBuilder::new()
         .with_token(token)
         .build()?
-        .model(model.to_string());
+        .model(repo.to_string());
     repo.get(file)
 }
