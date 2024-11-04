@@ -1,4 +1,7 @@
-use crate::api::{self, SampleMethod};
+use crate::{
+    api::{self, SampleMethod},
+    modifier::sdxl_vae_fp16_fix,
+};
 use hf_hub::api::sync::ApiError;
 
 use crate::{api::ConfigBuilder, util::download_file_hf_hub};
@@ -71,18 +74,14 @@ pub fn sdxl_base_1_0() -> Result<ConfigBuilder, ApiError> {
         "sd_xl_base_1.0.safetensors",
     )?;
 
-    let vae_path = download_file_hf_hub("madebyollin/sdxl-vae-fp16-fix", "sdxl_vae.safetensors")?;
-
     let mut config = ConfigBuilder::default();
 
     config
         .model(model_path)
-        .vae(vae_path)
         .vae_tiling(true)
         .height(1024)
         .width(1024);
-
-    Ok(config)
+    sdxl_vae_fp16_fix(config)
 }
 
 pub fn flux_1_dev(sd_type: api::WeightType) -> Result<ConfigBuilder, ApiError> {
@@ -167,8 +166,7 @@ pub fn sdxl_turbo_1_0_fp16() -> Result<ConfigBuilder, ApiError> {
     let mut config = ConfigBuilder::default();
 
     config.model(model_path).guidance(0.).cfg_scale(1.).steps(4);
-
-    Ok(config)
+    sdxl_vae_fp16_fix(config)
 }
 
 pub fn stable_diffusion_3_5_large_fp16() -> Result<ConfigBuilder, ApiError> {

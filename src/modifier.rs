@@ -11,3 +11,10 @@ pub fn real_esrgan_x4plus_anime_6_b(mut builder: ConfigBuilder) -> Result<Config
     builder.upscale_model(upscaler_path);
     Ok(builder)
 }
+
+/// Apply <https://huggingface.co/madebyollin/sdxl-vae-fp16-fix> to avoid black images with xl models
+pub fn sdxl_vae_fp16_fix(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let vae_path = download_file_hf_hub("madebyollin/sdxl-vae-fp16-fix", "sdxl.vae.safetensors")?;
+    builder.vae(vae_path);
+    Ok(builder)
+}
