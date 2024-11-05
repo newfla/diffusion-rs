@@ -83,11 +83,12 @@ pub struct PresetConfig {
 
 impl PresetBuilder {
     /// Add modifier that will apply in sequence
-    pub fn with_modifier(&mut self, f: Modifier) {
+    pub fn with_modifier(&mut self, f: Modifier) -> &mut Self {
         if self.modifiers.is_none() {
             self.modifiers = Some(Vec::new());
         }
         self.modifiers.as_mut().unwrap().push(f);
+        self
     }
 
     pub fn build(&mut self) -> Result<Config, ConfigBuilderError> {

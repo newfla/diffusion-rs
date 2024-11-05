@@ -18,3 +18,53 @@ pub fn sdxl_vae_fp16_fix(mut builder: ConfigBuilder) -> Result<ConfigBuilder, Ap
     builder.vae(vae_path);
     Ok(builder)
 }
+
+/// Apply <https://huggingface.co/madebyollin/taesd> taesd autoencoder for faster decoding (SD v1/v2)
+pub fn taesd(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let taesd_path =
+        download_file_hf_hub("madebyollin/taesd", "diffusion_pytorch_model.safetensors")?;
+    builder.taesd(taesd_path);
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/madebyollin/taesdxl> taesd autoencoder for faster decoding (SDXL)
+pub fn taesd_xl(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let taesd_path =
+        download_file_hf_hub("madebyollin/taesdxl", "diffusion_pytorch_model.safetensors")?;
+    builder.taesd(taesd_path);
+    Ok(builder)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        api::txt2img,
+        preset::{Modifier, Preset, PresetBuilder},
+    };
+
+    use super::{taesd, taesd_xl};
+
+    static PROMPT: &str = "a lovely duck drinking water from a bottle";
+
+    fn run(preset: Preset, m: Modifier) {
+        let config = PresetBuilder::default()
+            .preset(preset)
+            .prompt(PROMPT)
+            .with_modifier(m)
+            .build()
+            .unwrap();
+        txt2img(config).unwrap();
+    }
+
+    #[ignore]
+    #[test]
+    fn test_taesd() {
+        run(Preset::StableDiffusion1_5, taesd);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_taesd_xl() {
+        run(Preset::SDXLTurbo1_0Fp16, taesd_xl);
+    }
+}
