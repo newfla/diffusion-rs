@@ -4,7 +4,7 @@ use hf_hub::api::sync::ApiError;
 use crate::{
     api::{self, Config, ConfigBuilder, ConfigBuilderError},
     preset_builder::{
-        flux_1_dev, flux_1_schnell, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16,
+        flux_1_dev, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16,
         stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
         stable_diffusion_3_5_large_fp16, stable_diffusion_3_5_large_turbo_fp16,
         stable_diffusion_3_5_medium_fp16, stable_diffusion_3_medium_fp16,
@@ -33,9 +33,9 @@ pub enum Preset {
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. cfg_scale 0. 4 steps.
     StableDiffusion3_5LargeTurboFp16,
     SDXLBase1_0,
-    /// cfg_scale 1. guidance 0. 4 Steps
+    /// cfg_scale 1. guidance 0. 4 steps
     SDTurbo,
-    /// cfg_scale 1. guidance 0. 4 Steps
+    /// cfg_scale 1. guidance 0. 4 steps
     SDXLTurbo1_0Fp16,
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 28 steps.
@@ -43,6 +43,9 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 4 steps.
     Flux1Schnell(api::WeightType),
+    /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
+    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
+    JuggernautXL11,
 }
 
 impl Preset {
@@ -60,6 +63,7 @@ impl Preset {
             Preset::StableDiffusion3_5LargeFp16 => stable_diffusion_3_5_large_fp16(),
             Preset::StableDiffusion3_5MediumFp16 => stable_diffusion_3_5_medium_fp16(),
             Preset::StableDiffusion3_5LargeTurboFp16 => stable_diffusion_3_5_large_turbo_fp16(),
+            Preset::JuggernautXL11 => juggernaut_xl_11(),
         }
     }
 }
@@ -208,5 +212,12 @@ mod tests {
     fn test_stable_diffusion_3_5_large_turbo_fp16() {
         set_hf_token(include_str!("../token.txt"));
         run(Preset::StableDiffusion3_5LargeTurboFp16);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_juggernaut_xl_11() {
+        set_hf_token(include_str!("../token.txt"));
+        run(Preset::JuggernautXL11);
     }
 }

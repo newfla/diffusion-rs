@@ -221,3 +221,23 @@ pub fn stable_diffusion_3_5(
 
     Ok(config)
 }
+
+pub fn juggernaut_xl_11() -> Result<ConfigBuilder, ApiError> {
+    let model_path = download_file_hf_hub(
+        "RunDiffusion/Juggernaut-XI-v11",
+        "Juggernaut-XI-byRunDiffusion.safetensors",
+    )?;
+
+    let mut config = ConfigBuilder::default();
+
+    config
+        .model(model_path)
+        .vae_tiling(true)
+        .sampling_method(SampleMethod::DPM2)
+        .steps(20)
+        .guidance(6.)
+        .height(1024)
+        .width(1024);
+
+    Ok(config)
+}
