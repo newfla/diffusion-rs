@@ -26,7 +26,7 @@ diffusion-rs-sys = { path = "sys", version = "0.1.2" }
 hf-hub = "0.3.2"
 libc = "0.2.161"
 num_cpus = "1.16.0"
-thiserror = "1.0.65"
+thiserror = "2.0.3"
 
 [features]
 cublas = ["diffusion-rs-sys/cublas"]
