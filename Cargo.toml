@@ -3,7 +3,7 @@ members = ["sys"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/newfla/diffusion-rs"
@@ -22,7 +22,7 @@ documentation = "https://docs.rs/diffusion-rs"
 
 [dependencies]
 derive_builder = "0.20.2"
-diffusion-rs-sys = { path = "sys", version = "0.1.2" }
+diffusion-rs-sys = { path = "sys", version = "0.1.3" }
 hf-hub = "0.3.2"
 libc = "0.2.161"
 num_cpus = "1.16.0"
