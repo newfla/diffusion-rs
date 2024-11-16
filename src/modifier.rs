@@ -35,6 +35,22 @@ pub fn taesd_xl(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/cqyan/hybrid-sd-tinyvae> taesd autoencoder for faster decoding (SD v1/v2)
+pub fn hybrid_taesd(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let taesd_path =
+        download_file_hf_hub("cqyan/hybrid-sd-tinyvae", "diffusion_pytorch_model.safetensors")?;
+    builder.taesd(taesd_path);
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/cqyan/hybrid-sd-tinyvae-xl> taesd autoencoder for faster decoding (SDXL)
+pub fn hybrid_taesd_xl(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let taesd_path =
+        download_file_hf_hub("cqyan/hybrid-sd-tinyvae-xl", "diffusion_pytorch_model.safetensors")?;
+    builder.taesd(taesd_path);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -42,7 +58,7 @@ mod tests {
         preset::{Modifier, Preset, PresetBuilder},
     };
 
-    use super::{taesd, taesd_xl};
+    use super::{hybrid_taesd, hybrid_taesd_xl, taesd, taesd_xl};
 
     static PROMPT: &str = "a lovely duck drinking water from a bottle";
 
@@ -66,5 +82,17 @@ mod tests {
     #[test]
     fn test_taesd_xl() {
         run(Preset::SDXLTurbo1_0Fp16, taesd_xl);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_hybrid_taesd() {
+        run(Preset::StableDiffusion1_5, hybrid_taesd);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_hybrid_taesd_xl() {
+        run(Preset::SDXLTurbo1_0Fp16, hybrid_taesd_xl);
     }
 }
