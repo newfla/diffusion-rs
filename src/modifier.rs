@@ -37,16 +37,20 @@ pub fn taesd_xl(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
 
 /// Apply <https://huggingface.co/cqyan/hybrid-sd-tinyvae> taesd autoencoder for faster decoding (SD v1/v2)
 pub fn hybrid_taesd(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
-    let taesd_path =
-        download_file_hf_hub("cqyan/hybrid-sd-tinyvae", "diffusion_pytorch_model.safetensors")?;
+    let taesd_path = download_file_hf_hub(
+        "cqyan/hybrid-sd-tinyvae",
+        "diffusion_pytorch_model.safetensors",
+    )?;
     builder.taesd(taesd_path);
     Ok(builder)
 }
 
 /// Apply <https://huggingface.co/cqyan/hybrid-sd-tinyvae-xl> taesd autoencoder for faster decoding (SDXL)
 pub fn hybrid_taesd_xl(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
-    let taesd_path =
-        download_file_hf_hub("cqyan/hybrid-sd-tinyvae-xl", "diffusion_pytorch_model.safetensors")?;
+    let taesd_path = download_file_hf_hub(
+        "cqyan/hybrid-sd-tinyvae-xl",
+        "diffusion_pytorch_model.safetensors",
+    )?;
     builder.taesd(taesd_path);
     Ok(builder)
 }
