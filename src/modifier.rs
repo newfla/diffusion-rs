@@ -1,6 +1,9 @@
 use hf_hub::api::sync::ApiError;
 
-use crate::{api::ConfigBuilder, util::download_file_hf_hub};
+use crate::{
+    api::{ConfigBuilder, SampleMethod},
+    util::download_file_hf_hub,
+};
 
 /// Add the <https://huggingface.co/ximso/RealESRGAN_x4plus_anime_6B> upscaler
 pub fn real_esrgan_x4plus_anime_6_b(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
@@ -55,6 +58,32 @@ pub fn hybrid_taesd_xl(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiE
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdv1-5> to reduce inference steps for SD v1 between 2-8
+/// cfg_scale 1. 4 steps.
+pub fn lcm_lora_sd_1_5(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "latent-consistency/lcm-lora-sdv1-5",
+        "pytorch_lora_weights.safetensors",
+    )?;
+    builder.lora_model(&lora_path).cfg_scale(1.).steps(4);
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdxl> to reduce inference steps for SD v1 between 2-8 (default 8)
+/// Enabled [api::SampleMethod::LCM]. cfg_scale 2. 8 steps.
+pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "latent-consistency/lcm-lora-sdxl",
+        "pytorch_lora_weights.safetensors",
+    )?;
+    builder
+        .lora_model(&lora_path)
+        .cfg_scale(2.)
+        .steps(8)
+        .sampling_method(SampleMethod::LCM);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -62,7 +91,9 @@ mod tests {
         preset::{Modifier, Preset, PresetBuilder},
     };
 
-    use super::{hybrid_taesd, hybrid_taesd_xl, taesd, taesd_xl};
+    use super::{
+        hybrid_taesd, hybrid_taesd_xl, lcm_lora_sd_1_5, lcm_lora_sdxl_base_1_0, taesd, taesd_xl,
+    };
 
     static PROMPT: &str = "a lovely duck drinking water from a bottle";
 
@@ -98,5 +129,17 @@ mod tests {
     #[test]
     fn test_hybrid_taesd_xl() {
         run(Preset::SDXLTurbo1_0Fp16, hybrid_taesd_xl);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lcm_lora_sd_1_5() {
+        run(Preset::StableDiffusion1_5, lcm_lora_sd_1_5);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lcm_lora_sdxl_base_1_0() {
+        run(Preset::SDXLBase1_0, lcm_lora_sdxl_base_1_0);
     }
 }
