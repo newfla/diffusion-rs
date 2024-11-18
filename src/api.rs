@@ -125,7 +125,7 @@ pub struct Config {
     weight_type: WeightType,
 
     /// Lora model directory
-    #[builder(default = "Default::default()")]
+    #[builder(default = "Default::default()", setter(custom))]
     lora_model: CLibPath,
 
     /// Path to the input image, required by img2img
@@ -141,7 +141,7 @@ pub struct Config {
     output: PathBuf,
 
     /// The prompt to render
-    prompt: CLibString,
+    prompt: String,
 
     /// The negative prompt (default: "")
     #[builder(default = "\"\".into()")]
@@ -224,9 +224,21 @@ pub struct Config {
     /// Apply canny preprocessor (edge detection) (default: false)
     #[builder(default = "false")]
     canny: bool,
+
+    /// Suffix that needs to be added to prompt (e.g. lora model)
+    #[builder(default = "None", private)]
+    prompt_suffix: Option<String>,
 }
 
 impl ConfigBuilder {
+    pub fn lora_model(&mut self, lora_model: &Path) -> &mut Self {
+        let folder = lora_model.parent().unwrap();
+        let file_name = lora_model.file_stem().unwrap().to_str().unwrap().to_owned();
+        self.prompt_suffix(format!("<lora:{file_name}:1>"));
+        self.lora_model = Some(folder.into());
+        self
+    }
+
     pub fn n_threads(&mut self, value: i32) -> &mut Self {
         self.n_threads = if value > 0 {
             Some(value)
@@ -386,12 +398,17 @@ unsafe fn upscale(
 /// Generate an image with a prompt
 pub fn txt2img(config: Config) -> Result<(), DiffusionError> {
     unsafe {
+        let prompt: CLibString = match &config.prompt_suffix {
+            Some(suffix) => format!("{} {suffix}", &config.prompt),
+            None => config.prompt.clone(),
+        }
+        .into();
         let sd_ctx = config.build_sd_ctx(true);
         let upscaler_ctx = config.upscaler_ctx();
         let res = {
             let slice = diffusion_rs_sys::txt2img(
                 sd_ctx,
-                config.prompt.as_ptr(),
+                prompt.as_ptr(),
                 config.negative_prompt.as_ptr(),
                 config.clip_skip as i32,
                 config.cfg_scale,
