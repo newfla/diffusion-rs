@@ -109,7 +109,7 @@ fn main() {
         println!("cargo:rustc-link-lib=hipblas");
         println!("cargo:rustc-link-lib=rocblas");
         println!("cargo:rustc-link-lib=amdhip64");
-        println!("cargo:rustc-link-lib=static=ggml-metal");
+        println!("cargo:rustc-link-lib=static=ggml-hip");
 
         config.generator("Ninja");
         config.define("CMAKE_C_COMPILER", "clang");
