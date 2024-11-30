@@ -200,7 +200,7 @@ pub struct Config {
     #[builder(default = "Schedule::DEFAULT")]
     schedule: Schedule,
 
-    /// ignore last layers of CLIP network; 1 ignores none, 2 ignores one layer (default: -1)
+    /// Ignore last layers of CLIP network; 1 ignores none, 2 ignores one layer (default: -1)
     /// <= 0 represents unspecified, will be 1 for SD1.x, 2 for SD2.x
     #[builder(default = "ClipSkip::Unspecified")]
     clip_skip: ClipSkip,
@@ -228,6 +228,29 @@ pub struct Config {
     /// Suffix that needs to be added to prompt (e.g. lora model)
     #[builder(default = "None", private)]
     prompt_suffix: Option<String>,
+
+    /// Use flash attention in the diffusion model (for low vram).
+    /// Might lower quality, since it implies converting k and v to f16.
+    /// This might crash if it is not supported by the backend.
+    #[builder(default = "false")]
+    flash_attenuation: bool,
+
+    /// skip layer guidance (SLG) scale, only for DiT models: (default: 0)
+    /// 0 means disabled, a value of 2.5 is nice for sd3.5 medium
+    #[builder(default = "0.")]
+    slg_scale: f32,
+
+    /// Layers to skip for SLG steps: (default: [7,8,9])
+    #[builder(default = "vec![7, 8, 9]")]
+    skip_layer: Vec<i32>,
+
+    /// SLG enabling point: (default: 0.01)
+    #[builder(default = "0.01")]
+    skip_layer_start: f32,
+
+    /// SLG disabling point: (default: 0.2)
+    #[builder(default = "0.2")]
+    skip_layer_end: f32,
 }
 
 impl ConfigBuilder {
@@ -300,6 +323,7 @@ impl Config {
             self.clip_on_cpu,
             self.control_net_cpu,
             self.vae_on_cpu,
+            self.flash_attenuation,
         )
     }
 
@@ -310,7 +334,6 @@ impl Config {
             let upscaler = new_upscaler_ctx(
                 self.upscale_model.as_ref().unwrap().as_ptr(),
                 self.n_threads,
-                self.weight_type,
             );
             Some(upscaler)
         }
@@ -396,7 +419,7 @@ unsafe fn upscale(
 }
 
 /// Generate an image with a prompt
-pub fn txt2img(config: Config) -> Result<(), DiffusionError> {
+pub fn txt2img(mut config: Config) -> Result<(), DiffusionError> {
     unsafe {
         let prompt: CLibString = match &config.prompt_suffix {
             Some(suffix) => format!("{} {suffix}", &config.prompt),
@@ -424,6 +447,11 @@ pub fn txt2img(config: Config) -> Result<(), DiffusionError> {
                 config.style_ratio,
                 config.normalize_input,
                 config.input_id_images.as_ptr(),
+                config.skip_layer.as_mut_ptr(),
+                config.skip_layer.len(),
+                config.slg_scale,
+                config.skip_layer_start,
+                config.skip_layer_end,
             );
             if slice.is_null() {
                 return Err(DiffusionError::Forward);

@@ -1054,7 +1054,9 @@ pub enum sd_type_t {
     SD_TYPE_Q4_0_4_4 = 31,
     SD_TYPE_Q4_0_4_8 = 32,
     SD_TYPE_Q4_0_8_8 = 33,
-    SD_TYPE_COUNT = 34,
+    SD_TYPE_TQ1_0 = 34,
+    SD_TYPE_TQ2_0 = 35,
+    SD_TYPE_COUNT = 36,
 }
 extern "C" {
     pub fn sd_type_name(type_: sd_type_t) -> *const ::std::os::raw::c_char;
@@ -1140,6 +1142,7 @@ extern "C" {
         keep_clip_on_cpu: bool,
         keep_control_net_cpu: bool,
         keep_vae_on_cpu: bool,
+        diffusion_flash_attn: bool,
     ) -> *mut sd_ctx_t;
 }
 extern "C" {
@@ -1164,6 +1167,11 @@ extern "C" {
         style_strength: f32,
         normalize_input: bool,
         input_id_images_path: *const ::std::os::raw::c_char,
+        skip_layers: *mut ::std::os::raw::c_int,
+        skip_layers_count: usize,
+        slg_scale: f32,
+        skip_layer_start: f32,
+        skip_layer_end: f32,
     ) -> *mut sd_image_t;
 }
 extern "C" {
@@ -1187,6 +1195,11 @@ extern "C" {
         style_strength: f32,
         normalize_input: bool,
         input_id_images_path: *const ::std::os::raw::c_char,
+        skip_layers: *mut ::std::os::raw::c_int,
+        skip_layers_count: usize,
+        slg_scale: f32,
+        skip_layer_start: f32,
+        skip_layer_end: f32,
     ) -> *mut sd_image_t;
 }
 extern "C" {

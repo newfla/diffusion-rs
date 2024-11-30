@@ -84,6 +84,7 @@ fn main() {
         println!("cargo:rustc-link-lib=cudart");
         println!("cargo:rustc-link-lib=cublasLt");
         println!("cargo:rustc-link-lib=cuda");
+        println!("cargo:rustc-link-lib=static=ggml-cuda");
 
         if target.contains("msvc") {
             let cuda_path = PathBuf::from(env::var("CUDA_PATH").unwrap()).join("lib/x64");
@@ -108,6 +109,7 @@ fn main() {
         println!("cargo:rustc-link-lib=hipblas");
         println!("cargo:rustc-link-lib=rocblas");
         println!("cargo:rustc-link-lib=amdhip64");
+        println!("cargo:rustc-link-lib=static=ggml-metal");
 
         config.generator("Ninja");
         config.define("CMAKE_C_COMPILER", "clang");
@@ -123,6 +125,7 @@ fn main() {
             hip_path.join("lib")
         };
         println!("cargo:rustc-link-search={}", hip_lib_path.display());
+
         config.define("SD_HIPBLAS", "ON");
         if let Ok(target) = env::var("AMDGPU_TARGETS") {
             config.define("AMDGPU_TARGETS", target);
@@ -131,10 +134,11 @@ fn main() {
 
     #[cfg(feature = "metal")]
     {
+        config.define("SD_METAL", "ON");
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=Metal");
         println!("cargo:rustc-link-lib=framework=MetalKit");
-        config.define("SD_METAL", "ON");
+        println!("cargo:rustc-link-lib=static=ggml-metal");
     }
 
     #[cfg(feature = "vulkan")]
@@ -142,6 +146,7 @@ fn main() {
         if target.contains("msvc") {
             println!("cargo:rerun-if-env-changed=VULKAN_SDK");
             println!("cargo:rustc-link-lib=vulkan-1");
+            println!("cargo:rustc-link-lib=static=ggml-vulkan");
             let vulkan_path = match env::var("VULKAN_SDK") {
                 Ok(path) => PathBuf::from(path),
                 Err(_) => panic!(
@@ -169,6 +174,7 @@ fn main() {
             config.define("CMAKE_CXX_COMPILER", "icpx");
         }
         config.define("SD_SYCL", "ON");
+        println!("cargo:rustc-link-lib=static=ggml-sycl");
     }
 
     #[cfg(feature = "flashattn")]
@@ -198,7 +204,8 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", destination.display());
     println!("cargo:rustc-link-lib=static=stable-diffusion");
-    println!("cargo:rustc-link-lib=static=ggml");
+    println!("cargo:rustc-link-lib=static=ggml-base");
+    println!("cargo:rustc-link-lib=static=ggml-cpu");
 }
 
 fn add_link_search_path(dir: &Path) -> std::io::Result<()> {
