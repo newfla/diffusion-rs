@@ -38,6 +38,8 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: sudo apt update && sudo apt install -y clang cmake
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
       - name: Build
         run: cargo build
       - name: Test (ubuntu)
