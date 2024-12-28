@@ -1178,6 +1178,7 @@ extern "C" {
     pub fn img2img(
         sd_ctx: *mut sd_ctx_t,
         init_image: sd_image_t,
+        mask_image: sd_image_t,
         prompt: *const ::std::os::raw::c_char,
         negative_prompt: *const ::std::os::raw::c_char,
         clip_skip: ::std::os::raw::c_int,
@@ -1229,7 +1230,6 @@ extern "C" {
     pub fn new_upscaler_ctx(
         esrgan_path: *const ::std::os::raw::c_char,
         n_threads: ::std::os::raw::c_int,
-        wtype: sd_type_t,
     ) -> *mut upscaler_ctx_t;
 }
 extern "C" {

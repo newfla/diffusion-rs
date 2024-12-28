@@ -29,7 +29,7 @@ num_cpus = "1.16.0"
 thiserror = "2.0.3"
 
 [features]
-cublas = ["diffusion-rs-sys/cublas"]
+cuda = ["diffusion-rs-sys/cuda"]
 hipblas = ["diffusion-rs-sys/hipblas"]
 metal = ["diffusion-rs-sys/metal"]
 vulkan = ["diffusion-rs-sys/vulkan"]

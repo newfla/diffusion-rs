@@ -77,7 +77,7 @@ fn main() {
     let mut config = Config::new(&diffusion_root);
 
     //Enable cmake feature flags
-    #[cfg(feature = "cublas")]
+    #[cfg(feature = "cuda")]
     {
         println!("cargo:rerun-if-env-changed=CUDA_PATH");
         println!("cargo:rustc-link-lib=cublas");
@@ -97,7 +97,7 @@ fn main() {
             println!("cargo:rustc-link-search=/opt/cuda/lib64/stubs");
         }
 
-        config.define("SD_CUBLAS", "ON");
+        config.define("SD_CUDA", "ON");
         if let Ok(target) = env::var("CUDA_COMPUTE_CAP") {
             config.define("CUDA_COMPUTE_CAP", target);
         }
