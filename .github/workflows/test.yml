@@ -103,7 +103,7 @@ jobs:
       - name: Build
         env:
           CUDA_COMPUTE_CAP: "75" 
-        run: cargo build --features cublas
+        run: cargo build --features cuda
 
   build-rocm:
     needs: build-no-features
