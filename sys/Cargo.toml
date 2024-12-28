@@ -30,7 +30,7 @@ include = [
 [dependencies]
 
 [features]
-cublas = []
+cuda = []
 hipblas = []
 metal = []
 vulkan = []

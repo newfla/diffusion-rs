@@ -77,7 +77,7 @@ fn main() {
     let mut config = Config::new(&diffusion_root);
 
     //Enable cmake feature flags
-    #[cfg(feature = "cublas")]
+    #[cfg(feature = "cuda")]
     {
         println!("cargo:rerun-if-env-changed=CUDA_PATH");
         println!("cargo:rustc-link-lib=cublas");
@@ -97,7 +97,7 @@ fn main() {
             println!("cargo:rustc-link-search=/opt/cuda/lib64/stubs");
         }
 
-        config.define("SD_CUBLAS", "ON");
+        config.define("SD_CUDA", "ON");
         if let Ok(target) = env::var("CUDA_COMPUTE_CAP") {
             config.define("CUDA_COMPUTE_CAP", target);
         }
@@ -109,7 +109,7 @@ fn main() {
         println!("cargo:rustc-link-lib=hipblas");
         println!("cargo:rustc-link-lib=rocblas");
         println!("cargo:rustc-link-lib=amdhip64");
-        println!("cargo:rustc-link-lib=static=ggml-metal");
+        println!("cargo:rustc-link-lib=static=ggml-hip");
 
         config.generator("Ninja");
         config.define("CMAKE_C_COMPILER", "clang");
@@ -127,6 +127,8 @@ fn main() {
         println!("cargo:rustc-link-search={}", hip_lib_path.display());
 
         config.define("SD_HIPBLAS", "ON");
+        //Fix requrired at 9578fdc
+        config.define("GGML_HIP", "ON");
         if let Ok(target) = env::var("AMDGPU_TARGETS") {
             config.define("AMDGPU_TARGETS", target);
         }

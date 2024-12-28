@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, windows-latest, macos-latest]
+        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-latest, windows-latest]
+        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-22.04, windows-2022]
+        platform: [ubuntu-22.04] #, windows-2022]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +103,7 @@ jobs:
       - name: Build
         env:
           CUDA_COMPUTE_CAP: "75" 
-        run: cargo build --features cublas
+        run: cargo build --features cuda
 
   build-rocm:
     needs: build-no-features
