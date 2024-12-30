@@ -23,7 +23,7 @@ documentation = "https://docs.rs/diffusion-rs"
 [dependencies]
 derive_builder = "0.20.2"
 diffusion-rs-sys = { path = "sys", version = "0.1.4" }
-hf-hub = "0.3.2"
+hf-hub = "0.4.0"
 libc = "0.2.161"
 num_cpus = "1.16.0"
 thiserror = "2.0.3"
