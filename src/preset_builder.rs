@@ -1,6 +1,8 @@
+use std::path::PathBuf;
+
 use crate::{
     api::{self, SampleMethod},
-    modifier::sdxl_vae_fp16_fix,
+    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_fp8_flux_1},
 };
 use hf_hub::api::sync::ApiError;
 
@@ -85,39 +87,42 @@ pub fn sdxl_base_1_0() -> Result<ConfigBuilder, ApiError> {
 }
 
 pub fn flux_1_dev(sd_type: api::WeightType) -> Result<ConfigBuilder, ApiError> {
-    flux_1("dev", sd_type, 28)
+    let model_path = flux_1_model_weight("dev", sd_type)?;
+    let mut builder = flux_1("dev", 28)?;
+
+    builder.diffusion_model(model_path);
+    t5xxl_fp16_flux_1(builder)
 }
 
 pub fn flux_1_schnell(sd_type: api::WeightType) -> Result<ConfigBuilder, ApiError> {
-    flux_1("schnell", sd_type, 4)
+    let model_path = flux_1_model_weight("schnell", sd_type)?;
+    let mut builder = flux_1("schnell", 4)?;
+
+    builder.diffusion_model(model_path);
+    t5xxl_fp16_flux_1(builder)
 }
 
-fn flux_1(model: &str, sd_type: api::WeightType, steps: i32) -> Result<ConfigBuilder, ApiError> {
+fn flux_1_model_weight(model: &str, sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
     check_flux_type(sd_type);
     let weight_type = flux_type_to_model(sd_type);
-    let model_path = download_file_hf_hub(
+    download_file_hf_hub(
         format!("leejet/FLUX.1-{model}-gguf").as_str(),
         format!("flux1-{model}-{}.gguf", weight_type).as_str(),
-    )?;
+    )
+}
 
+fn flux_1(vae_model: &str, steps: i32) -> Result<ConfigBuilder, ApiError> {
+    let mut config = ConfigBuilder::default();
     let vae_path = download_file_hf_hub(
-        format!("black-forest-labs/FLUX.1-{model}").as_str(),
+        format!("black-forest-labs/FLUX.1-{vae_model}").as_str(),
         "ae.safetensors",
     )?;
     let clip_l_path =
         download_file_hf_hub("comfyanonymous/flux_text_encoders", "clip_l.safetensors")?;
-    let t5xxl_path = download_file_hf_hub(
-        "comfyanonymous/flux_text_encoders",
-        "t5xxl_fp16.safetensors",
-    )?;
-
-    let mut config = ConfigBuilder::default();
 
     config
-        .diffusion_model(model_path)
         .vae(vae_path)
         .clip_l(clip_l_path)
-        .t5xxl(t5xxl_path)
         .vae_tiling(true)
         .cfg_scale(1.)
         .sampling_method(SampleMethod::EULER)
@@ -240,4 +245,11 @@ pub fn juggernaut_xl_11() -> Result<ConfigBuilder, ApiError> {
         .width(1024);
 
     Ok(config)
+}
+
+pub fn flux_1_mini() -> Result<ConfigBuilder, ApiError> {
+    let model_path = download_file_hf_hub("TencentARC/flux-mini", "flux-mini.safetensors")?;
+    let mut builder = flux_1("dev", 28)?;
+    builder.diffusion_model(model_path).width(512).height(512);
+    t5xxl_fp8_flux_1(builder)
 }

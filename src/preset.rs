@@ -4,8 +4,8 @@ use hf_hub::api::sync::ApiError;
 use crate::{
     api::{self, Config, ConfigBuilder, ConfigBuilderError},
     preset_builder::{
-        flux_1_dev, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16,
-        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
+        flux_1_dev, flux_1_mini, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0,
+        sdxl_turbo_1_0_fp16, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
         stable_diffusion_3_5_large_fp16, stable_diffusion_3_5_large_turbo_fp16,
         stable_diffusion_3_5_medium_fp16, stable_diffusion_3_medium_fp16,
     },
@@ -43,6 +43,9 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 4 steps.
     Flux1Schnell(api::WeightType),
+    /// A 3.2B param rectified flow transformer distilled from FLUX.1 [dev] https://huggingface.co/TencentARC/flux-mini
+    /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. 28 steps.
+    Flux1Mini,
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
     JuggernautXL11,
@@ -64,6 +67,7 @@ impl Preset {
             Preset::StableDiffusion3_5MediumFp16 => stable_diffusion_3_5_medium_fp16(),
             Preset::StableDiffusion3_5LargeTurboFp16 => stable_diffusion_3_5_large_turbo_fp16(),
             Preset::JuggernautXL11 => juggernaut_xl_11(),
+            Preset::Flux1Mini => flux_1_mini(),
         }
     }
 }
@@ -219,5 +223,12 @@ mod tests {
     fn test_juggernaut_xl_11() {
         set_hf_token(include_str!("../token.txt"));
         run(Preset::JuggernautXL11);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_flux_1_mini() {
+        set_hf_token(include_str!("../token.txt"));
+        run(Preset::Flux1Mini);
     }
 }
