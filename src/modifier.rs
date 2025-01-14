@@ -84,6 +84,29 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigBuilder) -> Result<ConfigBuilde
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors> Fp8 t5xxl text encoder to reduce memory usage
+pub fn t5xxl_fp8_flux_1(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let t5xxl_path = download_file_hf_hub(
+        "comfyanonymous/flux_text_encoders",
+        "t5xxl_fp8_e4m3fn.safetensors",
+    )?;
+
+    builder.t5xxl(t5xxl_path);
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp16.safetensors>
+/// Default for flux_1_dev/schnell
+pub fn t5xxl_fp16_flux_1(mut builder: ConfigBuilder) -> Result<ConfigBuilder, ApiError> {
+    let t5xxl_path = download_file_hf_hub(
+        "comfyanonymous/flux_text_encoders",
+        "t5xxl_fp16.safetensors",
+    )?;
+
+    builder.t5xxl(t5xxl_path);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
