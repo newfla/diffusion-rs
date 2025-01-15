@@ -218,9 +218,6 @@ fn main() {
 
     #[cfg(feature = "sycl")]
     println!("cargo:rustc-link-lib=static=ggml-sycl");
-
-
-
 }
 
 fn add_link_search_path(dir: &Path) -> std::io::Result<()> {
