@@ -66,6 +66,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --features vulkan
+      - name: Test
+        run: cargo test --features vulkan
 
 
   build-metal:
@@ -78,6 +80,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --features metal
+      - name: Test
+        run: cargo test --features metal
 
   build-cuda:
     needs: build-no-features
@@ -103,6 +107,10 @@ jobs:
         env:
           CUDA_COMPUTE_CAP: "75" 
         run: cargo build --features cuda
+      - name: Test
+        env:
+          CUDA_COMPUTE_CAP: "75" 
+        run: cargo test --features cuda
 
   build-rocm:
     needs: build-no-features
@@ -134,6 +142,10 @@ jobs:
         env:
           AMDGPU_TARGETS: "gfx1100" 
         run: cargo build --features hipblas
+      - name: Test
+        env:
+          AMDGPU_TARGETS: "gfx1100" 
+        run: cargo test --features hipblas
 
   build-sycl:
     needs: build-no-features
@@ -156,4 +168,8 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh 
           cargo build --features sycl
-  
+      - name: Test
+        run: |
+          source /opt/intel/oneapi/setvars.sh 
+          cargo test --features sycl
+    
