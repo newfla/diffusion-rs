@@ -204,6 +204,10 @@ fn main() {
     println!("cargo:rustc-link-lib=static=ggml-base");
     println!("cargo:rustc-link-lib=static=ggml-cpu");
 
+    if target.contains("apple") {
+        println!("cargo:rustc-link-lib=framework=Accelerate");
+    }
+
     #[cfg(feature = "cuda")]
     println!("cargo:rustc-link-lib=static=ggml-cuda");
 
