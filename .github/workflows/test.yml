@@ -40,8 +40,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build
-      - name: Test (ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
+      - name: Test
         run: cargo test
 
   build-vulkan:
@@ -67,6 +66,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --features vulkan
+      - name: Test
+        if: matrix.platform == 'ubuntu-latest'
+        run: cargo test --features vulkan
 
 
   build-metal:
@@ -79,6 +81,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --features metal
+      - name: Test
+        run: cargo test --features metal
 
   build-cuda:
     needs: build-no-features
@@ -135,6 +139,10 @@ jobs:
         env:
           AMDGPU_TARGETS: "gfx1100" 
         run: cargo build --features hipblas
+      - name: Test
+        env:
+          AMDGPU_TARGETS: "gfx1100" 
+        run: cargo test --features hipblas
 
   build-sycl:
     needs: build-no-features
@@ -157,4 +165,8 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh 
           cargo build --features sycl
-  
+      - name: Test
+        run: |
+          source /opt/intel/oneapi/setvars.sh 
+          cargo test --features sycl
+    
