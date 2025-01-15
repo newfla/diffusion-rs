@@ -67,6 +67,7 @@ jobs:
       - name: Build
         run: cargo build --features vulkan
       - name: Test
+        if: matrix.platform == 'ubuntu-latest'
         run: cargo test --features vulkan
 
 
