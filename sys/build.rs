@@ -142,18 +142,20 @@ fn main() {
 
     #[cfg(feature = "vulkan")]
     {
+        let vulkan_path = env::var("VULKAN_SDK").map(|path| PathBuf::from(path));
         if target.contains("msvc") {
             println!("cargo:rerun-if-env-changed=VULKAN_SDK");
             println!("cargo:rustc-link-lib=vulkan-1");
-            let vulkan_path = match env::var("VULKAN_SDK") {
-                Ok(path) => PathBuf::from(path),
-                Err(_) => panic!(
-                    "Please install Vulkan SDK and ensure that VULKAN_SDK env variable is set"
-                ),
-            };
-            let vulkan_lib_path = vulkan_path.join("Lib");
+
+            let vulkan_lib_path = vulkan_path
+                .expect("Please install Vulkan SDK and ensure that VULKAN_SDK env variable is set")
+                .join("Lib");
             println!("cargo:rustc-link-search={}", vulkan_lib_path.display());
         } else {
+            if let Ok(vulkan_path) = vulkan_path {
+                let vulkan_lib_path = vulkan_path.join("lib");
+                println!("cargo:rustc-link-search={}", vulkan_lib_path.display());
+            }
             println!("cargo:rustc-link-lib=vulkan");
         }
         config.define("SD_VULKAN", "ON");

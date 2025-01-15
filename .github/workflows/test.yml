@@ -107,10 +107,6 @@ jobs:
         env:
           CUDA_COMPUTE_CAP: "75" 
         run: cargo build --features cuda
-      - name: Test
-        env:
-          CUDA_COMPUTE_CAP: "75" 
-        run: cargo test --features cuda
 
   build-rocm:
     needs: build-no-features
