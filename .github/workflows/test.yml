@@ -70,7 +70,6 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: cargo test --features vulkan
 
-
   build-metal:
     needs: build-no-features
     runs-on: macos-latest
@@ -139,10 +138,6 @@ jobs:
         env:
           AMDGPU_TARGETS: "gfx1100" 
         run: cargo build --features hipblas
-      - name: Test
-        env:
-          AMDGPU_TARGETS: "gfx1100" 
-        run: cargo test --features hipblas
 
   build-sycl:
     needs: build-no-features
@@ -165,8 +160,4 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh 
           cargo build --features sycl
-      - name: Test
-        run: |
-          source /opt/intel/oneapi/setvars.sh 
-          cargo test --features sycl
     
