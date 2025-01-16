@@ -40,8 +40,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build
-      - name: Test (ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
+      - name: Test
         run: cargo test
 
   build-vulkan:
@@ -67,7 +66,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --features vulkan
-
+      - name: Test
+        if: matrix.platform == 'ubuntu-latest'
+        run: cargo test --features vulkan
 
   build-metal:
     needs: build-no-features
@@ -79,6 +80,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --features metal
+      - name: Test
+        run: cargo test --features metal
 
   build-cuda:
     needs: build-no-features
@@ -157,4 +160,4 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh 
           cargo build --features sycl
-  
+    

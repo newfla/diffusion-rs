@@ -7,13 +7,15 @@ Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 ## Features Matrix
 | | Windows | Mac | Linux |
 | --- | :---: | :---: | :---: |
-|vulkan| ✅️ | ✅️ | ✅️ |
-|metal| ❌️ | ✅️ | ❌️ |
-|cuda| ✅️ | ❌️ | ✅️ |
-|rocm| ❔️ | ❌️ | ✅️ |
-|sycl| ❔️ | ❌️ | ✅️ |
+|vulkan| ✅️ | ⛓️‍💥 | ✅️ |
+|metal| - | ✅️ | - |
+|cuda| ✅️ | - | ✅️ |
+|rocm| ❔️ | - | ⛓️‍💥 |
+|sycl| ❔️ | - | ⛓️‍💥 |
 
-❔️: Not tested, should be supported 
+✅️: Working
+
+⛓️‍💥 : Issues when linking libraries
 
 ## Usage 
 ``` rust no_run
