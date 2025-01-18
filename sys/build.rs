@@ -125,8 +125,6 @@ fn main() {
         println!("cargo:rustc-link-search={}", hip_lib_path.display());
 
         config.define("SD_HIPBLAS", "ON");
-        //Fix requrired at 9578fdc
-        config.define("GGML_HIP", "ON");
         if let Ok(target) = env::var("AMDGPU_TARGETS") {
             config.define("AMDGPU_TARGETS", target);
         }
