@@ -162,8 +162,8 @@ fn main() {
     #[cfg(feature = "sycl")]
     {
         env::var("ONEAPI_ROOT").expect("Please load the oneAPi environment before building. See https://github.com/ggerganov/llama.cpp/blob/master/docs/backend/SYCL.md");
-        let sycl_lib_path = PathBuf::from( env::var("ONEAPI_ROOT").unwrap()).join("mkl/latest/lib");
-        println!("cargo:rustc-link-search={}",sycl_lib_path.display());
+        let sycl_lib_path = PathBuf::from(env::var("ONEAPI_ROOT").unwrap()).join("mkl/latest/lib");
+        println!("cargo:rustc-link-search={}", sycl_lib_path.display());
 
         println!("cargo:rustc-link-lib=static=mkl_sycl");
         println!("cargo:rustc-link-lib=static=mkl_core");
