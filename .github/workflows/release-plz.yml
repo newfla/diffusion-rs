@@ -20,10 +20,6 @@ jobs:
         run: sudo apt update && sudo apt install -y clang cmake
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Count sys files
-        run: cargo package --allow-dirty -p diffusion-rs-sys
-      - name: List sys files
-        run: cargo package --allow-dirty -p diffusion-rs-sys -l
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
         env:
