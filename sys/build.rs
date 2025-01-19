@@ -162,23 +162,27 @@ fn main() {
     #[cfg(feature = "sycl")]
     {
         env::var("ONEAPI_ROOT").expect("Please load the oneAPi environment before building. See https://github.com/ggerganov/llama.cpp/blob/master/docs/backend/SYCL.md");
+        let sycl_lib_path = PathBuf::from(env::var("ONEAPI_ROOT").unwrap()).join("mkl/latest/lib");
+        println!("cargo:rustc-link-search={}", sycl_lib_path.display());
 
-        println!("cargo:rustc-link-lib=iomp5");
-        println!("cargo-rustc-link-lib=dnnl");
-        println!("cargo:rustc-link-lib=OpenCL");
+        println!("cargo:rustc-link-lib=static=mkl_sycl");
+        println!("cargo:rustc-link-lib=static=mkl_core");
+        println!("cargo:rustc-link-lib=static=mkl_scalapack_ilp64");
+        println!("cargo:rustc-link-lib=static=mkl_intel_ilp64");
+        println!("cargo:rustc-link-lib=static=mkl_blacs_intelmpi_ilp64");
+        println!("cargo:rustc-link-lib=static=mkl_tbb_thread");
+
         println!("cargo:rustc-link-lib=tbb");
-        println!("cargo-rustc-link-lib=mkl_core");
-        println!("cargo-rustc-link-lib=m");
-        println!("cargo-rustc-link-lib=dl");
-        println!("cargo:rustc-link-lib=mkl_sycl_blas");
-        println!("cargo:rustc-link-lib=mkl_intel_ilp64");
-        println!("cargo:rustc-link-lib=mkl_tbb_thread");
+        println!("cargo:rustc-link-lib=OpenCL");
+        println!("cargo:rustc-link-lib=svml");
         println!("cargo:rustc-link-lib=imf");
         println!("cargo:rustc-link-lib=intlc");
-        println!("cargo-rustc-link-lib=libsvml");
+        println!("cargo:rustc-link-lib=ur_loader");
+        println!("cargo:rustc-link-lib=m");
+        println!("cargo-rustc-link-lib=dl");
         println!("cargo:rustc-link-lib=sycl");
+        println!("cargo:rustc-link-lib=dnnl");
 
-        //fails with undefined reference to symbol '__svml_expf8_l9'
         if target.contains("msvc") {
             config.generator("Ninja");
             config.define("CMAKE_C_COMPILER", "cl");

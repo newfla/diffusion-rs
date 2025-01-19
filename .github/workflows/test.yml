@@ -160,4 +160,8 @@ jobs:
         run: |
           source /opt/intel/oneapi/setvars.sh 
           cargo build --features sycl
+      - name: Test
+        run: |
+          source /opt/intel/oneapi/setvars.sh 
+          cargo test --features sycl
     

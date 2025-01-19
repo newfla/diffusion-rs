@@ -11,7 +11,7 @@ Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 |metal| - | ✅️ | - |
 |cuda| ✅️ | - | ✅️ |
 |rocm| ❔️ | - | ⛓️‍💥 |
-|sycl| ❔️ | - | ⛓️‍💥 |
+|sycl| ❔️ | - | ✅️ |
 
 ✅️: Working
 
