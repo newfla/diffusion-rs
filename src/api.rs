@@ -293,14 +293,14 @@ impl ConfigBuilder {
             Ok(())
         } else {
             Err(ConfigBuilderError::ValidationError(
-                "When batch_count > 0, ouput should point to folder and viceversa".to_owned(),
+                "When batch_count > 1, ouput should point to folder and viceversa".to_owned(),
             ))
         }
     }
 }
 
 impl Config {
-    unsafe fn build_sd_ctx(&self, vae_decode_only: bool) -> *mut sd_ctx_t {
+    unsafe fn diffusion_ctx(&self, vae_decode_only: bool) -> *mut sd_ctx_t {
         new_sd_ctx(
             self.model.as_ptr(),
             self.clip_l.as_ptr(),
@@ -382,7 +382,7 @@ impl From<&Path> for CLibPath {
     }
 }
 
-fn output_files(path: PathBuf, batch_size: i32) -> Vec<CLibPath> {
+fn output_files(path: &Path, batch_size: i32) -> Vec<CLibPath> {
     if batch_size == 1 {
         vec![path.into()]
     } else {
@@ -420,13 +420,14 @@ unsafe fn upscale(
 
 /// Generate an image with a prompt
 pub fn txt2img(mut config: Config) -> Result<(), DiffusionError> {
+    let prompt: CLibString = match &config.prompt_suffix {
+        Some(suffix) => format!("{} {suffix}", &config.prompt),
+        None => config.prompt.clone(),
+    }
+    .into();
+    let files = output_files(&config.output, config.batch_count);
     unsafe {
-        let prompt: CLibString = match &config.prompt_suffix {
-            Some(suffix) => format!("{} {suffix}", &config.prompt),
-            None => config.prompt.clone(),
-        }
-        .into();
-        let sd_ctx = config.build_sd_ctx(true);
+        let sd_ctx = config.diffusion_ctx(true);
         let upscaler_ctx = config.upscaler_ctx();
         let res = {
             let slice = diffusion_rs_sys::txt2img(
@@ -456,7 +457,6 @@ pub fn txt2img(mut config: Config) -> Result<(), DiffusionError> {
             if slice.is_null() {
                 return Err(DiffusionError::Forward);
             }
-            let files = output_files(config.output, config.batch_count);
             for (id, (img, path)) in slice::from_raw_parts(slice, config.batch_count as usize)
                 .iter()
                 .zip(files)
@@ -486,13 +486,18 @@ pub fn txt2img(mut config: Config) -> Result<(), DiffusionError> {
             free(slice as *mut c_void);
             Ok(())
         };
-
         //Clean-up CTX section
+        clean_up(sd_ctx, upscaler_ctx);
+        res
+    }
+}
+
+fn clean_up(sd_ctx: *mut sd_ctx_t, upscaler_ctx: Option<*mut upscaler_ctx_t>) {
+    unsafe {
         free_sd_ctx(sd_ctx);
         if let Some(upscaler_ctx) = upscaler_ctx {
             free_upscaler_ctx(upscaler_ctx);
         }
-        res
     }
 }
 
