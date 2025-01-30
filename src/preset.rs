@@ -2,7 +2,7 @@ use derive_builder::Builder;
 use hf_hub::api::sync::ApiError;
 
 use crate::{
-    api::{self, Config, ConfigBuilder, ConfigBuilderError},
+    api::{self, Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
         flux_1_dev, flux_1_mini, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0,
         sdxl_turbo_1_0_fp16, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
@@ -43,7 +43,7 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 4 steps.
     Flux1Schnell(api::WeightType),
-    /// A 3.2B param rectified flow transformer distilled from FLUX.1 [dev] https://huggingface.co/TencentARC/flux-mini
+    /// A 3.2B param rectified flow transformer distilled from FLUX.1-dev <https://huggingface.co/TencentARC/flux-mini>
     /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. 28 steps.
     Flux1Mini,
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
@@ -52,7 +52,7 @@ pub enum Preset {
 }
 
 impl Preset {
-    fn try_config_builder(self) -> Result<ConfigBuilder, ApiError> {
+    fn try_configs_builder(self) -> Result<(ConfigBuilder, ModelConfigBuilder), ApiError> {
         match self {
             Preset::StableDiffusion1_4 => stable_diffusion_1_4(),
             Preset::StableDiffusion1_5 => stable_diffusion_1_5(),
@@ -72,8 +72,14 @@ impl Preset {
     }
 }
 
+/// Configs tuple used by [crate::modifier]
+pub type ConfigsBuilder = (ConfigBuilder, ModelConfigBuilder);
+
+/// Returned by [PresetBuilder::build]
+pub type Configs = (Config, ModelConfig);
+
 /// Helper functions that modifies the [ConfigBuilder] See [crate::modifier]
-pub type Modifier = fn(ConfigBuilder) -> Result<ConfigBuilder, ApiError>;
+pub type Modifier = fn(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>;
 
 #[derive(Debug, Clone, Builder)]
 #[builder(
@@ -86,7 +92,7 @@ pub struct PresetConfig {
     prompt: String,
     preset: Preset,
     #[builder(private, default = "Vec::new()")]
-    modifiers: Vec<fn(ConfigBuilder) -> Result<ConfigBuilder, ApiError>>,
+    modifiers: Vec<Modifier>,
 }
 
 impl PresetBuilder {
@@ -99,25 +105,28 @@ impl PresetBuilder {
         self
     }
 
-    pub fn build(&mut self) -> Result<Config, ConfigBuilderError> {
+    pub fn build(&mut self) -> Result<Configs, ConfigBuilderError> {
         let preset = self.internal_build()?;
-        let config: ConfigBuilder = preset
+        let configs: ConfigsBuilder = preset
             .try_into()
             .map_err(|err: ApiError| ConfigBuilderError::ValidationError(err.to_string()))?;
-        config.build()
+        let config = configs.0.build()?;
+        let config_model = configs.1.build()?;
+
+        Ok((config, config_model))
     }
 }
 
-impl TryFrom<PresetConfig> for ConfigBuilder {
+impl TryFrom<PresetConfig> for ConfigsBuilder {
     type Error = ApiError;
 
     fn try_from(value: PresetConfig) -> Result<Self, Self::Error> {
-        let mut config_builder = value.preset.try_config_builder()?;
+        let mut configs_builder = value.preset.try_configs_builder()?;
         for m in value.modifiers {
-            config_builder = m(config_builder)?;
+            configs_builder = m(configs_builder)?;
         }
-        config_builder.prompt(value.prompt);
-        Ok(config_builder)
+        configs_builder.0.prompt(value.prompt);
+        Ok(configs_builder)
     }
 }
 
@@ -132,12 +141,12 @@ mod tests {
     static PROMPT: &str = "a lovely duck drinking water from a bottle";
 
     fn run(preset: Preset) {
-        let config = PresetBuilder::default()
+        let (mut config, mut model_config) = PresetBuilder::default()
             .preset(preset)
             .prompt(PROMPT)
             .build()
             .unwrap();
-        txt2img(config).unwrap();
+        txt2img(&mut config, &mut model_config).unwrap();
     }
 
     #[ignore]
