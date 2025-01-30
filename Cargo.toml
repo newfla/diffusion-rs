@@ -23,10 +23,11 @@ documentation = "https://docs.rs/diffusion-rs"
 [dependencies]
 derive_builder = "0.20.2"
 diffusion-rs-sys = { path = "sys", version = "0.1.6" }
-hf-hub = {version = "0.4.0", default-features = false, features = ["ureq"]}
+hf-hub = { version = "0.4.0", default-features = false, features = ["ureq"] }
+image = "0.25.5"
 libc = "0.2.161"
 num_cpus = "1.16.0"
-thiserror = "2.0.3"
+thiserror = "2.0.11"
 
 [features]
 cuda = ["diffusion-rs-sys/cuda"]

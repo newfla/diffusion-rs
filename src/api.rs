@@ -57,6 +57,7 @@ pub enum ClipSkip {
 
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
+
 /// Config struct common to all diffusion methods
 pub struct Config {
     /// Number of threads to use during computation (default: 0).
@@ -209,6 +210,10 @@ pub struct Config {
     #[builder(default = "false")]
     vae_tiling: bool,
 
+    /// free memory of params immediately after forward (default: true)
+    #[builder(default = "true")]
+    free_params_immediately: bool,
+
     /// Keep vae in cpu (for low vram) (default: false)
     #[builder(default = "false")]
     vae_on_cpu: bool,
@@ -233,7 +238,7 @@ pub struct Config {
     /// Might lower quality, since it implies converting k and v to f16.
     /// This might crash if it is not supported by the backend.
     #[builder(default = "false")]
-    flash_attenuation: bool,
+    flash_attention: bool,
 
     /// skip layer guidance (SLG) scale, only for DiT models: (default: 0)
     /// 0 means disabled, a value of 2.5 is nice for sd3.5 medium
@@ -254,10 +259,12 @@ pub struct Config {
 }
 
 impl ConfigBuilder {
-    pub fn lora_model(&mut self, lora_model: &Path) -> &mut Self {
+    /// add Lora model and clip strength to the prompt suffix
+    /// e.g. "<lora:file_name:clip_strength>"
+    pub fn lora_model(&mut self, lora_model: &Path, clip_strength: f32) -> &mut Self {
         let folder = lora_model.parent().unwrap();
         let file_name = lora_model.file_stem().unwrap().to_str().unwrap().to_owned();
-        self.prompt_suffix(format!("<lora:{file_name}:1>"));
+        self.prompt_suffix(format!("<lora:{file_name}:{clip_strength}>"));
         self.lora_model = Some(folder.into());
         self
     }
@@ -315,7 +322,7 @@ impl Config {
             self.stacked_id_embd.as_ptr(),
             vae_decode_only,
             self.vae_tiling,
-            true,
+            self.free_params_immediately,
             self.n_threads,
             self.weight_type,
             self.rng,
@@ -323,7 +330,7 @@ impl Config {
             self.clip_on_cpu,
             self.control_net_cpu,
             self.vae_on_cpu,
-            self.flash_attenuation,
+            self.flash_attention,
         )
     }
 
