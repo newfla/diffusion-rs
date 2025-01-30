@@ -1,4 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-/// Modified API
-pub mod api_modified;
+pub mod api;
+pub mod model_config;
+pub mod txt2img_config;
+pub mod utils;
