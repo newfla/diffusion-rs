@@ -228,7 +228,7 @@ impl ModelConfig {
                 self.stacked_id_embd.as_ptr(),
                 vae_decode_only,
                 self.vae_tiling,
-                true,
+                false,
                 self.n_threads,
                 self.weight_type,
                 self.rng,
