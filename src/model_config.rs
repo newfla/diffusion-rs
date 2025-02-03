@@ -1,15 +1,6 @@
 use derive_builder::Builder;
 
-use crate::utils::CLibPath;
-
-/// Specify the range function
-pub use diffusion_rs_sys::rng_type_t as RngFunction;
-
-/// Denoiser sigma schedule
-pub use diffusion_rs_sys::schedule_t as Schedule;
-
-/// Weight type
-pub use diffusion_rs_sys::sd_type_t as WeightType;
+use crate::utils::{CLibPath, RngFunction, Schedule, WeightType};
 
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into), build_fn(validate = "Self::validate"))]

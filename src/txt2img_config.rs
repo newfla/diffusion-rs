@@ -1,8 +1,6 @@
-use crate::utils::{CLibPath, CLibString, ClipSkip};
+use crate::utils::{CLibPath, CLibString, ClipSkip, SampleMethod};
 use derive_builder::Builder;
-
-/// Sampling methods
-pub use diffusion_rs_sys::sample_method_t as SampleMethod;
+use image::RgbImage;
 
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into), build_fn(validate = "Self::validate"))]
@@ -56,6 +54,9 @@ pub struct Txt2ImgConfig {
     #[builder(default = "1")]
     pub batch_count: i32,
 
+    #[builder(setter(into, strip_option))]
+    pub control_cond: Option<RgbImage>,
+
     /// Strength to apply Control Net (default: 0.9)
     /// 1.0 corresponds to full destruction of information in init
     #[builder(default = "0.9")]
@@ -63,7 +64,7 @@ pub struct Txt2ImgConfig {
 
     /// Strength for keeping input identity (default: 20%)
     #[builder(default = "20.0")]
-    pub style_ratio: f32,
+    pub style_strength: f32,
 
     /// Normalize PHOTOMAKER input id images
     #[builder(default = "false")]

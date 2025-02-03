@@ -3,8 +3,6 @@ use std::ptr::null;
 use std::slice;
 
 use diffusion_rs_sys::sd_image_t;
-use image::ImageBuffer;
-use image::Rgb;
 use image::RgbImage;
 use libc::free;
 
@@ -16,9 +14,10 @@ use crate::model_config::ModelConfig;
 use crate::txt2img_config::Txt2ImgConfig;
 use crate::utils::CLibString;
 use crate::utils::DiffusionError;
+use crate::utils::SdImageContainer;
 struct ModelCtx {
     /// The underlying C context
-    raw_ctx: *mut sd_ctx_t,
+    raw_ctx: Option<*mut sd_ctx_t>,
 
     /// We keep the config around in case we need to refer to it
     pub model_config: ModelConfig,
@@ -27,7 +26,7 @@ struct ModelCtx {
 impl ModelCtx {
     pub fn new(config: ModelConfig) -> Self {
         let raw_ctx = unsafe {
-            new_sd_ctx(
+            let ptr = new_sd_ctx(
                 config.model.as_ptr(),
                 config.clip_l.as_ptr(),
                 config.clip_g.as_ptr(),
@@ -50,7 +49,12 @@ impl ModelCtx {
                 config.keep_control_net_cpu,
                 config.keep_vae_on_cpu,
                 config.flash_attention,
-            )
+            );
+            if ptr.is_null() {
+                None
+            } else {
+                Some(ptr)
+            }
         };
 
         Self {
@@ -60,10 +64,9 @@ impl ModelCtx {
     }
 
     pub fn destroy(&mut self) {
-        unsafe {
-            if !self.raw_ctx.is_null() {
-                free_sd_ctx(self.raw_ctx);
-                self.raw_ctx = std::ptr::null_mut();
+        if let Some(ptr) = self.raw_ctx.take() {
+            unsafe {
+                free_sd_ctx(ptr);
             }
         }
     }
@@ -87,11 +90,20 @@ impl ModelCtx {
             prompt.0.to_str().expect("Couldn't get string")
         );
 
-        //controlnet support
+        //controlnet
 
+        let control_image: *const sd_image_t = match txt2img_config.control_cond {
+            Some(image) => {
+                let wrapper = SdImageContainer::try_from(image)?;
+                wrapper.as_ptr()
+            }
+            None => null(),
+        };
+
+        //run text to image
         let results: *mut sd_image_t = unsafe {
             diffusion_rs_sys::txt2img(
-                self.raw_ctx,
+                self.raw_ctx.ok_or(DiffusionError::NoContext)?,
                 prompt.as_ptr(),
                 txt2img_config.negative_prompt.as_ptr(),
                 txt2img_config.clip_skip as i32,
@@ -103,9 +115,9 @@ impl ModelCtx {
                 txt2img_config.sample_steps,
                 txt2img_config.seed,
                 txt2img_config.batch_count,
-                null(),
+                control_image,
                 txt2img_config.control_strength,
-                txt2img_config.style_ratio,
+                txt2img_config.style_strength,
                 txt2img_config.normalize_input,
                 txt2img_config.input_id_images.as_ptr(),
                 txt2img_config.skip_layer.as_mut_ptr(),
@@ -120,30 +132,13 @@ impl ModelCtx {
             return Err(DiffusionError::Forward);
         }
 
-        let result_images: Vec<RgbImage> = unsafe {
+        let result_images: Vec<RgbImage> = {
             let img_count = txt2img_config.batch_count as usize;
-            let images = slice::from_raw_parts(results, img_count);
-            let rgb_images: Result<Vec<RgbImage>, DiffusionError> = images
+            let images = unsafe { slice::from_raw_parts(results, img_count) };
+            images
                 .iter()
-                .map(|sd_img| {
-                    let len = (sd_img.width * sd_img.height * sd_img.channel) as usize;
-                    let raw_pixels = slice::from_raw_parts(sd_img.data, len);
-                    let buffer = raw_pixels.to_vec();
-                    let buffer = ImageBuffer::<Rgb<u8>, _>::from_raw(
-                        sd_img.width as u32,
-                        sd_img.height as u32,
-                        buffer,
-                    );
-                    Ok(match buffer {
-                        Some(buffer) => RgbImage::from(buffer),
-                        None => return Err(DiffusionError::SDImagetoRustImage),
-                    })
-                })
-                .collect();
-            match rgb_images {
-                Ok(images) => images,
-                Err(e) => return Err(e),
-            }
+                .filter_map(|sd_img| RgbImage::try_from(SdImageContainer::from(*sd_img)).ok())
+                .collect()
         };
 
         //Clean-up slice section
