@@ -11,13 +11,15 @@ use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::upscaler_ctx_t;
+use image::ImageBuffer;
+use image::ImageError;
+use image::RgbImage;
 use libc::free;
 use thiserror::Error;
 
 use diffusion_rs_sys::free_sd_ctx;
 use diffusion_rs_sys::new_sd_ctx;
 use diffusion_rs_sys::sd_ctx_t;
-use diffusion_rs_sys::stbi_write_png_custom;
 
 /// Specify the range function
 pub use diffusion_rs_sys::rng_type_t as RngFunction;
@@ -37,9 +39,9 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 pub enum DiffusionError {
     #[error("The underling stablediffusion.cpp function returned NULL")]
     Forward,
-    #[error("The underling stbi_write_image function returned 0 while saving image {0}/{1})")]
-    StoreImages(usize, i32),
-    #[error("The underling upsclaer model returned a NULL image")]
+    #[error(transparent)]
+    StoreImages(#[from] ImageError),
+    #[error("The underling upscaler model returned a NULL image")]
     Upscaler,
 }
 
@@ -454,12 +456,12 @@ impl From<&Path> for CLibPath {
     }
 }
 
-fn output_files(path: &Path, batch_size: i32) -> Vec<CLibPath> {
+fn output_files(path: &Path, batch_size: i32) -> Vec<PathBuf> {
     if batch_size == 1 {
         vec![path.into()]
     } else {
         (1..=batch_size)
-            .map(|id| path.join(format!("output_{id}.png")).into())
+            .map(|id| path.join(format!("output_{id}.png")))
             .collect()
     }
 }
@@ -536,16 +538,13 @@ pub fn txt2img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
         {
             match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
                 Ok(img) => {
-                    let status = stbi_write_png_custom(
-                        path.as_ptr(),
-                        img.width as i32,
-                        img.height as i32,
-                        img.channel as i32,
-                        img.data as *const c_void,
-                        0,
-                    );
-                    if status == 0 {
-                        return Err(DiffusionError::StoreImages(id, config.batch_count));
+                    // Thx @wandbrandon
+                    let len = (img.width * img.height * img.channel) as usize;
+                    let buffer = slice::from_raw_parts(img.data, len).to_vec();
+                    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer)
+                        .map(|img| RgbImage::from(img).save(path));
+                    if let Some(Err(err)) = save_state {
+                        return Err(DiffusionError::StoreImages(err));
                     }
                 }
                 Err(err) => {
