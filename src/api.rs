@@ -154,7 +154,7 @@ pub struct ModelConfig {
     /// Might lower quality, since it implies converting k and v to f16.
     /// This might crash if it is not supported by the backend.
     #[builder(default = "false")]
-    flash_attenuation: bool,
+    flash_attention: bool,
 
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
@@ -236,7 +236,7 @@ impl ModelConfig {
                 self.clip_on_cpu,
                 self.control_net_cpu,
                 self.vae_on_cpu,
-                self.flash_attenuation,
+                self.flash_attention,
             );
             self.diffusion_ctx = Some(ctx)
         }
