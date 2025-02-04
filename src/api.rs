@@ -162,11 +162,10 @@ impl Drop for ModelCtx {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::utils::{ClipSkip, SampleMethod, Schedule, WeightType};
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use image::ImageReader;
-
-    use super::*;
     use std::path::PathBuf;
 
     #[test]
@@ -207,11 +206,27 @@ mod tests {
 
     #[test]
     fn test_txt2img_success() {
-        let control_image = ImageReader::open("canny-384x.jpg")
+        let control_image1 = ImageReader::open("./images/canny-384x.jpg")
             .expect("Failed to open image")
             .decode()
             .expect("Failed to decode image")
             .into_rgb8();
+
+        let control_image2 = ImageReader::open("./images/canny-384x.jpg")
+            .expect("Failed to open image")
+            .decode()
+            .expect("Failed to decode image")
+            .into_rgb8();
+
+        let control_image3 = ImageReader::open("./images/canny-384x.jpg")
+            .expect("Failed to open image")
+            .decode()
+            .expect("Failed to decode image")
+            .into_rgb8();
+
+        let resolution = 384;
+        let sample_steps = 4;
+        let control_strength = 0.4;
 
         let mut ctx = ModelCtx::new(
             ModelConfigBuilder::default()
@@ -232,14 +247,14 @@ mod tests {
         let result = ctx
             .txt2img(Txt2ImgConfigBuilder::default()
             .prompt("masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk")
-            .control_cond(control_image)
-            .control_strength(0.4)
+            .control_cond(control_image1)
+            .control_strength(control_strength)
             .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-            .sample_steps(6)
+            .sample_steps(sample_steps)
             .sample_method(SampleMethod::LCM)
             .cfg_scale(1.0)
-            .height(384)
-            .width(384)
+            .height(resolution)
+            .width(resolution)
             .clip_skip(ClipSkip::OneLayer)
             .batch_count(1)
             .build()
@@ -247,50 +262,53 @@ mod tests {
             .expect("Failed to generate image 1");
 
         result.iter().enumerate().for_each(|(i, img)| {
-            img.save(format!("./test_image_{}.png", i)).unwrap();
+            img.save(format!("./images/test_1_{}x_{}.png", resolution, i))
+                .unwrap();
         });
 
-        // let result2 = ctx
-        //     .txt2img(Txt2ImgConfigBuilder::default()
-        //     .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, white skin, white dress, blue eyes")
-        //     .control_cond(control_image1)
-        //     .control_strength(0.4)
-        //     .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-        //     .sample_steps(6)
-        //     .sample_method(SampleMethod::LCM)
-        //     .cfg_scale(1.0)
-        //     .height(384)
-        //     .width(384)
-        //     .clip_skip(ClipSkip::OneLayer)
-        //     .batch_count(1)
-        //     .build()
-        //     .expect("Failed to build txt2img config 2"))
-        //     .expect("Failed to generate image 2");
+        let result2 = ctx
+            .txt2img(Txt2ImgConfigBuilder::default()
+            .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy")
+            .control_cond(control_image2)
+            .control_strength(control_strength)
+            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+            .sample_steps(sample_steps)
+            .sample_method(SampleMethod::LCM)
+            .cfg_scale(1.0)
+            .height(resolution)
+            .width(resolution)
+            .clip_skip(ClipSkip::OneLayer)
+            .batch_count(1)
+            .build()
+            .expect("Failed to build txt2img config 1"))
+            .expect("Failed to generate image 1");
 
-        // result2.iter().enumerate().for_each(|(i, img)| {
-        //     img.save(format!("./test_image2_{}.png", i)).unwrap();
-        // });
+        result2.iter().enumerate().for_each(|(i, img)| {
+            img.save(format!("./images/test_2_{}x_{}.png", resolution, i))
+                .unwrap();
+        });
 
-        // let result3 = ctx
-        //     .txt2img(Txt2ImgConfigBuilder::default()
-        //     .prompt("masterpiece, best quality, absurdres, 1girl, short hair, brown hair, dark skin, dark green suit, brown eyes, clenched_teeth")
-        //     .control_cond(control_image2)
-        //     .control_strength(0.4)
-        //     .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-        //     .sample_steps(6)
-        //     .sample_method(SampleMethod::LCM)
-        //     .cfg_scale(1.0)
-        //     .height(384)
-        //     .width(384)
-        //     .clip_skip(ClipSkip::OneLayer)
-        //     .batch_count(1)
-        //     .build()
-        //     .expect("Failed to build txt2img config 2"))
-        //     .expect("Failed to generate image 2");
+        let result3 = ctx
+            .txt2img(Txt2ImgConfigBuilder::default()
+            .prompt("masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy")
+            .control_cond(control_image3)
+            .control_strength(control_strength)
+            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+            .sample_steps(sample_steps)
+            .sample_method(SampleMethod::LCM)
+            .cfg_scale(1.0)
+            .height(resolution)
+            .width(resolution)
+            .clip_skip(ClipSkip::OneLayer)
+            .batch_count(1)
+            .build()
+            .expect("Failed to build txt2img config 1"))
+            .expect("Failed to generate image 1");
 
-        // result3.iter().enumerate().for_each(|(i, img)| {
-        //     img.save(format!("./test_image3_{}.png", i)).unwrap();
-        // });
+        result3.iter().enumerate().for_each(|(i, img)| {
+            img.save(format!("./images/test_3_{}x_{}.png", resolution, i))
+                .unwrap();
+        });
     }
 
     #[test]
