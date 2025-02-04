@@ -18,8 +18,10 @@ pub enum DiffusionError {
     StoreImages(usize, i32),
     #[error("The underling upscaler model returned a NULL image")]
     Upscaler,
-    #[error("sd_ctx_t is None")]
+    #[error("raw_ctx is None")]
     NoContext,
+    #[error("new_sd_ctx returned null")]
+    NewContextFailure,
     #[error("SD image conversion error: {0}")]
     SDImageError(#[from] SDImageError),
     // #[error("Free Params Immediately is set to true, which means that the params are freed after forward. This means that the model can only be used once")]

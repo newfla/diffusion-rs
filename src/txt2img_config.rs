@@ -54,7 +54,7 @@ pub struct Txt2ImgConfig {
     #[builder(default = "1")]
     pub batch_count: i32,
 
-    #[builder(setter(into, strip_option))]
+    #[builder(setter(strip_option), default)]
     pub control_cond: Option<RgbImage>,
 
     /// Strength to apply Control Net (default: 0.9)

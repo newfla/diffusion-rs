@@ -24,7 +24,7 @@ struct ModelCtx {
 }
 
 impl ModelCtx {
-    pub fn new(config: ModelConfig) -> Self {
+    pub fn new(config: ModelConfig) -> Result<Self, DiffusionError> {
         let raw_ctx = unsafe {
             let ptr = new_sd_ctx(
                 config.model.as_ptr(),
@@ -51,16 +51,16 @@ impl ModelCtx {
                 config.flash_attention,
             );
             if ptr.is_null() {
-                None
+                return Err(DiffusionError::NewContextFailure);
             } else {
                 Some(ptr)
             }
         };
 
-        Self {
+        Ok(Self {
             raw_ctx,
             model_config: config,
-        }
+        })
     }
 
     pub fn destroy(&mut self) {
@@ -92,12 +92,16 @@ impl ModelCtx {
 
         //controlnet
 
-        let control_image: *const sd_image_t = match txt2img_config.control_cond {
-            Some(image) => {
-                let wrapper = SdImageContainer::try_from(image)?;
-                wrapper.as_ptr()
+        let control_image = if self.model_config.control_net.as_ptr().is_null() {
+            match txt2img_config.control_cond {
+                Some(image) => {
+                    let wrapper = SdImageContainer::try_from(image)?;
+                    wrapper.as_ptr()
+                }
+                None => null(),
             }
-            None => null(),
+        } else {
+            null()
         };
 
         //run text to image
@@ -162,6 +166,7 @@ mod tests {
     pub use diffusion_rs_sys::sample_method_t as SampleMethod;
     /// Denoiser sigma schedule
     pub use diffusion_rs_sys::schedule_t as Schedule;
+    use image::ImageReader;
 
     use crate::utils::ClipSkip;
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
@@ -207,15 +212,27 @@ mod tests {
 
     #[test]
     fn test_txt2img_success() {
-        let config = ModelConfigBuilder::default()
-            .model(PathBuf::from("./models/mistoonAnime_v30.safetensors"))
-            .lora_model_dir(PathBuf::from("./models/loras"))
-            .taesd(PathBuf::from("./models/taesd1.safetensors"))
-            .flash_attention(true)
-            .schedule(Schedule::AYS)
-            .build()
-            .expect("Failed to build model config");
-        let mut ctx = ModelCtx::new(config.clone());
+        let control_image = ImageReader::open("openposetest.png")
+            .expect("Failed to open image")
+            .decode()
+            .expect("Failed to decode image")
+            .into_rgb8();
+
+        let mut ctx = ModelCtx::new(
+            ModelConfigBuilder::default()
+                .model(PathBuf::from("./models/mistoonAnime_v30.safetensors"))
+                .lora_model_dir(PathBuf::from("./models/loras"))
+                .taesd(PathBuf::from("./models/taesd1.safetensors"))
+                .control_net(PathBuf::from(
+                    "./models/controlnet/sd15openpose11.safetensors",
+                ))
+                .flash_attention(true)
+                .schedule(Schedule::AYS)
+                .build()
+                .expect("Failed to build model config"),
+        )
+        .expect("Failed to build model context");
+
         let txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, portrait, purple skin")
             .add_lora_model("pcm_sd15_lcmlike_lora_converted".to_owned(), 1.0)
@@ -229,6 +246,7 @@ mod tests {
             .expect("Failed to build txt2img config");
         let txt2img_conf2 = Txt2ImgConfigBuilder::default()
             .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, portrait, golden skin")
+            .control_cond(control_image)
             .add_lora_model("pcm_sd15_lcmlike_lora_converted".to_owned(), 1.0)
             .sample_steps(2)
             .sample_method(SampleMethod::LCM)
@@ -271,7 +289,7 @@ mod tests {
             .model(PathBuf::from("./mistoonAnime_v10Illustrious.safetensors"))
             .build()
             .unwrap();
-        let mut ctx = ModelCtx::new(config);
+        let mut ctx = ModelCtx::new(config).expect("Failed to build model context");
         let txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("test prompt")
             .sample_steps(1)
@@ -290,7 +308,7 @@ mod tests {
             .model(PathBuf::from("./mistoonAnime_v10Illustrious.safetensors"))
             .build()
             .unwrap();
-        let mut ctx = ModelCtx::new(config);
+        let mut ctx = ModelCtx::new(config).expect("Failed to build model context");
         let txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("multi-image prompt")
             .sample_steps(1)
