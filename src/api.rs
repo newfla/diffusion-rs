@@ -15,7 +15,7 @@ use crate::txt2img_config::Txt2ImgConfig;
 use crate::utils::CLibString;
 use crate::utils::DiffusionError;
 use crate::utils::SdImageContainer;
-struct ModelCtx {
+pub struct ModelCtx {
     /// The underlying C context
     raw_ctx: Option<*mut sd_ctx_t>,
 
