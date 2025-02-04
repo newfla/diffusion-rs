@@ -104,7 +104,7 @@ impl Txt2ImgConfigBuilder {
             .ok_or(Txt2ImgConfigBuilderError::UninitializedField("Prompt"))
     }
 
-    pub fn add_lora_model(&mut self, filename: String, strength: f32) -> &mut Self {
+    pub fn add_lora_model(&mut self, filename: &str, strength: f32) -> &mut Self {
         self.lora_prompt_suffix
             .get_or_insert_with(Vec::new)
             .push(format!("<lora:{filename}:{strength}>"));

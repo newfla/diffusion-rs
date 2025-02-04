@@ -1,7 +1,9 @@
 use image::ImageBuffer;
 use image::Rgb;
 use image::RgbImage;
+use libc::free;
 use std::ffi::c_char;
+use std::ffi::c_void;
 use std::ffi::CString;
 use std::path::Path;
 use std::path::PathBuf;
@@ -164,7 +166,7 @@ impl TryFrom<RgbImage> for SdImageContainer {
 impl Drop for SdImageContainer {
     fn drop(&mut self) {
         unsafe {
-            libc::free(self.inner.data as *mut libc::c_void);
+            free(self.inner.data as *mut c_void);
         }
     }
 }

@@ -1,20 +1,19 @@
-use std::ffi::c_void;
-use std::ptr::null;
-use std::slice;
-
-use diffusion_rs_sys::sd_image_t;
-use image::RgbImage;
-use libc::free;
-
-use diffusion_rs_sys::free_sd_ctx;
-use diffusion_rs_sys::new_sd_ctx;
-use diffusion_rs_sys::sd_ctx_t;
-
 use crate::model_config::ModelConfig;
 use crate::txt2img_config::Txt2ImgConfig;
 use crate::utils::CLibString;
 use crate::utils::DiffusionError;
 use crate::utils::SdImageContainer;
+use diffusion_rs_sys::free_sd_ctx;
+use diffusion_rs_sys::new_sd_ctx;
+use diffusion_rs_sys::sd_ctx_t;
+use diffusion_rs_sys::sd_image_t;
+use diffusion_rs_sys::strlen;
+use image::RgbImage;
+use libc::free;
+use std::ffi::c_void;
+use std::ptr::null;
+use std::slice;
+
 pub struct ModelCtx {
     /// The underlying C context
     raw_ctx: Option<*mut sd_ctx_t>,
@@ -63,14 +62,6 @@ impl ModelCtx {
         })
     }
 
-    pub fn destroy(&mut self) {
-        if let Some(ptr) = self.raw_ctx.take() {
-            unsafe {
-                free_sd_ctx(ptr);
-            }
-        }
-    }
-
     pub fn txt2img(
         &mut self,
         mut txt2img_config: Txt2ImgConfig,
@@ -92,16 +83,20 @@ impl ModelCtx {
 
         //controlnet
 
-        let control_image = if self.model_config.control_net.as_ptr().is_null() {
-            match txt2img_config.control_cond {
-                Some(image) => {
-                    let wrapper = SdImageContainer::try_from(image)?;
-                    wrapper.as_ptr()
+        let control_image = match txt2img_config.control_cond {
+            Some(image) => {
+                match unsafe { strlen(self.model_config.control_net.as_ptr()) as usize > 0 } {
+                    true => {
+                        let wrapper = SdImageContainer::try_from(image)?;
+                        wrapper.as_ptr()
+                    }
+                    false => {
+                        println!("Control net model is null, setting control image to null");
+                        null()
+                    }
                 }
-                None => null(),
             }
-        } else {
-            null()
+            None => null(),
         };
 
         //run text to image
@@ -156,20 +151,20 @@ impl ModelCtx {
 /// Automatic cleanup on drop
 impl Drop for ModelCtx {
     fn drop(&mut self) {
-        self.destroy();
+        match self.raw_ctx {
+            Some(ptr) => unsafe {
+                free_sd_ctx(ptr);
+            },
+            None => {}
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    /// Sampling methods
-    pub use diffusion_rs_sys::sample_method_t as SampleMethod;
-    /// Denoiser sigma schedule
-    pub use diffusion_rs_sys::schedule_t as Schedule;
-    use image::ImageReader;
-
-    use crate::utils::ClipSkip;
+    use crate::utils::{ClipSkip, SampleMethod, Schedule, WeightType};
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
+    use image::ImageReader;
 
     use super::*;
     use std::path::PathBuf;
@@ -212,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_txt2img_success() {
-        let control_image = ImageReader::open("openposetest.png")
+        let control_image = ImageReader::open("canny-384x.jpg")
             .expect("Failed to open image")
             .decode()
             .expect("Failed to decode image")
@@ -224,8 +219,9 @@ mod tests {
                 .lora_model_dir(PathBuf::from("./models/loras"))
                 .taesd(PathBuf::from("./models/taesd1.safetensors"))
                 .control_net(PathBuf::from(
-                    "./models/controlnet/sd15openpose11.safetensors",
+                    "./models/controlnet/control_canny-fp16.safetensors",
                 ))
+                //.weight_type(WeightType::SD_TYPE_Q4_1)
                 .flash_attention(true)
                 .schedule(Schedule::AYS)
                 .build()
@@ -233,53 +229,68 @@ mod tests {
         )
         .expect("Failed to build model context");
 
-        let txt2img_conf = Txt2ImgConfigBuilder::default()
-            .prompt("masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, portrait, purple skin")
-            .add_lora_model("pcm_sd15_lcmlike_lora_converted".to_owned(), 1.0)
-            .sample_steps(2)
-            .sample_method(SampleMethod::LCM)
-            .cfg_scale(1.0)
-            .height(256)
-            .width(256)
-            .clip_skip(ClipSkip::OneLayer)
-            .build()
-            .expect("Failed to build txt2img config");
-        let txt2img_conf2 = Txt2ImgConfigBuilder::default()
-            .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, portrait, golden skin")
+        let result = ctx
+            .txt2img(Txt2ImgConfigBuilder::default()
+            .prompt("masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk")
             .control_cond(control_image)
-            .add_lora_model("pcm_sd15_lcmlike_lora_converted".to_owned(), 1.0)
-            .sample_steps(2)
+            .control_strength(0.4)
+            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+            .sample_steps(6)
             .sample_method(SampleMethod::LCM)
             .cfg_scale(1.0)
-            .height(256)
-            .width(256)
+            .height(384)
+            .width(384)
             .clip_skip(ClipSkip::OneLayer)
+            .batch_count(1)
             .build()
-            .expect("Failed to build txt2img config");
-        let result = ctx.txt2img(txt2img_conf);
-        let result2 = ctx.txt2img(txt2img_conf2);
-        match result {
-            Ok(images) => {
-                //save image for testing
-                images.iter().enumerate().for_each(|(i, img)| {
-                    img.save(format!("./test_image_{}.png", i)).unwrap();
-                });
-                match result2 {
-                    Ok(images) => {
-                        //save image for testing
-                        images.iter().enumerate().for_each(|(i, img)| {
-                            img.save(format!("./test_image2_{}.png", i)).unwrap();
-                        });
-                    }
-                    Err(e) => {
-                        panic!("Error: {:?}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                panic!("Error: {:?}", e);
-            }
-        };
+            .expect("Failed to build txt2img config 1"))
+            .expect("Failed to generate image 1");
+
+        result.iter().enumerate().for_each(|(i, img)| {
+            img.save(format!("./test_image_{}.png", i)).unwrap();
+        });
+
+        // let result2 = ctx
+        //     .txt2img(Txt2ImgConfigBuilder::default()
+        //     .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, white skin, white dress, blue eyes")
+        //     .control_cond(control_image1)
+        //     .control_strength(0.4)
+        //     .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+        //     .sample_steps(6)
+        //     .sample_method(SampleMethod::LCM)
+        //     .cfg_scale(1.0)
+        //     .height(384)
+        //     .width(384)
+        //     .clip_skip(ClipSkip::OneLayer)
+        //     .batch_count(1)
+        //     .build()
+        //     .expect("Failed to build txt2img config 2"))
+        //     .expect("Failed to generate image 2");
+
+        // result2.iter().enumerate().for_each(|(i, img)| {
+        //     img.save(format!("./test_image2_{}.png", i)).unwrap();
+        // });
+
+        // let result3 = ctx
+        //     .txt2img(Txt2ImgConfigBuilder::default()
+        //     .prompt("masterpiece, best quality, absurdres, 1girl, short hair, brown hair, dark skin, dark green suit, brown eyes, clenched_teeth")
+        //     .control_cond(control_image2)
+        //     .control_strength(0.4)
+        //     .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+        //     .sample_steps(6)
+        //     .sample_method(SampleMethod::LCM)
+        //     .cfg_scale(1.0)
+        //     .height(384)
+        //     .width(384)
+        //     .clip_skip(ClipSkip::OneLayer)
+        //     .batch_count(1)
+        //     .build()
+        //     .expect("Failed to build txt2img config 2"))
+        //     .expect("Failed to generate image 2");
+
+        // result3.iter().enumerate().for_each(|(i, img)| {
+        //     img.save(format!("./test_image3_{}.png", i)).unwrap();
+        // });
     }
 
     #[test]
