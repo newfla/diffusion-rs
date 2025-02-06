@@ -11,13 +11,15 @@ use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::upscaler_ctx_t;
+use image::ImageBuffer;
+use image::ImageError;
+use image::RgbImage;
 use libc::free;
 use thiserror::Error;
 
 use diffusion_rs_sys::free_sd_ctx;
 use diffusion_rs_sys::new_sd_ctx;
 use diffusion_rs_sys::sd_ctx_t;
-use diffusion_rs_sys::stbi_write_png_custom;
 
 /// Specify the range function
 pub use diffusion_rs_sys::rng_type_t as RngFunction;
@@ -37,9 +39,9 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 pub enum DiffusionError {
     #[error("The underling stablediffusion.cpp function returned NULL")]
     Forward,
-    #[error("The underling stbi_write_image function returned 0 while saving image {0}/{1})")]
-    StoreImages(usize, i32),
-    #[error("The underling upsclaer model returned a NULL image")]
+    #[error(transparent)]
+    StoreImages(#[from] ImageError),
+    #[error("The underling upscaler model returned a NULL image")]
     Upscaler,
 }
 
@@ -56,13 +58,23 @@ pub enum ClipSkip {
 }
 
 #[derive(Builder, Debug, Clone)]
-#[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
-/// Config struct common to all diffusion methods
-pub struct Config {
+#[builder(
+    setter(into, strip_option),
+    build_fn(error = "ConfigBuilderError", validate = "Self::validate")
+)]
+pub struct ModelConfig {
     /// Number of threads to use during computation (default: 0).
     /// If n_ threads <= 0, then threads will be set to the number of CPU physical cores.
     #[builder(default = "num_cpus::get_physical() as i32", setter(custom))]
     n_threads: i32,
+
+    /// Path to esrgan model. Upscale images after generate, just RealESRGAN_x4plus_anime_6B supported by now
+    #[builder(default = "Default::default()")]
+    upscale_model: Option<CLibPath>,
+
+    /// Run the ESRGAN upscaler this many times (default 1)
+    #[builder(default = "0")]
+    upscale_repeats: i32,
 
     /// Path to full model
     #[builder(default = "Default::default()")]
@@ -104,22 +116,6 @@ pub struct Config {
     #[builder(default = "Default::default()")]
     stacked_id_embd: CLibPath,
 
-    /// Path to PHOTOMAKER input id images dir
-    #[builder(default = "Default::default()")]
-    input_id_images: CLibPath,
-
-    /// Normalize PHOTOMAKER input id images
-    #[builder(default = "false")]
-    normalize_input: bool,
-
-    /// Path to esrgan model. Upscale images after generate, just RealESRGAN_x4plus_anime_6B supported by now
-    #[builder(default = "Default::default()")]
-    upscale_model: Option<CLibPath>,
-
-    /// Run the ESRGAN upscaler this many times (default 1)
-    #[builder(default = "0")]
-    upscale_repeats: i32,
-
     /// Weight type. If not specified, the default is the type of the weight file
     #[builder(default = "WeightType::SD_TYPE_COUNT")]
     weight_type: WeightType,
@@ -127,6 +123,155 @@ pub struct Config {
     /// Lora model directory
     #[builder(default = "Default::default()", setter(custom))]
     lora_model: CLibPath,
+
+    /// Suffix that needs to be added to prompt (e.g. lora model)
+    #[builder(default = "None", private)]
+    prompt_suffix: Option<String>,
+
+    /// Process vae in tiles to reduce memory usage (default: false)
+    #[builder(default = "false")]
+    vae_tiling: bool,
+
+    /// RNG (default: CUDA)
+    #[builder(default = "RngFunction::CUDA_RNG")]
+    rng: RngFunction,
+
+    /// Denoiser sigma schedule (default: DEFAULT)
+    #[builder(default = "Schedule::DEFAULT")]
+    schedule: Schedule,
+
+    /// Keep vae in cpu (for low vram) (default: false)
+    #[builder(default = "false")]
+    vae_on_cpu: bool,
+
+    /// keep clip in cpu (for low vram) (default: false)
+    #[builder(default = "false")]
+    clip_on_cpu: bool,
+
+    /// Keep controlnet in cpu (for low vram) (default: false)
+    #[builder(default = "false")]
+    control_net_cpu: bool,
+
+    /// Use flash attention in the diffusion model (for low vram).
+    /// Might lower quality, since it implies converting k and v to f16.
+    /// This might crash if it is not supported by the backend.
+    #[builder(default = "false")]
+    flash_attention: bool,
+
+    #[builder(default = "None", private)]
+    upscaler_ctx: Option<*mut upscaler_ctx_t>,
+
+    #[builder(default = "None", private)]
+    diffusion_ctx: Option<*mut sd_ctx_t>,
+}
+
+impl ModelConfigBuilder {
+    fn validate(&self) -> Result<(), ConfigBuilderError> {
+        self.validate_model()
+    }
+
+    fn validate_model(&self) -> Result<(), ConfigBuilderError> {
+        self.model
+            .as_ref()
+            .or(self.diffusion_model.as_ref())
+            .map(|_| ())
+            .ok_or(ConfigBuilderError::UninitializedField(
+                "Model OR DiffusionModel must be valorized",
+            ))
+    }
+
+    pub fn lora_model(&mut self, lora_model: &Path) -> &mut Self {
+        let folder = lora_model.parent().unwrap();
+        let file_name = lora_model.file_stem().unwrap().to_str().unwrap().to_owned();
+        self.prompt_suffix(format!("<lora:{file_name}:1>"));
+        self.lora_model = Some(folder.into());
+        self
+    }
+
+    pub fn n_threads(&mut self, value: i32) -> &mut Self {
+        self.n_threads = if value > 0 {
+            Some(value)
+        } else {
+            Some(num_cpus::get_physical() as i32)
+        };
+        self
+    }
+}
+
+impl ModelConfig {
+    unsafe fn upscaler_ctx(&mut self) -> Option<*mut upscaler_ctx_t> {
+        if self.upscale_model.is_none() || self.upscale_repeats == 0 {
+            None
+        } else {
+            if self.upscaler_ctx.is_none() {
+                let upscaler = new_upscaler_ctx(
+                    self.upscale_model.as_ref().unwrap().as_ptr(),
+                    self.n_threads,
+                );
+                self.upscaler_ctx = Some(upscaler);
+            }
+            self.upscaler_ctx
+        }
+    }
+
+    unsafe fn diffusion_ctx(&mut self, vae_decode_only: bool) -> *mut sd_ctx_t {
+        if self.diffusion_ctx.is_none() {
+            let ctx = new_sd_ctx(
+                self.model.as_ptr(),
+                self.clip_l.as_ptr(),
+                self.clip_g.as_ptr(),
+                self.t5xxl.as_ptr(),
+                self.diffusion_model.as_ptr(),
+                self.vae.as_ptr(),
+                self.taesd.as_ptr(),
+                self.control_net.as_ptr(),
+                self.lora_model.as_ptr(),
+                self.embeddings.as_ptr(),
+                self.stacked_id_embd.as_ptr(),
+                vae_decode_only,
+                self.vae_tiling,
+                false,
+                self.n_threads,
+                self.weight_type,
+                self.rng,
+                self.schedule,
+                self.clip_on_cpu,
+                self.control_net_cpu,
+                self.vae_on_cpu,
+                self.flash_attention,
+            );
+            self.diffusion_ctx = Some(ctx)
+        }
+        self.diffusion_ctx.unwrap()
+    }
+}
+
+impl Drop for ModelConfig {
+    fn drop(&mut self) {
+        //Clean-up CTX section
+        unsafe {
+            if let Some(sd_ctx) = self.diffusion_ctx {
+                free_sd_ctx(sd_ctx);
+            }
+
+            if let Some(upscaler_ctx) = self.upscaler_ctx {
+                free_upscaler_ctx(upscaler_ctx);
+            }
+        }
+    }
+}
+
+#[derive(Builder, Debug, Clone)]
+#[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
+/// Config struct common to all diffusion methods
+pub struct Config {
+    /// Path to PHOTOMAKER input id images dir
+    #[builder(default = "Default::default()")]
+    input_id_images: CLibPath,
+
+    /// Normalize PHOTOMAKER input id images
+    #[builder(default = "false")]
+    normalize_input: bool,
 
     /// Path to the input image, required by img2img
     #[builder(default = "Default::default()")]
@@ -184,10 +329,6 @@ pub struct Config {
     #[builder(default = "20")]
     steps: i32,
 
-    /// RNG (default: CUDA)
-    #[builder(default = "RngFunction::CUDA_RNG")]
-    rng: RngFunction,
-
     /// RNG seed (default: 42, use random seed for < 0)
     #[builder(default = "42")]
     seed: i64,
@@ -196,51 +337,21 @@ pub struct Config {
     #[builder(default = "1")]
     batch_count: i32,
 
-    /// Denoiser sigma schedule (default: DEFAULT)
-    #[builder(default = "Schedule::DEFAULT")]
-    schedule: Schedule,
-
     /// Ignore last layers of CLIP network; 1 ignores none, 2 ignores one layer (default: -1)
     /// <= 0 represents unspecified, will be 1 for SD1.x, 2 for SD2.x
     #[builder(default = "ClipSkip::Unspecified")]
     clip_skip: ClipSkip,
 
-    /// Process vae in tiles to reduce memory usage (default: false)
-    #[builder(default = "false")]
-    vae_tiling: bool,
-
-    /// Keep vae in cpu (for low vram) (default: false)
-    #[builder(default = "false")]
-    vae_on_cpu: bool,
-
-    /// keep clip in cpu (for low vram) (default: false)
-    #[builder(default = "false")]
-    clip_on_cpu: bool,
-
-    /// Keep controlnet in cpu (for low vram) (default: false)
-    #[builder(default = "false")]
-    control_net_cpu: bool,
-
     /// Apply canny preprocessor (edge detection) (default: false)
     #[builder(default = "false")]
     canny: bool,
-
-    /// Suffix that needs to be added to prompt (e.g. lora model)
-    #[builder(default = "None", private)]
-    prompt_suffix: Option<String>,
-
-    /// Use flash attention in the diffusion model (for low vram).
-    /// Might lower quality, since it implies converting k and v to f16.
-    /// This might crash if it is not supported by the backend.
-    #[builder(default = "false")]
-    flash_attenuation: bool,
 
     /// skip layer guidance (SLG) scale, only for DiT models: (default: 0)
     /// 0 means disabled, a value of 2.5 is nice for sd3.5 medium
     #[builder(default = "0.")]
     slg_scale: f32,
 
-    /// Layers to skip for SLG steps: (default: [7,8,9])
+    /// Layers to skip for SLG steps: (default: \[7,8,9\])
     #[builder(default = "vec![7, 8, 9]")]
     skip_layer: Vec<i32>,
 
@@ -254,36 +365,8 @@ pub struct Config {
 }
 
 impl ConfigBuilder {
-    pub fn lora_model(&mut self, lora_model: &Path) -> &mut Self {
-        let folder = lora_model.parent().unwrap();
-        let file_name = lora_model.file_stem().unwrap().to_str().unwrap().to_owned();
-        self.prompt_suffix(format!("<lora:{file_name}:1>"));
-        self.lora_model = Some(folder.into());
-        self
-    }
-
-    pub fn n_threads(&mut self, value: i32) -> &mut Self {
-        self.n_threads = if value > 0 {
-            Some(value)
-        } else {
-            Some(num_cpus::get_physical() as i32)
-        };
-        self
-    }
-
     fn validate(&self) -> Result<(), ConfigBuilderError> {
-        self.validate_model()?;
         self.validate_output_dir()
-    }
-
-    fn validate_model(&self) -> Result<(), ConfigBuilderError> {
-        self.model
-            .as_ref()
-            .or(self.diffusion_model.as_ref())
-            .map(|_| ())
-            .ok_or(ConfigBuilderError::UninitializedField(
-                "Model OR DiffusionModel must be valorized",
-            ))
     }
 
     fn validate_output_dir(&self) -> Result<(), ConfigBuilderError> {
@@ -293,50 +376,41 @@ impl ConfigBuilder {
             Ok(())
         } else {
             Err(ConfigBuilderError::ValidationError(
-                "When batch_count > 0, ouput should point to folder and viceversa".to_owned(),
+                "When batch_count > 1, ouput should point to folder and viceversa".to_owned(),
             ))
         }
     }
 }
 
-impl Config {
-    unsafe fn build_sd_ctx(&self, vae_decode_only: bool) -> *mut sd_ctx_t {
-        new_sd_ctx(
-            self.model.as_ptr(),
-            self.clip_l.as_ptr(),
-            self.clip_g.as_ptr(),
-            self.t5xxl.as_ptr(),
-            self.diffusion_model.as_ptr(),
-            self.vae.as_ptr(),
-            self.taesd.as_ptr(),
-            self.control_net.as_ptr(),
-            self.lora_model.as_ptr(),
-            self.embeddings.as_ptr(),
-            self.stacked_id_embd.as_ptr(),
-            vae_decode_only,
-            self.vae_tiling,
-            true,
-            self.n_threads,
-            self.weight_type,
-            self.rng,
-            self.schedule,
-            self.clip_on_cpu,
-            self.control_net_cpu,
-            self.vae_on_cpu,
-            self.flash_attenuation,
-        )
-    }
+impl From<Config> for ConfigBuilder {
+    fn from(value: Config) -> Self {
+        let mut builder = ConfigBuilder::default();
+        builder
+            .input_id_images(value.input_id_images)
+            .normalize_input(value.normalize_input)
+            .init_img(value.init_img)
+            .control_image(value.control_image)
+            .output(value.output)
+            .prompt(value.prompt)
+            .negative_prompt(value.negative_prompt)
+            .cfg_scale(value.cfg_scale)
+            .strength(value.strength)
+            .style_ratio(value.style_ratio)
+            .control_strength(value.control_strength)
+            .height(value.height)
+            .width(value.width)
+            .sampling_method(value.sampling_method)
+            .steps(value.steps)
+            .seed(value.seed)
+            .batch_count(value.batch_count)
+            .clip_skip(value.clip_skip)
+            .slg_scale(value.slg_scale)
+            .skip_layer(value.skip_layer)
+            .skip_layer_start(value.skip_layer_start)
+            .skip_layer_end(value.skip_layer_end)
+            .canny(value.canny);
 
-    unsafe fn upscaler_ctx(&self) -> Option<*mut upscaler_ctx_t> {
-        if self.upscale_model.is_none() || self.upscale_repeats == 0 {
-            None
-        } else {
-            let upscaler = new_upscaler_ctx(
-                self.upscale_model.as_ref().unwrap().as_ptr(),
-                self.n_threads,
-            );
-            Some(upscaler)
-        }
+        builder
     }
 }
 
@@ -382,12 +456,12 @@ impl From<&Path> for CLibPath {
     }
 }
 
-fn output_files(path: PathBuf, batch_size: i32) -> Vec<CLibPath> {
+fn output_files(path: &Path, batch_size: i32) -> Vec<PathBuf> {
     if batch_size == 1 {
         vec![path.into()]
     } else {
         (1..=batch_size)
-            .map(|id| path.join(format!("output_{id}.png")).into())
+            .map(|id| path.join(format!("output_{id}.png")))
             .collect()
     }
 }
@@ -419,80 +493,69 @@ unsafe fn upscale(
 }
 
 /// Generate an image with a prompt
-pub fn txt2img(mut config: Config) -> Result<(), DiffusionError> {
+pub fn txt2img(config: &mut Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
+    let prompt: CLibString = match &model_config.prompt_suffix {
+        Some(suffix) => format!("{} {suffix}", &config.prompt),
+        None => config.prompt.clone(),
+    }
+    .into();
+    let files = output_files(&config.output, config.batch_count);
     unsafe {
-        let prompt: CLibString = match &config.prompt_suffix {
-            Some(suffix) => format!("{} {suffix}", &config.prompt),
-            None => config.prompt.clone(),
+        let sd_ctx = model_config.diffusion_ctx(true);
+        let upscaler_ctx = model_config.upscaler_ctx();
+
+        let slice = diffusion_rs_sys::txt2img(
+            sd_ctx,
+            prompt.as_ptr(),
+            config.negative_prompt.as_ptr(),
+            config.clip_skip as i32,
+            config.cfg_scale,
+            config.guidance,
+            config.width,
+            config.height,
+            config.sampling_method,
+            config.steps,
+            config.seed,
+            config.batch_count,
+            null(),
+            config.control_strength,
+            config.style_ratio,
+            config.normalize_input,
+            config.input_id_images.as_ptr(),
+            config.skip_layer.as_mut_ptr(),
+            config.skip_layer.len(),
+            config.slg_scale,
+            config.skip_layer_start,
+            config.skip_layer_end,
+        );
+        if slice.is_null() {
+            return Err(DiffusionError::Forward);
         }
-        .into();
-        let sd_ctx = config.build_sd_ctx(true);
-        let upscaler_ctx = config.upscaler_ctx();
-        let res = {
-            let slice = diffusion_rs_sys::txt2img(
-                sd_ctx,
-                prompt.as_ptr(),
-                config.negative_prompt.as_ptr(),
-                config.clip_skip as i32,
-                config.cfg_scale,
-                config.guidance,
-                config.width,
-                config.height,
-                config.sampling_method,
-                config.steps,
-                config.seed,
-                config.batch_count,
-                null(),
-                config.control_strength,
-                config.style_ratio,
-                config.normalize_input,
-                config.input_id_images.as_ptr(),
-                config.skip_layer.as_mut_ptr(),
-                config.skip_layer.len(),
-                config.slg_scale,
-                config.skip_layer_start,
-                config.skip_layer_end,
-            );
-            if slice.is_null() {
-                return Err(DiffusionError::Forward);
-            }
-            let files = output_files(config.output, config.batch_count);
-            for (id, (img, path)) in slice::from_raw_parts(slice, config.batch_count as usize)
-                .iter()
-                .zip(files)
-                .enumerate()
-            {
-                match upscale(config.upscale_repeats, upscaler_ctx, *img) {
-                    Ok(img) => {
-                        let status = stbi_write_png_custom(
-                            path.as_ptr(),
-                            img.width as i32,
-                            img.height as i32,
-                            img.channel as i32,
-                            img.data as *const c_void,
-                            0,
-                        );
-                        if status == 0 {
-                            return Err(DiffusionError::StoreImages(id, config.batch_count));
-                        }
-                    }
-                    Err(err) => {
-                        return Err(err);
+        for (id, (img, path)) in slice::from_raw_parts(slice, config.batch_count as usize)
+            .iter()
+            .zip(files)
+            .enumerate()
+        {
+            match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
+                Ok(img) => {
+                    // Thx @wandbrandon
+                    let len = (img.width * img.height * img.channel) as usize;
+                    let buffer = slice::from_raw_parts(img.data, len).to_vec();
+                    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer)
+                        .map(|img| RgbImage::from(img).save(path));
+                    if let Some(Err(err)) = save_state {
+                        return Err(DiffusionError::StoreImages(err));
                     }
                 }
+                Err(err) => {
+                    return Err(err);
+                }
             }
-
-            //Clean-up slice section
-            free(slice as *mut c_void);
-            Ok(())
-        };
-
-        //Clean-up CTX section
-        free_sd_ctx(sd_ctx);
-        if let Some(upscaler_ctx) = upscaler_ctx {
-            free_upscaler_ctx(upscaler_ctx);
         }
-        res
+
+        //Clean-up slice section
+        free(slice as *mut c_void);
+        Ok(())
     }
 }
 
@@ -500,26 +563,29 @@ pub fn txt2img(mut config: Config) -> Result<(), DiffusionError> {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::{api::ConfigBuilderError, util::download_file_hf_hub};
+    use crate::{
+        api::{ConfigBuilderError, ModelConfigBuilder},
+        util::download_file_hf_hub,
+    };
 
     use super::{txt2img, ConfigBuilder};
 
     #[test]
     fn test_required_args_txt2img() {
         assert!(ConfigBuilder::default().build().is_err());
-        assert!(ConfigBuilder::default()
+        assert!(ModelConfigBuilder::default().build().is_err());
+        ModelConfigBuilder::default()
             .model(PathBuf::from("./test.ckpt"))
             .build()
-            .is_err());
+            .unwrap();
 
-        assert!(ConfigBuilder::default()
+        ConfigBuilder::default()
             .prompt("a lovely cat driving a sport car")
             .build()
-            .is_err());
+            .unwrap();
 
         assert!(matches!(
             ConfigBuilder::default()
-                .model(PathBuf::from("./test.ckpt"))
                 .prompt("a lovely cat driving a sport car")
                 .batch_count(10)
                 .build(),
@@ -527,13 +593,11 @@ mod tests {
         ));
 
         ConfigBuilder::default()
-            .model(PathBuf::from("./test.ckpt"))
             .prompt("a lovely cat driving a sport car")
             .build()
             .unwrap();
 
         ConfigBuilder::default()
-            .model(PathBuf::from("./test.ckpt"))
             .prompt("a lovely duck drinking water from a bottle")
             .batch_count(2)
             .output(PathBuf::from("./"))
@@ -553,15 +617,25 @@ mod tests {
             "RealESRGAN_x4plus_anime_6B.pth",
         )
         .unwrap();
-        let config = ConfigBuilder::default()
-            .model(model_path)
+        let mut config = ConfigBuilder::default()
             .prompt("a lovely duck drinking water from a bottle")
             .output(PathBuf::from("./output_1.png"))
-            .upscale_model(upscaler_path)
-            .upscale_repeats(1)
             .batch_count(1)
             .build()
             .unwrap();
-        txt2img(config).unwrap();
+        let mut model_config = ModelConfigBuilder::default()
+            .model(model_path)
+            .upscale_model(upscaler_path)
+            .upscale_repeats(1)
+            .build()
+            .unwrap();
+
+        txt2img(&mut config, &mut model_config).unwrap();
+        let mut config2 = ConfigBuilder::from(config)
+            .prompt("a lovely duck drinking water from a straw")
+            .output(PathBuf::from("./output_2.png"))
+            .build()
+            .unwrap();
+        txt2img(&mut config2, &mut model_config).unwrap();
     }
 }
