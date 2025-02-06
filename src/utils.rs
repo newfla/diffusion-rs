@@ -1,10 +1,15 @@
+use diffusion_rs_sys::sd_get_system_info;
+use diffusion_rs_sys::sd_log_level_t;
+use diffusion_rs_sys::sd_set_log_callback;
 use image::ImageBuffer;
 use image::Rgb;
 use image::RgbImage;
 use libc::free;
 use std::ffi::c_char;
 use std::ffi::c_void;
+use std::ffi::CStr;
 use std::ffi::CString;
+
 use std::path::Path;
 use std::path::PathBuf;
 use std::slice;
@@ -105,87 +110,32 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 /// Sampling methods
 pub use diffusion_rs_sys::sample_method_t as SampleMethod;
 
-/// Image buffer Type
-pub use diffusion_rs_sys::sd_image_t;
+use diffusion_rs_sys::sd_image_t;
 
-#[derive(Debug, Clone)]
-pub struct SdImageContainer {
-    // Wrap the raw external type.
-    inner: sd_image_t,
+pub fn convert_image(sd_image: &sd_image_t) -> Result<RgbImage, SDImageError> {
+    let len = (sd_image.width * sd_image.height * sd_image.channel) as usize;
+    let raw_pixels = unsafe { slice::from_raw_parts(sd_image.data, len) };
+    let buffer = raw_pixels.to_vec();
+    let buffer =
+        ImageBuffer::<Rgb<u8>, _>::from_raw(sd_image.width as u32, sd_image.height as u32, buffer);
+    Ok(match buffer {
+        Some(buffer) => RgbImage::from(buffer),
+        None => return Err(SDImageError::AllocationError),
+    })
 }
 
-impl SdImageContainer {
-    pub fn as_ptr(&self) -> *const sd_image_t {
-        &self.inner
-    }
-}
-
-impl From<sd_image_t> for SdImageContainer {
-    fn from(inner: sd_image_t) -> Self {
-        Self { inner }
-    }
-}
-
-impl TryFrom<RgbImage> for SdImageContainer {
-    type Error = SDImageError;
-
-    fn try_from(img: RgbImage) -> Result<Self, Self::Error> {
-        let (width, height) = img.dimensions();
-        // For an RGB image, we have 3 channels.
-        let channel = 3u32;
-        let expected_len = (width * height * channel) as usize;
-
-        // Convert the image into its raw pixel data (a Vec<u8>).
-        let pixel_data: Vec<u8> = img.into_raw();
-
-        // Ensure that the pixel data is of the expected length.
-        if pixel_data.len() != expected_len {
-            return Err(SDImageError::DifferentLength);
-        }
-
-        let data_ptr = unsafe {
-            let ptr = libc::malloc(expected_len) as *mut u8;
-            if ptr.is_null() {
-                return Err(SDImageError::AllocationError);
-            }
-            std::ptr::copy_nonoverlapping(pixel_data.as_ptr(), ptr, expected_len);
-            ptr
-        };
-
-        Ok(SdImageContainer {
-            inner: sd_image_t {
-                width,
-                height,
-                channel,
-                data: data_ptr,
-            },
-        })
-    }
-}
-
-impl Drop for SdImageContainer {
-    fn drop(&mut self) {
-        unsafe {
-            free(self.inner.data as *mut c_void);
+extern "C" fn my_log_callback(level: sd_log_level_t, text: *const c_char, _data: *mut c_void) {
+    unsafe {
+        // Convert C string to Rust &str and print it.
+        if !text.is_null() {
+            let msg = CStr::from_ptr(text).to_str().unwrap_or("Invalid UTF-8");
+            print!("({:?}): {}", level, msg);
         }
     }
 }
 
-impl TryFrom<SdImageContainer> for RgbImage {
-    type Error = SDImageError;
-
-    fn try_from(sd_image: SdImageContainer) -> Result<Self, Self::Error> {
-        let len = (sd_image.inner.width * sd_image.inner.height * sd_image.inner.channel) as usize;
-        let raw_pixels = unsafe { slice::from_raw_parts(sd_image.inner.data, len) };
-        let buffer = raw_pixels.to_vec();
-        let buffer = ImageBuffer::<Rgb<u8>, _>::from_raw(
-            sd_image.inner.width as u32,
-            sd_image.inner.height as u32,
-            buffer,
-        );
-        Ok(match buffer {
-            Some(buffer) => RgbImage::from(buffer),
-            None => return Err(SDImageError::AllocationError),
-        })
+pub fn setup_logging() {
+    unsafe {
+        sd_set_log_callback(Some(my_log_callback), std::ptr::null_mut());
     }
 }

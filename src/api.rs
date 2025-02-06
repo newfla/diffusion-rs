@@ -1,15 +1,9 @@
 use crate::model_config::ModelConfig;
 use crate::txt2img_config::Txt2ImgConfig;
-use crate::utils::CLibString;
-use crate::utils::DiffusionError;
-use crate::utils::SdImageContainer;
-use diffusion_rs_sys::free_sd_ctx;
-use diffusion_rs_sys::new_sd_ctx;
-use diffusion_rs_sys::sd_ctx_t;
-use diffusion_rs_sys::sd_image_t;
-use diffusion_rs_sys::strlen;
+use crate::utils::{convert_image, setup_logging, CLibString, DiffusionError};
+use diffusion_rs_sys::{free_sd_ctx, new_sd_ctx, sd_ctx_t, sd_image_t, txt2img};
 use image::RgbImage;
-use libc::free;
+use libc::{free, strlen};
 use std::ffi::c_void;
 use std::ptr::null;
 use std::slice;
@@ -24,6 +18,8 @@ pub struct ModelCtx {
 
 impl ModelCtx {
     pub fn new(config: ModelConfig) -> Result<Self, DiffusionError> {
+        setup_logging();
+
         let raw_ctx = unsafe {
             let ptr = new_sd_ctx(
                 config.model.as_ptr(),
@@ -75,21 +71,16 @@ impl ModelCtx {
             prompt.into()
         };
 
-        //print prompt for debugging
-        println!(
-            "Prompt: {:?}",
-            prompt.0.to_str().expect("Couldn't get string")
-        );
-
         //controlnet
-
-        let control_image = match txt2img_config.control_cond {
+        let control_image: *const sd_image_t = match txt2img_config.control_cond {
             Some(image) => {
                 match unsafe { strlen(self.model_config.control_net.as_ptr()) as usize > 0 } {
-                    true => {
-                        let wrapper = SdImageContainer::try_from(image)?;
-                        wrapper.as_ptr()
-                    }
+                    true => &sd_image_t {
+                        data: image.as_ptr() as *mut u8,
+                        width: image.width(),
+                        height: image.height(),
+                        channel: 3,
+                    },
                     false => {
                         println!("Control net model is null, setting control image to null");
                         null()
@@ -101,7 +92,7 @@ impl ModelCtx {
 
         //run text to image
         let results: *mut sd_image_t = unsafe {
-            diffusion_rs_sys::txt2img(
+            txt2img(
                 self.raw_ctx.ok_or(DiffusionError::NoContext)?,
                 prompt.as_ptr(),
                 txt2img_config.negative_prompt.as_ptr(),
@@ -136,7 +127,7 @@ impl ModelCtx {
             let images = unsafe { slice::from_raw_parts(results, img_count) };
             images
                 .iter()
-                .filter_map(|sd_img| RgbImage::try_from(SdImageContainer::from(*sd_img)).ok())
+                .filter_map(|sd_img| convert_image(sd_img).ok())
                 .collect()
         };
 
@@ -163,7 +154,7 @@ impl Drop for ModelCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{ClipSkip, SampleMethod, Schedule, WeightType};
+    use crate::utils::{ClipSkip, RngFunction, SampleMethod, Schedule, WeightType};
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use image::ImageReader;
     use std::path::PathBuf;
@@ -206,25 +197,14 @@ mod tests {
 
     #[test]
     fn test_txt2img_success() {
+        let resolution: i32 = 384;
+
         let control_image1 = ImageReader::open("./images/canny-384x.jpg")
             .expect("Failed to open image")
             .decode()
             .expect("Failed to decode image")
             .into_rgb8();
 
-        let control_image2 = ImageReader::open("./images/canny-384x.jpg")
-            .expect("Failed to open image")
-            .decode()
-            .expect("Failed to decode image")
-            .into_rgb8();
-
-        let control_image3 = ImageReader::open("./images/canny-384x.jpg")
-            .expect("Failed to open image")
-            .decode()
-            .expect("Failed to decode image")
-            .into_rgb8();
-
-        let resolution = 384;
         let sample_steps = 4;
         let control_strength = 0.4;
 
@@ -236,8 +216,10 @@ mod tests {
                 .control_net(PathBuf::from(
                     "./models/controlnet/control_canny-fp16.safetensors",
                 ))
-                //.weight_type(WeightType::SD_TYPE_Q4_1)
+                .weight_type(WeightType::SD_TYPE_F16)
                 .flash_attention(true)
+                //.rng_type(RngFunction::STD_DEFAULT_RNG)
+                .vae_decode_only(true)
                 .schedule(Schedule::AYS)
                 .build()
                 .expect("Failed to build model config"),
@@ -247,12 +229,13 @@ mod tests {
         let result = ctx
             .txt2img(Txt2ImgConfigBuilder::default()
             .prompt("masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk")
-            .control_cond(control_image1)
+            .control_cond(&control_image1)
             .control_strength(control_strength)
             .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
             .sample_steps(sample_steps)
             .sample_method(SampleMethod::LCM)
             .cfg_scale(1.0)
+            .guidance(0.0)
             .height(resolution)
             .width(resolution)
             .clip_skip(ClipSkip::OneLayer)
@@ -269,46 +252,47 @@ mod tests {
         let result2 = ctx
             .txt2img(Txt2ImgConfigBuilder::default()
             .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy")
-            .control_cond(control_image2)
+            .control_cond(&control_image1)
             .control_strength(control_strength)
             .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
             .sample_steps(sample_steps)
             .sample_method(SampleMethod::LCM)
             .cfg_scale(1.0)
+            .guidance(0.0)
             .height(resolution)
             .width(resolution)
             .clip_skip(ClipSkip::OneLayer)
             .batch_count(1)
             .build()
-            .expect("Failed to build txt2img config 1"))
-            .expect("Failed to generate image 1");
+            .expect("Failed to build txt2img config 2"))
+            .expect("Failed to generate image 2");
 
         result2.iter().enumerate().for_each(|(i, img)| {
             img.save(format!("./images/test_2_{}x_{}.png", resolution, i))
                 .unwrap();
         });
 
-        let result3 = ctx
-            .txt2img(Txt2ImgConfigBuilder::default()
-            .prompt("masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy")
-            .control_cond(control_image3)
-            .control_strength(control_strength)
-            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-            .sample_steps(sample_steps)
-            .sample_method(SampleMethod::LCM)
-            .cfg_scale(1.0)
-            .height(resolution)
-            .width(resolution)
-            .clip_skip(ClipSkip::OneLayer)
-            .batch_count(1)
-            .build()
-            .expect("Failed to build txt2img config 1"))
-            .expect("Failed to generate image 1");
+        // let result3 = ctx
+        //     .txt2img(Txt2ImgConfigBuilder::default()
+        //     .prompt("masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy")
+        //     .control_cond(control_image3)
+        //     .control_strength(control_strength)
+        //     .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+        //     .sample_steps(sample_steps)
+        //     .sample_method(SampleMethod::LCM)
+        //     .cfg_scale(1.0)
+        //     .height(resolution)
+        //     .width(resolution)
+        //     .clip_skip(ClipSkip::OneLayer)
+        //     .batch_count(1)
+        //     .build()
+        //     .expect("Failed to build txt2img config 1"))
+        //     .expect("Failed to generate image 1");
 
-        result3.iter().enumerate().for_each(|(i, img)| {
-            img.save(format!("./images/test_3_{}x_{}.png", resolution, i))
-                .unwrap();
-        });
+        // result3.iter().enumerate().for_each(|(i, img)| {
+        //     img.save(format!("./images/test_3_{}x_{}.png", resolution, i))
+        //         .unwrap();
+        // });
     }
 
     #[test]
