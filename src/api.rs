@@ -59,7 +59,7 @@ impl ModelCtx {
     }
 
     pub fn txt2img(
-        &mut self,
+        &self,
         mut txt2img_config: Txt2ImgConfig,
     ) -> Result<Vec<RgbImage>, DiffusionError> {
         // add loras to prompt as suffix
@@ -158,6 +158,7 @@ mod tests {
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use image::ImageReader;
     use std::path::PathBuf;
+    use std::sync::Arc;
 
     #[test]
     fn test_invalid_model_config() {
@@ -208,7 +209,7 @@ mod tests {
         let sample_steps = 4;
         let control_strength = 0.4;
 
-        let mut ctx = ModelCtx::new(
+        let ctx = ModelCtx::new(
             ModelConfigBuilder::default()
                 .model(PathBuf::from("./models/mistoonAnime_v30.safetensors"))
                 .lora_model_dir(PathBuf::from("./models/loras"))
@@ -218,7 +219,7 @@ mod tests {
                 ))
                 .weight_type(WeightType::SD_TYPE_F16)
                 .flash_attention(true)
-                //.rng_type(RngFunction::STD_DEFAULT_RNG)
+                .rng_type(RngFunction::CUDA_RNG)
                 .vae_decode_only(true)
                 .schedule(Schedule::AYS)
                 .build()
@@ -235,7 +236,6 @@ mod tests {
             .sample_steps(sample_steps)
             .sample_method(SampleMethod::LCM)
             .cfg_scale(1.0)
-            .guidance(0.0)
             .height(resolution)
             .width(resolution)
             .clip_skip(ClipSkip::OneLayer)
@@ -258,7 +258,6 @@ mod tests {
             .sample_steps(sample_steps)
             .sample_method(SampleMethod::LCM)
             .cfg_scale(1.0)
-            .guidance(0.0)
             .height(resolution)
             .width(resolution)
             .clip_skip(ClipSkip::OneLayer)
@@ -302,7 +301,7 @@ mod tests {
             .model(PathBuf::from("./mistoonAnime_v10Illustrious.safetensors"))
             .build()
             .unwrap();
-        let mut ctx = ModelCtx::new(config).expect("Failed to build model context");
+        let ctx = ModelCtx::new(config).expect("Failed to build model context");
         let txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("test prompt")
             .sample_steps(1)
@@ -321,7 +320,7 @@ mod tests {
             .model(PathBuf::from("./mistoonAnime_v10Illustrious.safetensors"))
             .build()
             .unwrap();
-        let mut ctx = ModelCtx::new(config).expect("Failed to build model context");
+        let ctx = ModelCtx::new(config).expect("Failed to build model context");
         let txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("multi-image prompt")
             .sample_steps(1)

@@ -46,7 +46,7 @@ pub enum SDImageError {
 
 #[repr(i32)]
 #[non_exhaustive]
-#[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 /// Ignore the lower X layers of CLIP network
 pub enum ClipSkip {
     /// Will be [ClipSkip::None] for SD1.x, [ClipSkip::OneLayer] for SD2.x
