@@ -1,10 +1,8 @@
-use diffusion_rs_sys::sd_get_system_info;
 use diffusion_rs_sys::sd_log_level_t;
 use diffusion_rs_sys::sd_set_log_callback;
 use image::ImageBuffer;
 use image::Rgb;
 use image::RgbImage;
-use libc::free;
 use std::ffi::c_char;
 use std::ffi::c_void;
 use std::ffi::CStr;
