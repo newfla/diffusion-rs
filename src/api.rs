@@ -531,10 +531,9 @@ pub fn txt2img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
         if slice.is_null() {
             return Err(DiffusionError::Forward);
         }
-        for (id, (img, path)) in slice::from_raw_parts(slice, config.batch_count as usize)
+        for (img, path) in slice::from_raw_parts(slice, config.batch_count as usize)
             .iter()
             .zip(files)
-            .enumerate()
         {
             match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
                 Ok(img) => {
