@@ -16,6 +16,9 @@ pub struct ModelCtx {
     pub model_config: ModelConfig,
 }
 
+unsafe impl Send for ModelCtx {}
+unsafe impl Sync for ModelCtx {}
+
 impl ModelCtx {
     pub fn new(config: ModelConfig) -> Result<Self, DiffusionError> {
         setup_logging();
@@ -158,7 +161,8 @@ mod tests {
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use image::ImageReader;
     use std::path::PathBuf;
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
+    use std::thread;
 
     #[test]
     fn test_invalid_model_config() {
@@ -198,17 +202,6 @@ mod tests {
 
     #[test]
     fn test_txt2img_success() {
-        let resolution: i32 = 384;
-
-        let control_image1 = ImageReader::open("./images/canny-384x.jpg")
-            .expect("Failed to open image")
-            .decode()
-            .expect("Failed to decode image")
-            .into_rgb8();
-
-        let sample_steps = 4;
-        let control_strength = 0.4;
-
         let ctx = ModelCtx::new(
             ModelConfigBuilder::default()
                 .model(PathBuf::from("./models/mistoonAnime_v30.safetensors"))
@@ -222,76 +215,71 @@ mod tests {
                 .rng_type(RngFunction::CUDA_RNG)
                 .vae_decode_only(true)
                 .schedule(Schedule::AYS)
+                .n_threads(-1)
                 .build()
                 .expect("Failed to build model config"),
         )
         .expect("Failed to build model context");
 
-        let result = ctx
-            .txt2img(Txt2ImgConfigBuilder::default()
-            .prompt("masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk")
-            .control_cond(&control_image1)
-            .control_strength(control_strength)
-            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-            .sample_steps(sample_steps)
-            .sample_method(SampleMethod::LCM)
-            .cfg_scale(1.0)
-            .height(resolution)
-            .width(resolution)
-            .clip_skip(ClipSkip::OneLayer)
-            .batch_count(1)
-            .build()
-            .expect("Failed to build txt2img config 1"))
-            .expect("Failed to generate image 1");
+        let resolution: i32 = 384;
+        let sample_steps = 1;
+        let control_strength = 0.4;
+        let control_image = ImageReader::open("./images/canny-384x.jpg")
+            .expect("Failed to open image")
+            .decode()
+            .expect("Failed to decode image")
+            .into_rgb8();
 
-        result.iter().enumerate().for_each(|(i, img)| {
-            img.save(format!("./images/test_1_{}x_{}.png", resolution, i))
-                .unwrap();
-        });
+        let prompts = vec![
+            "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
+            "masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
+            "masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy"
+        ];
 
-        let result2 = ctx
-            .txt2img(Txt2ImgConfigBuilder::default()
-            .prompt("masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy")
-            .control_cond(&control_image1)
-            .control_strength(control_strength)
-            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-            .sample_steps(sample_steps)
-            .sample_method(SampleMethod::LCM)
-            .cfg_scale(1.0)
-            .height(resolution)
-            .width(resolution)
-            .clip_skip(ClipSkip::OneLayer)
-            .batch_count(1)
-            .build()
-            .expect("Failed to build txt2img config 2"))
-            .expect("Failed to generate image 2");
+        let ctx = Arc::new(Mutex::new(ctx));
 
-        result2.iter().enumerate().for_each(|(i, img)| {
-            img.save(format!("./images/test_2_{}x_{}.png", resolution, i))
-                .unwrap();
-        });
+        let mut handles = vec![];
 
-        // let result3 = ctx
-        //     .txt2img(Txt2ImgConfigBuilder::default()
-        //     .prompt("masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy")
-        //     .control_cond(control_image3)
-        //     .control_strength(control_strength)
-        //     .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-        //     .sample_steps(sample_steps)
-        //     .sample_method(SampleMethod::LCM)
-        //     .cfg_scale(1.0)
-        //     .height(resolution)
-        //     .width(resolution)
-        //     .clip_skip(ClipSkip::OneLayer)
-        //     .batch_count(1)
-        //     .build()
-        //     .expect("Failed to build txt2img config 1"))
-        //     .expect("Failed to generate image 1");
+        for (index, prompt) in prompts.into_iter().enumerate() {
+            let txt2img_config = Txt2ImgConfigBuilder::default()
+                .prompt(prompt)
+                .control_cond(control_image.clone())
+                .control_strength(control_strength)
+                .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+                .sample_steps(sample_steps)
+                .sample_method(SampleMethod::LCM)
+                .cfg_scale(1.0)
+                .height(resolution)
+                .width(resolution)
+                .clip_skip(ClipSkip::OneLayer)
+                .batch_count(1)
+                .build()
+                .expect("Failed to build txt2img config 1");
 
-        // result3.iter().enumerate().for_each(|(i, img)| {
-        //     img.save(format!("./images/test_3_{}x_{}.png", resolution, i))
-        //         .unwrap();
-        // });
+            let ctx = Arc::clone(&ctx);
+
+            let handle = thread::spawn(move || {
+                let result = ctx
+                    .lock()
+                    .unwrap()
+                    .txt2img(txt2img_config)
+                    .expect("Failed to generate image 1");
+
+                result.iter().enumerate().for_each(|(batch, img)| {
+                    img.save(format!(
+                        "./images/test_#{}_{}x_{}.png",
+                        index, resolution, batch
+                    ))
+                    .unwrap();
+                });
+            });
+
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
     }
 
     #[test]

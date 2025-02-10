@@ -5,7 +5,7 @@ use image::RgbImage;
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into), build_fn(validate = "Self::validate"))]
 /// txt2img config
-pub struct Txt2ImgConfig<'a> {
+pub struct Txt2ImgConfig {
     /// Prompt to generate image from
     pub prompt: String,
 
@@ -26,7 +26,7 @@ pub struct Txt2ImgConfig<'a> {
     #[builder(default = "7.0")]
     pub cfg_scale: f32,
 
-    /// Guidance (default: 3.5)
+    /// Guidance (default: 3.5) for Flux/DiT models
     #[builder(default = "3.5")]
     pub guidance: f32,
 
@@ -55,7 +55,7 @@ pub struct Txt2ImgConfig<'a> {
     pub batch_count: i32,
 
     #[builder(setter(strip_option), default)]
-    pub control_cond: Option<&'a RgbImage>,
+    pub control_cond: Option<RgbImage>,
 
     /// Strength to apply Control Net (default: 0.9)
     /// 1.0 corresponds to full destruction of information in init
@@ -92,7 +92,7 @@ pub struct Txt2ImgConfig<'a> {
     pub skip_layer_end: f32,
 }
 
-impl<'a> Txt2ImgConfigBuilder<'a> {
+impl Txt2ImgConfigBuilder {
     fn validate(&self) -> Result<(), Txt2ImgConfigBuilderError> {
         self.validate_prompt()
     }
