@@ -61,10 +61,7 @@ impl ModelCtx {
         })
     }
 
-    pub fn txt2img(
-        &self,
-        mut txt2img_config: Txt2ImgConfig,
-    ) -> Result<Vec<RgbImage>, DiffusionError> {
+    pub fn txt2img(&self, txt2img_config: Txt2ImgConfig) -> Result<Vec<RgbImage>, DiffusionError> {
         // add loras to prompt as suffix
         let prompt: CLibString = {
             let mut prompt = txt2img_config.prompt.clone();
@@ -113,7 +110,7 @@ impl ModelCtx {
                 txt2img_config.style_strength,
                 txt2img_config.normalize_input,
                 txt2img_config.input_id_images.as_ptr(),
-                txt2img_config.skip_layer.as_mut_ptr(),
+                txt2img_config.skip_layer.as_ptr() as *mut i32,
                 txt2img_config.skip_layer.len(),
                 txt2img_config.slg_scale,
                 txt2img_config.skip_layer_start,
@@ -161,6 +158,7 @@ mod tests {
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use image::ImageReader;
     use std::path::PathBuf;
+    use std::rc::Rc;
     use std::sync::{Arc, Mutex};
     use std::thread;
 
@@ -222,13 +220,15 @@ mod tests {
         .expect("Failed to build model context");
 
         let resolution: i32 = 384;
-        let sample_steps = 1;
+        let sample_steps = 6;
         let control_strength = 0.4;
-        let control_image = ImageReader::open("./images/canny-384x.jpg")
-            .expect("Failed to open image")
-            .decode()
-            .expect("Failed to decode image")
-            .into_rgb8();
+        let control_image = Arc::new(
+            ImageReader::open("./images/canny-384x.jpg")
+                .expect("Failed to open image")
+                .decode()
+                .expect("Failed to decode image")
+                .into_rgb8(),
+        );
 
         let prompts = vec![
             "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
@@ -243,7 +243,7 @@ mod tests {
         for (index, prompt) in prompts.into_iter().enumerate() {
             let txt2img_config = Txt2ImgConfigBuilder::default()
                 .prompt(prompt)
-                .control_cond(control_image.clone())
+                .control_cond(Arc::clone(&control_image))
                 .control_strength(control_strength)
                 .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
                 .sample_steps(sample_steps)

@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
 use crate::utils::{CLibPath, CLibString, ClipSkip, SampleMethod};
 use derive_builder::Builder;
 use image::RgbImage;
 
 #[derive(Builder, Debug, Clone)]
-#[builder(setter(into), build_fn(validate = "Self::validate"))]
+#[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
 /// txt2img config
 pub struct Txt2ImgConfig {
     /// Prompt to generate image from
@@ -54,8 +56,8 @@ pub struct Txt2ImgConfig {
     #[builder(default = "1")]
     pub batch_count: i32,
 
-    #[builder(setter(strip_option), default)]
-    pub control_cond: Option<RgbImage>,
+    #[builder(default = "None")]
+    pub control_cond: Option<Arc<RgbImage>>,
 
     /// Strength to apply Control Net (default: 0.9)
     /// 1.0 corresponds to full destruction of information in init
