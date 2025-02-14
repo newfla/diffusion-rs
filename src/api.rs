@@ -21,7 +21,7 @@ unsafe impl Sync for ModelCtx {}
 
 impl ModelCtx {
     pub fn new(config: ModelConfig) -> Result<Self, DiffusionError> {
-        setup_logging();
+        setup_logging(config.log_callback, config.progress_callback);
 
         let raw_ctx = unsafe {
             let ptr = new_sd_ctx(
@@ -87,7 +87,10 @@ impl ModelCtx {
                     }
                 }
             }
-            None => null(),
+            None => {
+                println!("Control net conditioning image is null, setting control image to null");
+                null()
+            }
         };
 
         //run text to image
@@ -158,7 +161,6 @@ mod tests {
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use image::ImageReader;
     use std::path::PathBuf;
-    use std::rc::Rc;
     use std::sync::{Arc, Mutex};
     use std::thread;
 
@@ -206,7 +208,7 @@ mod tests {
                 .lora_model_dir(PathBuf::from("./models/loras"))
                 .taesd(PathBuf::from("./models/taesd1.safetensors"))
                 .control_net(PathBuf::from(
-                    "./models/controlnet/control_canny-fp16.safetensors",
+                    "./models/controlnet/control_v11f1e_sd15_tile_fp16.safetensors",
                 ))
                 .weight_type(WeightType::SD_TYPE_F16)
                 .flash_attention(true)
@@ -221,19 +223,24 @@ mod tests {
 
         let resolution: i32 = 384;
         let sample_steps = 6;
-        let control_strength = 0.4;
+        let control_strength = 0.6;
         let control_image = Arc::new(
-            ImageReader::open("./images/canny-384x.jpg")
+            ImageReader::open("./images/samusweapon_d.png")
                 .expect("Failed to open image")
                 .decode()
                 .expect("Failed to decode image")
+                .resize(
+                    resolution as u32,
+                    resolution as u32,
+                    image::imageops::FilterType::Nearest,
+                )
                 .into_rgb8(),
         );
 
         let prompts = vec![
             "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
-            "masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
-            "masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy"
+            //"masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
+            //"masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy"
         ];
 
         let ctx = Arc::new(Mutex::new(ctx));

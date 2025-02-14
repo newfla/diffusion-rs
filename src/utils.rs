@@ -1,5 +1,6 @@
 use diffusion_rs_sys::sd_log_level_t;
 use diffusion_rs_sys::sd_set_log_callback;
+use diffusion_rs_sys::sd_set_progress_callback;
 use image::ImageBuffer;
 use image::Rgb;
 use image::RgbImage;
@@ -7,7 +8,6 @@ use std::ffi::c_char;
 use std::ffi::c_void;
 use std::ffi::CStr;
 use std::ffi::CString;
-
 use std::path::Path;
 use std::path::PathBuf;
 use std::slice;
@@ -122,7 +122,7 @@ pub fn convert_image(sd_image: &sd_image_t) -> Result<RgbImage, SDImageError> {
     })
 }
 
-extern "C" fn my_log_callback(level: sd_log_level_t, text: *const c_char, _data: *mut c_void) {
+extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _data: *mut c_void) {
     unsafe {
         // Convert C string to Rust &str and print it.
         if !text.is_null() {
@@ -132,8 +132,47 @@ extern "C" fn my_log_callback(level: sd_log_level_t, text: *const c_char, _data:
     }
 }
 
-pub fn setup_logging() {
+// use std::sync::LazyLock;
+
+// static BAR: LazyLock<Mutex<ProgressBar>> = LazyLock::new(|| {
+//     Mutex::new(ProgressBar::no_length().with_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+// .unwrap()
+// .progress_chars("#>-")))
+// });
+
+// /// This is your C callback that gets called with current progress.
+// extern "C" fn default_progress_callback(step: c_int, steps: c_int, time: f32, _data: *mut c_void) {
+//     // Update the global progress bar if it's been initialized.
+//     let mut bar = BAR.lock().unwrap();
+
+//     if bar.is_finished() {
+//         *bar = ProgressBar::no_length().with_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+//         .unwrap()
+//         .progress_chars("#>-"));
+//     } else {
+//         if steps == step {
+//             bar.finish_with_message("Done");
+//         }
+//         bar.set_length(steps as u64);
+//         bar.set_position(step as u64);
+//         bar.set_message(format!("Elapsed: {:.2} s", time));
+//     }
+// }
+
+pub fn setup_logging(
+    log_callback: Option<
+        extern "C" fn(level: sd_log_level_t, text: *const c_char, _data: *mut c_void),
+    >,
+    progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
+) {
     unsafe {
-        sd_set_log_callback(Some(my_log_callback), std::ptr::null_mut());
+        match log_callback {
+            Some(callback) => sd_set_log_callback(Some(callback), std::ptr::null_mut()),
+            None => sd_set_log_callback(Some(default_log_callback), std::ptr::null_mut()),
+        };
+        match progress_callback {
+            Some(callback) => sd_set_progress_callback(Some(callback), std::ptr::null_mut()),
+            None => (),
+        };
     }
 }

@@ -1,4 +1,7 @@
+use std::ffi::{c_char, c_void};
+
 use derive_builder::Builder;
+use diffusion_rs_sys::sd_log_level_t;
 
 use crate::utils::{CLibPath, RngFunction, Schedule, WeightType};
 
@@ -102,6 +105,16 @@ pub struct ModelConfig {
     /// (default: false)
     #[builder(default = "false")]
     pub flash_attention: bool,
+
+    /// set log callback function for cpp logs (default: None)
+    #[builder(default = "None")]
+    pub log_callback:
+        Option<extern "C" fn(level: sd_log_level_t, text: *const c_char, _data: *mut c_void)>,
+
+    /// set log callback function for progress logs (default: None)
+    #[builder(default = "None")]
+    pub progress_callback:
+        Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
 }
 
 impl ModelConfigBuilder {
