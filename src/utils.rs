@@ -108,6 +108,8 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 /// Sampling methods
 pub use diffusion_rs_sys::sample_method_t as SampleMethod;
 
+use diffusion_rs_sys::sd_log_level_t as SD_LOG_LEVEL_T;
+
 use diffusion_rs_sys::sd_image_t;
 
 pub fn convert_image(sd_image: &sd_image_t) -> Result<RgbImage, SDImageError> {
@@ -161,7 +163,7 @@ extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _
 
 pub fn setup_logging(
     log_callback: Option<
-        extern "C" fn(level: sd_log_level_t, text: *const c_char, _data: *mut c_void),
+        extern "C" fn(level: SD_LOG_LEVEL_T, text: *const c_char, _data: *mut c_void),
     >,
     progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
 ) {
