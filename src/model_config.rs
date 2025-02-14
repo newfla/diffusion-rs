@@ -6,7 +6,7 @@ use diffusion_rs_sys::sd_log_level_t;
 use crate::utils::{CLibPath, RngFunction, Schedule, WeightType};
 
 #[derive(Builder, Debug, Clone)]
-#[builder(setter(into), build_fn(validate = "Self::validate"))]
+#[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
 /// Config struct common to all diffusion methods
 pub struct ModelConfig {
     /// Path to full model
