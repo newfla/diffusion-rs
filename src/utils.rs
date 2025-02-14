@@ -108,7 +108,8 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 /// Sampling methods
 pub use diffusion_rs_sys::sample_method_t as SampleMethod;
 
-use diffusion_rs_sys::sd_log_level_t as SD_LOG_LEVEL_T;
+//log level
+pub use diffusion_rs_sys::sd_log_level_t as SD_LOG_LEVEL_T;
 
 use diffusion_rs_sys::sd_image_t;
 
