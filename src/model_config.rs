@@ -1,7 +1,7 @@
 use std::ffi::{c_char, c_void};
 
 use derive_builder::Builder;
-use diffusion_rs_sys::sd_log_level_t;
+use diffusion_rs_sys::{get_num_physical_cores, sd_log_level_t};
 
 use crate::utils::{CLibPath, RngFunction, Schedule, WeightType};
 
@@ -68,10 +68,7 @@ pub struct ModelConfig {
 
     /// Number of threads to use during computation (default: 0).
     /// If n_ threads <= 0, then threads will be set to the number of CPU physical cores.
-    #[builder(
-        default = "std::thread::available_parallelism().map_or(1, |p| p.get() as i32)",
-        setter(custom)
-    )]
+    #[builder(default = "unsafe { get_num_physical_cores() }", setter(custom))]
     pub n_threads: i32,
 
     /// Weight type. If not specified, the default is the type of the weight file
@@ -122,7 +119,7 @@ impl ModelConfigBuilder {
         self.n_threads = if value > 0 {
             Some(value)
         } else {
-            Some(std::thread::available_parallelism().map_or(1, |p| p.get() as i32))
+            Some(unsafe { get_num_physical_cores() })
         };
         self
     }
