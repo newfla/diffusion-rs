@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
-use crate::utils::{CLibPath, CLibString, ClipSkip, SampleMethod};
+use crate::utils::SampleMethod;
 use derive_builder::Builder;
 use image::RgbImage;
 
@@ -17,12 +17,12 @@ pub struct Txt2ImgConfig {
 
     /// The negative prompt (default: "")
     #[builder(default = "\"\".into()")]
-    pub negative_prompt: CLibString,
+    pub negative_prompt: String,
 
     /// Ignore last layers of CLIP network; 1 ignores none, 2 ignores one layer (default: -1)
     /// <= 0 represents unspecified, will be 1 for SD1.x, 2 for SD2.x
-    #[builder(default = "ClipSkip::Unspecified")]
-    pub clip_skip: ClipSkip,
+    #[builder(default = "0")]
+    pub clip_skip: i32,
 
     /// Unconditional guidance scale (default: 7.0)
     #[builder(default = "7.0")]
@@ -74,7 +74,7 @@ pub struct Txt2ImgConfig {
 
     /// Path to PHOTOMAKER input id images dir
     #[builder(default = "Default::default()")]
-    pub input_id_images: CLibPath,
+    pub input_id_images: PathBuf,
 
     /// Layers to skip for SLG steps: (default: [7,8,9])
     #[builder(default = "vec![7, 8, 9]")]

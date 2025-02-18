@@ -8,7 +8,6 @@ use std::ffi::c_char;
 use std::ffi::c_void;
 use std::ffi::CStr;
 use std::ffi::CString;
-use std::path::Path;
 use std::path::PathBuf;
 use std::slice;
 use thiserror::Error;
@@ -29,8 +28,6 @@ pub enum DiffusionError {
     NewContextFailure,
     #[error("SD image conversion error: {0}")]
     SDImageError(#[from] SDImageError),
-    // #[error("Free Params Immediately is set to true, which means that the params are freed after forward. This means that the model can only be used once")]
-    // FreeParamsImmediately,
 }
 
 #[non_exhaustive]
@@ -40,60 +37,6 @@ pub enum SDImageError {
     AllocationError,
     #[error("The image buffer has a different length than expected")]
     DifferentLength,
-}
-
-#[repr(i32)]
-#[non_exhaustive]
-#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
-/// Ignore the lower X layers of CLIP network
-pub enum ClipSkip {
-    /// Will be [ClipSkip::None] for SD1.x, [ClipSkip::OneLayer] for SD2.x
-    #[default]
-    Unspecified = 0,
-    None = 1,
-    OneLayer = 2,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct CLibString(pub CString);
-
-impl CLibString {
-    pub fn as_ptr(&self) -> *const c_char {
-        self.0.as_ptr()
-    }
-}
-
-impl From<&str> for CLibString {
-    fn from(value: &str) -> Self {
-        Self(CString::new(value).unwrap())
-    }
-}
-
-impl From<String> for CLibString {
-    fn from(value: String) -> Self {
-        Self(CString::new(value).unwrap())
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct CLibPath(CString);
-
-impl CLibPath {
-    pub fn as_ptr(&self) -> *const c_char {
-        self.0.as_ptr()
-    }
-}
-
-impl From<PathBuf> for CLibPath {
-    fn from(value: PathBuf) -> Self {
-        Self(CString::new(value.to_str().unwrap_or_default()).unwrap())
-    }
-}
-
-impl From<&Path> for CLibPath {
-    fn from(value: &Path) -> Self {
-        Self(CString::new(value.to_str().unwrap_or_default()).unwrap())
-    }
 }
 
 /// Specify the range function
@@ -109,9 +52,17 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 pub use diffusion_rs_sys::sample_method_t as SampleMethod;
 
 //log level
-pub use diffusion_rs_sys::sd_log_level_t as SD_LOG_LEVEL_T;
+pub use diffusion_rs_sys::sd_log_level_t as SdLogLevel;
 
 use diffusion_rs_sys::sd_image_t;
+
+pub fn pathbuf_to_c_char(path: &PathBuf) -> CString {
+    let path_str = path
+        .to_str()
+        .expect("PathBuf contained non-UTF-8 characters");
+    // Create a CString which adds a null terminator.
+    CString::new(path_str).expect("CString conversion failed")
+}
 
 pub fn convert_image(sd_image: &sd_image_t) -> Result<RgbImage, SDImageError> {
     let len = (sd_image.width * sd_image.height * sd_image.channel) as usize;
@@ -163,9 +114,7 @@ extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _
 // }
 
 pub fn setup_logging(
-    log_callback: Option<
-        extern "C" fn(level: SD_LOG_LEVEL_T, text: *const c_char, _data: *mut c_void),
-    >,
+    log_callback: Option<extern "C" fn(level: SdLogLevel, text: *const c_char, _data: *mut c_void)>,
     progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
 ) {
     unsafe {

@@ -1,9 +1,10 @@
 use std::ffi::{c_char, c_void};
+use std::path::PathBuf;
 
 use derive_builder::Builder;
 use diffusion_rs_sys::{get_num_physical_cores, sd_log_level_t};
 
-use crate::utils::{CLibPath, RngFunction, Schedule, WeightType};
+use crate::utils::{RngFunction, Schedule, WeightType};
 
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
@@ -11,47 +12,47 @@ use crate::utils::{CLibPath, RngFunction, Schedule, WeightType};
 pub struct ModelConfig {
     /// Path to full model
     #[builder(default = "Default::default()")]
-    pub model: CLibPath,
+    pub model: PathBuf,
 
     /// path to the clip-l text encoder
     #[builder(default = "Default::default()")]
-    pub clip_l: CLibPath,
+    pub clip_l: PathBuf,
 
     /// path to the clip-g text encoder
     #[builder(default = "Default::default()")]
-    pub clip_g: CLibPath,
+    pub clip_g: PathBuf,
 
     /// Path to the t5xxl text encoder
     #[builder(default = "Default::default()")]
-    pub t5xxl: CLibPath,
+    pub t5xxl: PathBuf,
 
     /// Path to the standalone diffusion model
     #[builder(default = "Default::default()")]
-    pub diffusion_model: CLibPath,
+    pub diffusion_model: PathBuf,
 
     /// Path to vae
     #[builder(default = "Default::default()")]
-    pub vae: CLibPath,
+    pub vae: PathBuf,
 
     /// Path to taesd. Using Tiny AutoEncoder for fast decoding (lower quality)
     #[builder(default = "Default::default()")]
-    pub taesd: CLibPath,
+    pub taesd: PathBuf,
 
     /// Path to control net model
     #[builder(default = "Default::default()")]
-    pub control_net: CLibPath,
+    pub control_net: PathBuf,
 
     /// Lora models directory
     #[builder(default = "Default::default()")]
-    pub lora_model_dir: CLibPath,
+    pub lora_model_dir: PathBuf,
 
     /// Path to embeddings directory
     #[builder(default = "Default::default()")]
-    pub embeddings_dir: CLibPath,
+    pub embeddings_dir: PathBuf,
 
     /// Path to PHOTOMAKER stacked id embeddings
     #[builder(default = "Default::default()")]
-    pub stacked_id_embd_dir: CLibPath,
+    pub stacked_id_embd_dir: PathBuf,
 
     //TODO: Add more info here for docs
     /// vae decode only (default: false)
