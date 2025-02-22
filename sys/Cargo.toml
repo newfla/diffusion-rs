@@ -36,7 +36,6 @@ hipblas = []
 metal = []
 vulkan = []
 sycl = []
-flashattn = []
 
 [build-dependencies]
 cc = "1.1.31"

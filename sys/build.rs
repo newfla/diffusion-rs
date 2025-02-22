@@ -194,11 +194,6 @@ fn main() {
         config.define("SD_SYCL", "ON");
     }
 
-    #[cfg(feature = "flashattn")]
-    {
-        config.define("SD_FLASH_ATTN", "ON");
-    }
-
     // Build stable-diffusion
     config
         .profile("Release")

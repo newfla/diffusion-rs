@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use crate::utils::SampleMethod;
 use derive_builder::Builder;
@@ -57,7 +57,7 @@ pub struct Txt2ImgConfig {
     pub batch_count: i32,
 
     #[builder(default = "None")]
-    pub control_cond: Option<Arc<RgbImage>>,
+    pub control_cond: Option<RgbImage>,
 
     /// Strength to apply Control Net (default: 0.9)
     /// 1.0 corresponds to full destruction of information in init

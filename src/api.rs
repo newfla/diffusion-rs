@@ -1,5 +1,4 @@
 use std::ffi::{c_void, CString};
-use std::ops::{Deref, DerefMut};
 use std::ptr::null;
 use std::slice;
 
@@ -62,7 +61,7 @@ impl ModelCtx {
 
     pub fn txt2img(
         &self,
-        mut txt2img_config: Txt2ImgConfig,
+        txt2img_config: &mut Txt2ImgConfig,
     ) -> Result<Vec<RgbImage>, DiffusionError> {
         // add loras to prompt as suffix
         let prompt: CString = {
@@ -77,19 +76,20 @@ impl ModelCtx {
             .expect("Failed to convert negative prompt to CString");
 
         //controlnet
-        let control_image: *const sd_image_t = match txt2img_config.control_cond {
-            Some(image) => match self.config.control_net.is_file() {
-                true => &sd_image_t {
-                    data: image.as_ptr() as *mut u8,
-                    width: image.width(),
-                    height: image.height(),
-                    channel: 3,
-                },
-                false => {
+        let control_image: *const sd_image_t = match txt2img_config.control_cond.as_mut() {
+            Some(image) => {
+                if self.config.control_net.is_file() {
+                    &sd_image_t {
+                        data: image.as_mut_ptr(),
+                        width: image.width(),
+                        height: image.height(),
+                        channel: 3,
+                    }
+                } else {
                     println!("Control net model is null, setting control image to null");
                     null()
                 }
-            },
+            }
             None => {
                 println!("Control net conditioning image is null, setting control image to null");
                 null()
@@ -201,7 +201,7 @@ mod tests {
             .lora_model_dir("./models/loras")
             .taesd("./models/taesd1.safetensors")
             .control_net("./models/controlnet/control_canny-fp16.safetensors")
-            .weight_type(WeightType::SD_TYPE_F16)
+            .weight_type(WeightType::SD_TYPE_Q4_1)
             .rng_type(RngFunction::CUDA_RNG)
             .schedule(Schedule::AYS)
             .vae_decode_only(true)
@@ -212,8 +212,8 @@ mod tests {
         let ctx = ModelCtx::new(model_config).expect("Failed to build model context");
 
         let resolution: i32 = 384;
-        let sample_steps = 6;
-        let control_strength = 0.8;
+        let sample_steps = 3;
+        let control_strength = 0.9;
         let control_image = ImageReader::open("./images/canny-384x.jpg")
             .expect("Failed to open image")
             .decode()
@@ -227,10 +227,10 @@ mod tests {
 
         let prompt = "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk";
 
-        let txt2img_config = Txt2ImgConfigBuilder::default()
+        let mut txt2img_config = Txt2ImgConfigBuilder::default()
             .prompt(prompt)
             .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-            .control_cond(control_image.clone())
+            .control_cond(control_image)
             .control_strength(control_strength)
             .sample_steps(sample_steps)
             .sample_method(SampleMethod::LCM)
@@ -243,7 +243,7 @@ mod tests {
             .expect("Failed to build txt2img config 1");
 
         let result = ctx
-            .txt2img(txt2img_config)
+            .txt2img(&mut txt2img_config)
             .expect("Failed to generate image 1");
 
         result.iter().enumerate().for_each(|(batch, img)| {
@@ -263,7 +263,7 @@ mod tests {
             .rng_type(RngFunction::CUDA_RNG)
             .schedule(Schedule::AYS)
             .vae_decode_only(true)
-            .flash_attention(true)
+            .flash_attention(false)
             .build()
             .expect("Failed to build model config");
 
@@ -273,19 +273,17 @@ mod tests {
 
         let resolution: i32 = 384;
         let sample_steps = 3;
-        let control_strength = 0.9;
-        let control_image = Arc::new(
-            ImageReader::open("./images/canny-384x.jpg")
-                .expect("Failed to open image")
-                .decode()
-                .expect("Failed to decode image")
-                .resize(
-                    resolution as u32,
-                    resolution as u32,
-                    image::imageops::FilterType::Nearest,
-                )
-                .into_rgb8(),
-        );
+        let control_strength = 0.8;
+        let control_image = ImageReader::open("./images/canny-384x.jpg")
+            .expect("Failed to open image")
+            .decode()
+            .expect("Failed to decode image")
+            .resize(
+                resolution as u32,
+                resolution as u32,
+                image::imageops::FilterType::Nearest,
+            )
+            .into_rgb8();
 
         let prompts = vec![
             "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
@@ -295,19 +293,22 @@ mod tests {
 
         let mut handles = vec![];
 
+        let mut binding = Txt2ImgConfigBuilder::default();
+        let txt2img_config_base = binding
+            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+            .control_cond(control_image)
+            .control_strength(control_strength)
+            .sample_steps(sample_steps)
+            .sample_method(SampleMethod::LCM)
+            .cfg_scale(1.0)
+            .height(resolution)
+            .width(resolution)
+            .clip_skip(2)
+            .batch_count(1);
+
         for (index, prompt) in prompts.into_iter().enumerate() {
-            let txt2img_config = Txt2ImgConfigBuilder::default()
+            let mut txt2img_config = txt2img_config_base
                 .prompt(prompt)
-                .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
-                .control_cond(Arc::clone(&control_image))
-                .control_strength(control_strength)
-                .sample_steps(sample_steps)
-                .sample_method(SampleMethod::LCM)
-                .cfg_scale(1.0)
-                .height(resolution)
-                .width(resolution)
-                .clip_skip(2)
-                .batch_count(1)
                 .build()
                 .expect("Failed to build txt2img config");
 
@@ -317,7 +318,7 @@ mod tests {
                 let result = ctx
                     .lock()
                     .unwrap()
-                    .txt2img(txt2img_config)
+                    .txt2img(&mut txt2img_config)
                     .expect("Failed to generate image");
 
                 result.iter().enumerate().for_each(|(batch, img)| {
@@ -345,13 +346,13 @@ mod tests {
             .build()
             .unwrap();
         let ctx = ModelCtx::new(config).expect("Failed to build model context");
-        let txt2img_conf = Txt2ImgConfigBuilder::default()
+        let mut txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("test prompt")
             .sample_steps(1)
             .build()
             .unwrap();
         // Hypothetical failure scenario
-        let result = ctx.txt2img(txt2img_conf);
+        let result = ctx.txt2img(&mut txt2img_conf);
         // Expect an error if calling with invalid path
         // This depends on your real implementation
         assert!(result.is_err() || result.is_ok());
@@ -364,13 +365,13 @@ mod tests {
             .build()
             .unwrap();
         let ctx = ModelCtx::new(config).expect("Failed to build model context");
-        let txt2img_conf = Txt2ImgConfigBuilder::default()
+        let mut txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("multi-image prompt")
             .sample_steps(1)
             .batch_count(3)
             .build()
             .unwrap();
-        let result = ctx.txt2img(txt2img_conf);
+        let result = ctx.txt2img(&mut txt2img_conf);
         assert!(result.is_ok());
         if let Ok(images) = result {
             assert_eq!(images.len(), 3);
