@@ -21,7 +21,7 @@ unsafe impl Send for ModelCtx {}
 unsafe impl Sync for ModelCtx {}
 
 impl ModelCtx {
-    pub fn new(config: ModelConfig) -> Result<Self, DiffusionError> {
+    pub fn new(config: &ModelConfig) -> Result<Self, DiffusionError> {
         setup_logging(config.log_callback, config.progress_callback);
 
         let ctx = unsafe {
@@ -56,7 +56,10 @@ impl ModelCtx {
             }
         };
 
-        Ok(Self { ctx, config })
+        Ok(Self {
+            ctx,
+            config: config.clone(),
+        })
     }
 
     pub fn txt2img(
@@ -201,7 +204,7 @@ mod tests {
             .lora_model_dir("./models/loras")
             .taesd("./models/taesd1.safetensors")
             .control_net("./models/controlnet/control_canny-fp16.safetensors")
-            .weight_type(WeightType::SD_TYPE_Q4_1)
+            .weight_type(WeightType::SD_TYPE_F16)
             .rng_type(RngFunction::CUDA_RNG)
             .schedule(Schedule::AYS)
             .vae_decode_only(true)
@@ -209,10 +212,10 @@ mod tests {
             .build()
             .expect("Failed to build model config");
 
-        let ctx = ModelCtx::new(model_config).expect("Failed to build model context");
+        let ctx = ModelCtx::new(&model_config).expect("Failed to build model context");
 
         let resolution: i32 = 384;
-        let sample_steps = 3;
+        let sample_steps = 2;
         let control_strength = 0.9;
         let control_image = ImageReader::open("./images/canny-384x.jpg")
             .expect("Failed to open image")
@@ -268,7 +271,7 @@ mod tests {
             .expect("Failed to build model config");
 
         let ctx = Arc::new(Mutex::new(
-            ModelCtx::new(model_config).expect("Failed to build model context"),
+            ModelCtx::new(&model_config).expect("Failed to build model context"),
         ));
 
         let resolution: i32 = 384;
@@ -339,13 +342,97 @@ mod tests {
     }
 
     #[test]
+    fn test_txt2img_multithreaded_multimodel_success() {
+        let model_config = ModelConfigBuilder::default()
+            .model("./models/mistoonAnime_v30.safetensors")
+            .lora_model_dir("./models/loras")
+            .taesd("./models/taesd1.safetensors")
+            .control_net("./models/controlnet/control_canny-fp16.safetensors")
+            .weight_type(WeightType::SD_TYPE_F16)
+            .rng_type(RngFunction::CUDA_RNG)
+            .schedule(Schedule::AYS)
+            .vae_decode_only(true)
+            .flash_attention(false)
+            .build()
+            .expect("Failed to build model config");
+
+        let ctx1 = ModelCtx::new(&model_config).expect("Failed to build model context");
+        let ctx2 = ModelCtx::new(&model_config).expect("Failed to build model context");
+
+        let models = Arc::new(vec![ctx1, ctx2]);
+
+        let resolution: i32 = 384;
+        let sample_steps = 3;
+        let control_strength = 0.8;
+        let control_image = ImageReader::open("./images/canny-384x.jpg")
+            .expect("Failed to open image")
+            .decode()
+            .expect("Failed to decode image")
+            .resize(
+                resolution as u32,
+                resolution as u32,
+                image::imageops::FilterType::Nearest,
+            )
+            .into_rgb8();
+
+        let prompts = vec![
+            "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
+            "masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
+        ];
+
+        let mut handles = vec![];
+
+        let mut binding = Txt2ImgConfigBuilder::default();
+        let txt2img_config_base = binding
+            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+            .control_cond(control_image)
+            .control_strength(control_strength)
+            .sample_steps(sample_steps)
+            .sample_method(SampleMethod::LCM)
+            .cfg_scale(1.0)
+            .height(resolution)
+            .width(resolution)
+            .clip_skip(2)
+            .batch_count(1);
+
+        for (index, prompt) in prompts.into_iter().enumerate() {
+            let mut txt2img_config = txt2img_config_base
+                .prompt(prompt)
+                .build()
+                .expect("Failed to build txt2img config");
+
+            let models = Arc::clone(&models);
+            let handle = thread::spawn(move || {
+                let result = models[index]
+                    .txt2img(&mut txt2img_config)
+                    .expect("Failed to generate image");
+
+                result.iter().enumerate().for_each(|(batch, img)| {
+                    img.save(format!(
+                        "./images/test_mt_#{}_{}x_{}.png",
+                        index, resolution, batch
+                    ))
+                    .unwrap();
+                });
+                println!("Thread {} finished", index);
+            });
+
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    #[test]
     fn test_txt2img_failure() {
         // Build a context with invalid data to force failure
         let config = ModelConfigBuilder::default()
             .model("./mistoonAnime_v10Illustrious.safetensors")
             .build()
             .unwrap();
-        let ctx = ModelCtx::new(config).expect("Failed to build model context");
+        let ctx = ModelCtx::new(&config).expect("Failed to build model context");
         let mut txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("test prompt")
             .sample_steps(1)
@@ -364,7 +451,7 @@ mod tests {
             .model("./mistoonAnime_v10Illustrious.safetensors")
             .build()
             .unwrap();
-        let ctx = ModelCtx::new(config).expect("Failed to build model context");
+        let ctx = ModelCtx::new(&config).expect("Failed to build model context");
         let mut txt2img_conf = Txt2ImgConfigBuilder::default()
             .prompt("multi-image prompt")
             .sample_steps(1)
