@@ -329,6 +329,10 @@ pub struct Config {
     #[builder(default = "SampleMethod::EULER_A")]
     sampling_method: SampleMethod,
 
+    /// eta in DDIM, only for DDIM and TCD: (default: 0)
+    #[builder(default = "0.")]
+    eta: f32,
+
     /// Number of sample steps (default: 20)
     #[builder(default = "20")]
     steps: i32,
@@ -517,6 +521,7 @@ pub fn txt2img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             config.clip_skip as i32,
             config.cfg_scale,
             config.guidance,
+            config.eta,
             config.width,
             config.height,
             config.sampling_method,
