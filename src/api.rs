@@ -1,6 +1,6 @@
+use std::ffi::CString;
 use std::ffi::c_char;
 use std::ffi::c_void;
-use std::ffi::CString;
 use std::path::Path;
 use std::path::PathBuf;
 use std::ptr::null;
@@ -200,49 +200,53 @@ impl ModelConfigBuilder {
 
 impl ModelConfig {
     unsafe fn upscaler_ctx(&mut self) -> Option<*mut upscaler_ctx_t> {
-        if self.upscale_model.is_none() || self.upscale_repeats == 0 {
-            None
-        } else {
-            if self.upscaler_ctx.is_none() {
-                let upscaler = new_upscaler_ctx(
-                    self.upscale_model.as_ref().unwrap().as_ptr(),
-                    self.n_threads,
-                );
-                self.upscaler_ctx = Some(upscaler);
+        unsafe {
+            if self.upscale_model.is_none() || self.upscale_repeats == 0 {
+                None
+            } else {
+                if self.upscaler_ctx.is_none() {
+                    let upscaler = new_upscaler_ctx(
+                        self.upscale_model.as_ref().unwrap().as_ptr(),
+                        self.n_threads,
+                    );
+                    self.upscaler_ctx = Some(upscaler);
+                }
+                self.upscaler_ctx
             }
-            self.upscaler_ctx
         }
     }
 
     unsafe fn diffusion_ctx(&mut self, vae_decode_only: bool) -> *mut sd_ctx_t {
-        if self.diffusion_ctx.is_none() {
-            let ctx = new_sd_ctx(
-                self.model.as_ptr(),
-                self.clip_l.as_ptr(),
-                self.clip_g.as_ptr(),
-                self.t5xxl.as_ptr(),
-                self.diffusion_model.as_ptr(),
-                self.vae.as_ptr(),
-                self.taesd.as_ptr(),
-                self.control_net.as_ptr(),
-                self.lora_model.as_ptr(),
-                self.embeddings.as_ptr(),
-                self.stacked_id_embd.as_ptr(),
-                vae_decode_only,
-                self.vae_tiling,
-                false,
-                self.n_threads,
-                self.weight_type,
-                self.rng,
-                self.schedule,
-                self.clip_on_cpu,
-                self.control_net_cpu,
-                self.vae_on_cpu,
-                self.flash_attention,
-            );
-            self.diffusion_ctx = Some(ctx)
+        unsafe {
+            if self.diffusion_ctx.is_none() {
+                let ctx = new_sd_ctx(
+                    self.model.as_ptr(),
+                    self.clip_l.as_ptr(),
+                    self.clip_g.as_ptr(),
+                    self.t5xxl.as_ptr(),
+                    self.diffusion_model.as_ptr(),
+                    self.vae.as_ptr(),
+                    self.taesd.as_ptr(),
+                    self.control_net.as_ptr(),
+                    self.lora_model.as_ptr(),
+                    self.embeddings.as_ptr(),
+                    self.stacked_id_embd.as_ptr(),
+                    vae_decode_only,
+                    self.vae_tiling,
+                    false,
+                    self.n_threads,
+                    self.weight_type,
+                    self.rng,
+                    self.schedule,
+                    self.clip_on_cpu,
+                    self.control_net_cpu,
+                    self.vae_on_cpu,
+                    self.flash_attention,
+                );
+                self.diffusion_ctx = Some(ctx)
+            }
+            self.diffusion_ctx.unwrap()
         }
-        self.diffusion_ctx.unwrap()
     }
 }
 
@@ -471,24 +475,26 @@ unsafe fn upscale(
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
     data: sd_image_t,
 ) -> Result<sd_image_t, DiffusionError> {
-    match upscaler_ctx {
-        Some(upscaler_ctx) => {
-            let upscale_factor = 4; // unused for RealESRGAN_x4plus_anime_6B.pth
-            let mut current_image = data;
-            for _ in 0..upscale_repeats {
-                let upscaled_image =
-                    diffusion_rs_sys::upscale(upscaler_ctx, current_image, upscale_factor);
+    unsafe {
+        match upscaler_ctx {
+            Some(upscaler_ctx) => {
+                let upscale_factor = 4; // unused for RealESRGAN_x4plus_anime_6B.pth
+                let mut current_image = data;
+                for _ in 0..upscale_repeats {
+                    let upscaled_image =
+                        diffusion_rs_sys::upscale(upscaler_ctx, current_image, upscale_factor);
 
-                if upscaled_image.data.is_null() {
-                    return Err(DiffusionError::Upscaler);
+                    if upscaled_image.data.is_null() {
+                        return Err(DiffusionError::Upscaler);
+                    }
+
+                    free(current_image.data as *mut c_void);
+                    current_image = upscaled_image;
                 }
-
-                free(current_image.data as *mut c_void);
-                current_image = upscaled_image;
+                Ok(current_image)
             }
-            Ok(current_image)
+            None => Ok(data),
         }
-        None => Ok(data),
     }
 }
 
@@ -567,7 +573,7 @@ mod tests {
         util::download_file_hf_hub,
     };
 
-    use super::{txt2img, ConfigBuilder};
+    use super::{ConfigBuilder, txt2img};
 
     #[test]
     fn test_required_args_txt2img() {
