@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     api::{self, ModelConfigBuilder, SampleMethod},
-    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_fp8_flux_1},
+    modifier::{sdxl_vae_fp16_fix, t5xxl_fp8_flux_1, t5xxl_fp16_flux_1},
     preset::ConfigsBuilder,
 };
 use hf_hub::api::sync::ApiError;
