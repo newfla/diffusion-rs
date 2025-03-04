@@ -25,3 +25,5 @@ bin/act
 .idea/
 models/
 images/
+
+.DS_Store

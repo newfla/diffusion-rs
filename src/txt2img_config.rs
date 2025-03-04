@@ -32,6 +32,10 @@ pub struct Txt2ImgConfig {
     #[builder(default = "3.5")]
     pub guidance: f32,
 
+    /// eta in DDIM, only for DDIM and TCD: (default: 0)
+    #[builder(default = "0.0")]
+    pub eta: f32,
+
     /// Image height, in pixel space (default: 512)
     #[builder(default = "512")]
     pub height: i32,
@@ -82,7 +86,7 @@ pub struct Txt2ImgConfig {
 
     /// skip layer guidance (SLG) scale, only for DiT models: (default: 0)
     /// 0 means disabled, a value of 2.5 is nice for sd3.5 medium
-    #[builder(default = "0.")]
+    #[builder(default = "0.0")]
     pub slg_scale: f32,
 
     /// SLG enabling point: (default: 0.01)

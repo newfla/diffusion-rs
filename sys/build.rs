@@ -17,12 +17,10 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=wrapper.h");
-    println!("cargo:rerun-if-changed=stb_image_write.c");
 
     // Copy stable-diffusion code into the build script directory
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     let diffusion_root = out.join("stable-diffusion.cpp/");
-    let stb_write_image_src = diffusion_root.join("thirdparty/stb_image_write.c");
 
     if !diffusion_root.exists() {
         create_dir_all(&diffusion_root).unwrap();
@@ -33,16 +31,6 @@ fn main() {
                 e
             )
         });
-        fs::copy("./stb_image_write.c", &stb_write_image_src).unwrap_or_else(|e| {
-            panic!(
-                "Failed to copy stb_image_write to {}: {}",
-                stb_write_image_src.display(),
-                e
-            )
-        });
-
-        remove_default_params_stb(&diffusion_root.join("thirdparty/stb_image_write.h"))
-            .unwrap_or_else(|e| panic!("Failed to remove default parameters from stb: {}", e));
     }
 
     // Bindgen
@@ -205,11 +193,6 @@ fn main() {
 
     let destination = config.build();
 
-    // Build stb write image
-    let mut builder = cc::Build::new();
-
-    builder.file(stb_write_image_src).compile("stbwriteimage");
-
     add_link_search_path(&out.join("lib")).unwrap();
     add_link_search_path(&out.join("build")).unwrap();
     add_link_search_path(&out).unwrap();
@@ -260,10 +243,4 @@ fn get_cpp_link_stdlib(target: &str) -> Option<&'static str> {
     } else {
         Some("stdc++")
     }
-}
-
-fn remove_default_params_stb(file: &Path) -> std::io::Result<()> {
-    let data = fs::read_to_string(file)?;
-    let new_data = data.replace("const char* parameters = NULL", "const char* parameters");
-    fs::write(file, new_data)
 }

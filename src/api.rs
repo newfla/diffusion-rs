@@ -1,10 +1,10 @@
-use std::ffi::{c_void, CString};
+use std::ffi::{CString, c_void};
 use std::ptr::null;
 use std::slice;
 
 use crate::model_config::ModelConfig;
 use crate::txt2img_config::Txt2ImgConfig;
-use crate::utils::{convert_image, pathbuf_to_c_char, setup_logging, DiffusionError};
+use crate::utils::{DiffusionError, convert_image, pathbuf_to_c_char, setup_logging};
 use diffusion_rs_sys::sd_image_t;
 use image::RgbImage;
 use libc::free;
@@ -107,6 +107,7 @@ impl ModelCtx {
                 txt2img_config.clip_skip,
                 txt2img_config.cfg_scale,
                 txt2img_config.guidance,
+                txt2img_config.eta,
                 txt2img_config.width,
                 txt2img_config.height,
                 txt2img_config.sample_method,
@@ -215,8 +216,8 @@ mod tests {
         let ctx = ModelCtx::new(&model_config).expect("Failed to build model context");
 
         let resolution: i32 = 384;
-        let sample_steps = 2;
-        let control_strength = 0.9;
+        let sample_steps = 3;
+        let control_strength = 0.8;
         let control_image = ImageReader::open("./images/canny-384x.jpg")
             .expect("Failed to open image")
             .decode()
@@ -232,16 +233,17 @@ mod tests {
 
         let mut txt2img_config = Txt2ImgConfigBuilder::default()
             .prompt(prompt)
-            .add_lora_model("pcm_sd15_lcmlike_lora_converted", 1.0)
+            .add_lora_model("pcm_sd15_smallcfg_2step_converted", 1.0)
             .control_cond(control_image)
             .control_strength(control_strength)
             .sample_steps(sample_steps)
-            .sample_method(SampleMethod::LCM)
+            .sample_method(SampleMethod::TCD)
+            .eta(1.0)
             .cfg_scale(1.0)
             .height(resolution)
             .width(resolution)
             .clip_skip(2)
-            .batch_count(2)
+            .batch_count(5)
             .build()
             .expect("Failed to build txt2img config 1");
 
@@ -291,7 +293,7 @@ mod tests {
         let prompts = vec![
             "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
             "masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
-            "masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy"
+            "masterpiece, best quality, absurdres, 1girl, medium hair, brown hair, green eyes, dark skin, dark green sweater, cat ears, nyan, sexy",
         ];
 
         let mut handles = vec![];
@@ -352,7 +354,7 @@ mod tests {
             .rng_type(RngFunction::CUDA_RNG)
             .schedule(Schedule::AYS)
             .vae_decode_only(true)
-            .flash_attention(false)
+            .flash_attention(true)
             .build()
             .expect("Failed to build model config");
 
@@ -362,8 +364,8 @@ mod tests {
         let models = Arc::new(vec![ctx1, ctx2]);
 
         let resolution: i32 = 384;
-        let sample_steps = 3;
-        let control_strength = 0.8;
+        let sample_steps = 4;
+        let control_strength = 0.5;
         let control_image = ImageReader::open("./images/canny-384x.jpg")
             .expect("Failed to open image")
             .decode()
@@ -377,7 +379,7 @@ mod tests {
 
         let prompts = vec![
             "masterpiece, best quality, absurdres, 1girl, succubus, bobcut, black hair, horns, purple skin, red eyes, choker, sexy, smirk",
-            "masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
+            //"masterpiece, best quality, absurdres, 1girl, angel, long hair, blonde hair, wings, white skin, blue eyes, white dress, sexy",
         ];
 
         let mut handles = vec![];
@@ -409,7 +411,7 @@ mod tests {
 
                 result.iter().enumerate().for_each(|(batch, img)| {
                     img.save(format!(
-                        "./images/test_mt_#{}_{}x_{}.png",
+                        "./images/test_mt_mm_#{}_{}x_{}.png",
                         index, resolution, batch
                     ))
                     .unwrap();

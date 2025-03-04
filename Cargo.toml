@@ -1,10 +1,9 @@
 [workspace]
 members = ["sys"]
-resolver = "2"
 
 [workspace.package]
-version = "0.1.6"
-edition = "2021"
+version = "0.1.8"
+edition = "2024"
 license = "MIT"
 repository = "https://github.com/newfla/diffusion-rs"
 keywords = ["ai", "stable-diffusion", "flux"]
@@ -22,11 +21,11 @@ documentation = "https://docs.rs/diffusion-rs"
 
 [dependencies]
 derive_builder = "0.20.2"
-diffusion-rs-sys = { path = "sys", version = "0.1.6" }
+diffusion-rs-sys = { path = "sys", version = "0.1.8" }
 image = "0.25.5"
 libc = "0.2.161"
 num_cpus = "1.16.0"
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 
 [features]
 cuda = ["diffusion-rs-sys/cuda"]
