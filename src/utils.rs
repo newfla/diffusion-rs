@@ -4,10 +4,10 @@ use diffusion_rs_sys::sd_set_progress_callback;
 use image::ImageBuffer;
 use image::Rgb;
 use image::RgbImage;
-use std::ffi::c_char;
-use std::ffi::c_void;
 use std::ffi::CStr;
 use std::ffi::CString;
+use std::ffi::c_char;
+use std::ffi::c_void;
 use std::path::PathBuf;
 use std::slice;
 use thiserror::Error;
@@ -80,9 +80,27 @@ extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _
     unsafe {
         // Convert C string to Rust &str and print it.
         if !text.is_null() {
-            let msg = CStr::from_ptr(text).to_str().unwrap_or("Invalid UTF-8");
+            let msg = CStr::from_ptr(text)
+                .to_str()
+                .unwrap_or("LOG ERROR: Invalid UTF-8");
             print!("({:?}): {}", level, msg);
         }
+    }
+}
+
+pub fn setup_logging(
+    log_callback: Option<extern "C" fn(level: SdLogLevel, text: *const c_char, _data: *mut c_void)>,
+    progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
+) {
+    unsafe {
+        match log_callback {
+            Some(callback) => sd_set_log_callback(Some(callback), std::ptr::null_mut()),
+            None => sd_set_log_callback(Some(default_log_callback), std::ptr::null_mut()),
+        };
+        match progress_callback {
+            Some(callback) => sd_set_progress_callback(Some(callback), std::ptr::null_mut()),
+            None => (),
+        };
     }
 }
 
@@ -112,19 +130,3 @@ extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _
 //         bar.set_message(format!("Elapsed: {:.2} s", time));
 //     }
 // }
-
-pub fn setup_logging(
-    log_callback: Option<extern "C" fn(level: SdLogLevel, text: *const c_char, _data: *mut c_void)>,
-    progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
-) {
-    unsafe {
-        match log_callback {
-            Some(callback) => sd_set_log_callback(Some(callback), std::ptr::null_mut()),
-            None => sd_set_log_callback(Some(default_log_callback), std::ptr::null_mut()),
-        };
-        match progress_callback {
-            Some(callback) => sd_set_progress_callback(Some(callback), std::ptr::null_mut()),
-            None => (),
-        };
-    }
-}
