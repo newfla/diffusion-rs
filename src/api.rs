@@ -26,7 +26,7 @@ impl ModelCtx {
         setup_logging(
             config.log_callback,
             config.progress_callback,
-            config.logging_data,
+            config.logging_data.as_ref().unwrap().data,
         );
 
         let ctx = unsafe {
@@ -163,7 +163,7 @@ impl Drop for ModelCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{RngFunction, SampleMethod, Schedule, WeightType};
+    use crate::utils::{Data, RngFunction, SampleMethod, Schedule, WeightType};
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
     use diffusion_rs_sys::sd_log_level_t;
     use image::ImageReader;
@@ -243,7 +243,10 @@ mod tests {
         let mut state = State {
             state: String::from("beginning"),
         };
-        let state_ptr: *mut c_void = &mut state as *mut _ as *mut c_void;
+
+        let state_ptr: Data = Data {
+            data: &mut state as *mut State as *mut c_void,
+        };
 
         let model_config = ModelConfigBuilder::default()
             .model("./models/mistoonAnime_v30.safetensors")

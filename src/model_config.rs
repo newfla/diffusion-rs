@@ -5,7 +5,7 @@ use std::ptr::null_mut;
 use derive_builder::Builder;
 use diffusion_rs_sys::{get_num_physical_cores, sd_log_level_t};
 
-use crate::utils::{RngFunction, Schedule, WeightType};
+use crate::utils::{Data, RngFunction, Schedule, WeightType};
 
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
@@ -115,8 +115,8 @@ pub struct ModelConfig {
     pub progress_callback:
         Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
 
-    #[builder(default = "null_mut()")]
-    pub logging_data: *mut c_void,
+    #[builder(default = "None")]
+    pub logging_data: Option<Data>,
 }
 
 impl ModelConfigBuilder {

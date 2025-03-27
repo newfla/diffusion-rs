@@ -105,6 +105,14 @@ pub fn setup_logging(
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Data {
+    pub data: *mut c_void,
+}
+
+unsafe impl Send for Data {}
+unsafe impl Sync for Data {}
+
 // use std::sync::LazyLock;
 
 // static BAR: LazyLock<Mutex<ProgressBar>> = LazyLock::new(|| {
