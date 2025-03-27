@@ -1,5 +1,6 @@
 use std::ffi::{c_char, c_void};
 use std::path::PathBuf;
+use std::ptr::null_mut;
 
 use derive_builder::Builder;
 use diffusion_rs_sys::{get_num_physical_cores, sd_log_level_t};
@@ -113,6 +114,9 @@ pub struct ModelConfig {
     #[builder(default = "None")]
     pub progress_callback:
         Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
+
+    #[builder(default = "null_mut()")]
+    pub logging_data: *mut c_void,
 }
 
 impl ModelConfigBuilder {

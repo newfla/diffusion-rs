@@ -91,14 +91,15 @@ extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _
 pub fn setup_logging(
     log_callback: Option<extern "C" fn(level: SdLogLevel, text: *const c_char, _data: *mut c_void)>,
     progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
+    logging_data: *mut c_void,
 ) {
     unsafe {
         match log_callback {
-            Some(callback) => sd_set_log_callback(Some(callback), std::ptr::null_mut()),
-            None => sd_set_log_callback(Some(default_log_callback), std::ptr::null_mut()),
+            Some(callback) => sd_set_log_callback(Some(callback), logging_data),
+            None => sd_set_log_callback(Some(default_log_callback), logging_data),
         };
         match progress_callback {
-            Some(callback) => sd_set_progress_callback(Some(callback), std::ptr::null_mut()),
+            Some(callback) => sd_set_progress_callback(Some(callback), logging_data),
             None => (),
         };
     }

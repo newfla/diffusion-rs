@@ -9,6 +9,7 @@ use diffusion_rs_sys::sd_image_t;
 use image::RgbImage;
 use libc::free;
 
+#[derive(Debug)]
 pub struct ModelCtx {
     /// The underlying C context
     ctx: *mut diffusion_rs_sys::sd_ctx_t,
@@ -22,7 +23,11 @@ unsafe impl Sync for ModelCtx {}
 
 impl ModelCtx {
     pub fn new(config: &ModelConfig) -> Result<Self, DiffusionError> {
-        setup_logging(config.log_callback, config.progress_callback);
+        setup_logging(
+            config.log_callback,
+            config.progress_callback,
+            config.logging_data,
+        );
 
         let ctx = unsafe {
             let ptr = diffusion_rs_sys::new_sd_ctx(
@@ -160,9 +165,44 @@ mod tests {
     use super::*;
     use crate::utils::{RngFunction, SampleMethod, Schedule, WeightType};
     use crate::{model_config::ModelConfigBuilder, txt2img_config::Txt2ImgConfigBuilder};
+    use diffusion_rs_sys::sd_log_level_t;
     use image::ImageReader;
+    use std::ffi::{CStr, c_char, c_int};
     use std::sync::{Arc, Mutex};
     use std::thread;
+
+    #[derive(Debug)]
+    struct State {
+        state: String,
+    }
+
+    extern "C" fn testing_log_callback(
+        level: sd_log_level_t,
+        text: *const c_char,
+        _data: *mut c_void,
+    ) {
+        unsafe {
+            // Convert C string to Rust &str and print it.
+            if !text.is_null() {
+                let msg = CStr::from_ptr(text)
+                    .to_str()
+                    .unwrap_or("LOG ERROR: Invalid UTF-8");
+                print!("({:?}): {}", level, msg);
+            }
+        }
+    }
+
+    extern "C" fn testing_progress_callback(
+        step: c_int,
+        steps: c_int,
+        time: f32,
+        _data: *mut c_void,
+    ) {
+        // Convert C string to Rust &str and print it.
+        let data: &mut State = unsafe { &mut *(_data as *mut State) };
+        data.state = format!("Updated at {}", time);
+        print!("({:?}): {} {:?}", (step, steps), time, data);
+    }
 
     #[test]
     fn test_invalid_model_config() {
@@ -200,6 +240,11 @@ mod tests {
 
     #[test]
     fn test_txt2img_singlethreaded_success() {
+        let mut state = State {
+            state: String::from("beginning"),
+        };
+        let state_ptr: *mut c_void = &mut state as *mut _ as *mut c_void;
+
         let model_config = ModelConfigBuilder::default()
             .model("./models/mistoonAnime_v30.safetensors")
             .lora_model_dir("./models/loras")
@@ -210,6 +255,10 @@ mod tests {
             .schedule(Schedule::AYS)
             .vae_decode_only(true)
             .flash_attention(true)
+            .logging_data(state_ptr)
+            .progress_callback(
+                testing_progress_callback as extern "C" fn(i32, i32, f32, *mut libc::c_void),
+            )
             .build()
             .expect("Failed to build model config");
 
