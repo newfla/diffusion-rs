@@ -1,9 +1,7 @@
-use std::ffi::{c_char, c_void};
-use std::path::PathBuf;
-use std::ptr::null_mut;
-
 use derive_builder::Builder;
 use diffusion_rs_sys::{get_num_physical_cores, sd_log_level_t};
+use std::ffi::{c_char, c_void};
+use std::path::PathBuf;
 
 use crate::utils::{Data, RngFunction, Schedule, WeightType};
 

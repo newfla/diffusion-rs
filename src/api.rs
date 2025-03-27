@@ -168,6 +168,7 @@ mod tests {
     use diffusion_rs_sys::sd_log_level_t;
     use image::ImageReader;
     use std::ffi::{CStr, c_char, c_int};
+    use std::sync::mpsc::{self, Sender};
     use std::sync::{Arc, Mutex};
     use std::thread;
 
@@ -201,6 +202,19 @@ mod tests {
         // Convert C string to Rust &str and print it.
         let data: &mut State = unsafe { &mut *(_data as *mut State) };
         data.state = format!("Updated at {}", time);
+        print!("({:?}): {} {:?}", (step, steps), time, data);
+    }
+
+    extern "C" fn testing_progress_callback2(
+        step: c_int,
+        steps: c_int,
+        time: f32,
+        _data: *mut c_void,
+    ) {
+        // Convert C string to Rust &str and print it.
+        let data: &Sender<String> = unsafe { &*(_data as *const Sender<String>) };
+        data.send(format!("Updated at {}", time))
+            .expect("Failed to send progress update");
         print!("({:?}): {} {:?}", (step, steps), time, data);
     }
 
@@ -295,7 +309,7 @@ mod tests {
             .height(resolution)
             .width(resolution)
             .clip_skip(2)
-            .batch_count(5)
+            .batch_count(1)
             .build()
             .expect("Failed to build txt2img config 1");
 
@@ -311,6 +325,12 @@ mod tests {
 
     #[test]
     fn test_txt2img_multithreaded_success() {
+        let (sender, receiver) = mpsc::channel();
+
+        let sender_ptr: Data = Data {
+            data: &mut sender.clone() as *mut Sender<String> as *mut c_void,
+        };
+
         let model_config = ModelConfigBuilder::default()
             .model("./models/mistoonAnime_v30.safetensors")
             .lora_model_dir("./models/loras")
@@ -321,6 +341,10 @@ mod tests {
             .schedule(Schedule::AYS)
             .vae_decode_only(true)
             .flash_attention(false)
+            .logging_data(sender_ptr)
+            .progress_callback(
+                testing_progress_callback2 as extern "C" fn(i32, i32, f32, *mut c_void),
+            )
             .build()
             .expect("Failed to build model config");
 
@@ -370,8 +394,12 @@ mod tests {
                 .expect("Failed to build txt2img config");
 
             let ctx = Arc::clone(&ctx);
-
+            let sender_clone = sender.clone();
             let handle = thread::spawn(move || {
+                sender_clone
+                    .send(format!("Thread {} started", index))
+                    .expect("Failed to send message");
+
                 let result = ctx
                     .lock()
                     .unwrap()

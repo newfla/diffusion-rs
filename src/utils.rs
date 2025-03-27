@@ -88,9 +88,14 @@ extern "C" fn default_log_callback(level: sd_log_level_t, text: *const c_char, _
     }
 }
 
+type UnsafeLogCallbackFn =
+    extern "C" fn(level: sd_log_level_t, text: *const c_char, data: *mut c_void);
+
+type UnsafeProgressCallbackFn = extern "C" fn(step: i32, steps: i32, time: f32, data: *mut c_void);
+
 pub fn setup_logging(
-    log_callback: Option<extern "C" fn(level: SdLogLevel, text: *const c_char, _data: *mut c_void)>,
-    progress_callback: Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
+    log_callback: Option<UnsafeLogCallbackFn>,
+    progress_callback: Option<UnsafeProgressCallbackFn>,
     logging_data: *mut c_void,
 ) {
     unsafe {
@@ -111,31 +116,3 @@ pub struct Data {
 }
 
 unsafe impl Send for Data {}
-unsafe impl Sync for Data {}
-
-// use std::sync::LazyLock;
-
-// static BAR: LazyLock<Mutex<ProgressBar>> = LazyLock::new(|| {
-//     Mutex::new(ProgressBar::no_length().with_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-// .unwrap()
-// .progress_chars("#>-")))
-// });
-
-// /// This is your C callback that gets called with current progress.
-// extern "C" fn default_progress_callback(step: c_int, steps: c_int, time: f32, _data: *mut c_void) {
-//     // Update the global progress bar if it's been initialized.
-//     let mut bar = BAR.lock().unwrap();
-
-//     if bar.is_finished() {
-//         *bar = ProgressBar::no_length().with_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-//         .unwrap()
-//         .progress_chars("#>-"));
-//     } else {
-//         if steps == step {
-//             bar.finish_with_message("Done");
-//         }
-//         bar.set_length(steps as u64);
-//         bar.set_position(step as u64);
-//         bar.set_message(format!("Elapsed: {:.2} s", time));
-//     }
-// }
