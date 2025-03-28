@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::utils::SampleMethod;
+use crate::types::SampleMethod;
 use derive_builder::Builder;
 use image::RgbImage;
 
@@ -115,5 +115,24 @@ impl Txt2ImgConfigBuilder {
             .get_or_insert_with(Vec::new)
             .push(format!("<lora:{filename}:{strength}>"));
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_txt2img_config() {
+        let config = Txt2ImgConfigBuilder::default().build();
+        assert!(config.is_err(), "Txt2ImgConfig should fail without prompt");
+    }
+
+    #[test]
+    fn test_valid_txt2img_config() {
+        let config = Txt2ImgConfigBuilder::default()
+            .prompt("testing prompt")
+            .build();
+        assert!(config.is_ok(), "Txt2ImgConfig should succeed with prompt");
     }
 }

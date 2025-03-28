@@ -1,12 +1,19 @@
+use crate::types::{RngFunction, Schedule, SdLogLevel, WeightType};
 use derive_builder::Builder;
-use diffusion_rs_sys::{get_num_physical_cores, sd_log_level_t};
-use std::ffi::{c_char, c_void};
+use std::ffi::{CStr, c_char, c_void};
 use std::path::PathBuf;
 
-use crate::utils::{Data, RngFunction, Schedule, WeightType};
+type UnsafeLogCallbackFn = unsafe extern "C" fn(
+    level: diffusion_rs_sys::sd_log_level_t,
+    text: *const c_char,
+    data: *mut c_void,
+);
+
+type UnsafeProgressCallbackFn =
+    unsafe extern "C" fn(step: i32, steps: i32, time: f32, data: *mut c_void);
 
 #[derive(Builder, Debug, Clone)]
-#[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
+#[builder(setter(into), build_fn(validate = "Self::validate"))]
 /// Config struct common to all diffusion methods
 pub struct ModelConfig {
     /// Path to full model
@@ -67,8 +74,11 @@ pub struct ModelConfig {
     pub free_params_immediately: bool,
 
     /// Number of threads to use during computation (default: 0).
-    /// If n_ threads <= 0, then threads will be set to the number of CPU physical cores.
-    #[builder(default = "unsafe { get_num_physical_cores() }", setter(custom))]
+    /// If n_threads <= 0, then threads will be set to the number of CPU physical cores.
+    #[builder(
+        default = "unsafe { diffusion_rs_sys::get_num_physical_cores() }",
+        setter(custom)
+    )]
     pub n_threads: i32,
 
     /// Weight type. If not specified, the default is the type of the weight file
@@ -104,17 +114,12 @@ pub struct ModelConfig {
     pub flash_attention: bool,
 
     /// set log callback function for cpp logs (default: None)
-    #[builder(default = "None")]
-    pub log_callback:
-        Option<extern "C" fn(level: sd_log_level_t, text: *const c_char, _data: *mut c_void)>,
+    #[builder(setter(custom))]
+    pub log_callback: (Option<UnsafeLogCallbackFn>, *mut c_void),
 
     /// set log callback function for progress logs (default: None)
-    #[builder(default = "None")]
-    pub progress_callback:
-        Option<extern "C" fn(step: i32, steps: i32, time: f32, _data: *mut c_void)>,
-
-    #[builder(default = "None")]
-    pub logging_data: Option<Data>,
+    #[builder(setter(custom))]
+    pub progress_callback: (Option<UnsafeProgressCallbackFn>, *mut c_void),
 }
 
 impl ModelConfigBuilder {
@@ -122,7 +127,7 @@ impl ModelConfigBuilder {
         self.n_threads = if value > 0 {
             Some(value)
         } else {
-            Some(unsafe { get_num_physical_cores() })
+            Some(unsafe { diffusion_rs_sys::get_num_physical_cores() })
         };
         self
     }
@@ -139,5 +144,51 @@ impl ModelConfigBuilder {
             .ok_or(ModelConfigBuilderError::UninitializedField(
                 "Model OR DiffusionModel must be initialized",
             ))
+    }
+
+    pub fn log_callback<F>(&mut self, mut closure: F) -> &mut Self
+    where
+        F: FnMut(SdLogLevel, String) + Send + Sync,
+    {
+        let mut unsafe_closure = |level: diffusion_rs_sys::sd_log_level_t, text: *const c_char| {
+            let msg = unsafe { CStr::from_ptr(text) }
+                .to_str()
+                .unwrap_or("LOG ERROR: Invalid UTF-8");
+            let level = SdLogLevel::from(level);
+            (closure)(level, msg.to_string());
+        };
+
+        let (state, callback) =
+            unsafe { ffi_helpers::split_closure_trailing_data(&mut unsafe_closure) };
+        let adapted_callback: UnsafeLogCallbackFn = callback;
+        self.log_callback = Some((Some(adapted_callback), state));
+        self
+    }
+
+    pub fn progress_callback<F>(&mut self, mut closure: F) -> &mut Self
+    where
+        F: FnMut(i32, i32, f32) + Send + Sync,
+    {
+        let (state, callback) = unsafe { ffi_helpers::split_closure_trailing_data(&mut closure) };
+        let adapted_callback: UnsafeProgressCallbackFn = callback;
+        self.progress_callback = Some((Some(adapted_callback), state));
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_model_config() {
+        let config = ModelConfigBuilder::default().build();
+        assert!(config.is_err(), "ModelConfig should fail without a model");
+    }
+
+    #[test]
+    fn test_valid_model_config() {
+        let config = ModelConfigBuilder::default().model("./test.ckpt").build();
+        assert!(config.is_ok(), "ModelConfig should succeed with model path");
     }
 }
