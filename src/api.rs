@@ -25,16 +25,29 @@ unsafe impl Sync for ModelCtx {}
 
 impl ModelCtx {
     pub fn new(config: &ModelConfig) -> Result<Self, DiffusionError> {
-        unsafe {
-            diffusion_rs_sys::sd_set_log_callback(config.log_callback.0, config.log_callback.1)
-        };
+        match &config.log_callback {
+            Some(t) => {
+                unsafe {
+                    diffusion_rs_sys::sd_set_log_callback(
+                        t.0,
+                        t.1.clone().lock().unwrap().as_mut().unwrap(),
+                    )
+                };
+            }
+            None => {}
+        }
 
-        unsafe {
-            diffusion_rs_sys::sd_set_progress_callback(
-                config.progress_callback.0,
-                config.progress_callback.1,
-            )
-        };
+        match &config.progress_callback {
+            Some(t) => {
+                unsafe {
+                    diffusion_rs_sys::sd_set_progress_callback(
+                        t.0,
+                        t.1.clone().lock().unwrap().as_mut().unwrap(),
+                    )
+                };
+            }
+            None => {}
+        }
 
         let ctx = unsafe {
             let ptr = diffusion_rs_sys::new_sd_ctx(

@@ -82,6 +82,12 @@ fn test_txt2img_multithreaded_success() {
         .schedule(Schedule::AYS)
         .vae_decode_only(true)
         .flash_attention(false)
+        .log_callback(|level, text| {
+            print!("({:?}): {}", level, text);
+        })
+        .progress_callback(|step, steps, time| {
+            println!("Progress: {}/{} ({}s)", step, steps, time);
+        })
         .build()
         .expect("Failed to build model config");
 
@@ -157,24 +163,42 @@ fn test_txt2img_multithreaded_success() {
 
 #[test]
 fn test_txt2img_multithreaded_multimodel_success() {
-    let model_config = ModelConfigBuilder::default()
+    let mut model_config = ModelConfigBuilder::default();
+    model_config
         .model("./models/mistoonAnime_v30.safetensors")
         .lora_model_dir("./models/loras")
         .taesd("./models/taesd1.safetensors")
         .control_net("./models/controlnet/control_canny-fp16.safetensors")
         .schedule(Schedule::AYS)
         .vae_decode_only(true)
-        .flash_attention(true)
-        .build()
-        .expect("Failed to build model config");
+        .flash_attention(true);
 
-    let ctx1 = ModelCtx::new(&model_config).expect("Failed to build model context");
-    let ctx2 = ModelCtx::new(&model_config).expect("Failed to build model context");
+    let mut model_handle = vec![];
+    for x in 0..2 {
+        let model_config = model_config
+            .log_callback(|level, text| {
+                print!("[Thread {}], ({:?}): {}", x, level, text);
+            })
+            .build()
+            .expect("Failed to build model config");
+        let handle = thread::spawn(move || {
+            // Use the context directly in the thread
+            return ModelCtx::new(&model_config).expect("Failed to build model context");
+        });
+        model_handle.push(handle);
+    }
 
-    let models = Arc::new(vec![ctx1, ctx2]);
+    // wait for threads to finish
+    let mut models = vec![];
+    for handle in model_handle {
+        let ctx = handle.join().expect("Failed to join thread");
+        models.push(ctx);
+    }
+
+    let models = Arc::new(models);
 
     let resolution: i32 = 384;
-    let sample_steps = 3;
+    let sample_steps = 1;
     let control_strength = 0.5;
     let control_image = ImageReader::open("./images/canny-384x.jpg")
         .expect("Failed to open image")

@@ -2,6 +2,7 @@ use crate::types::{RngFunction, Schedule, SdLogLevel, WeightType};
 use derive_builder::Builder;
 use std::ffi::{CStr, c_char, c_void};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 type UnsafeLogCallbackFn = unsafe extern "C" fn(
     level: diffusion_rs_sys::sd_log_level_t,
@@ -114,13 +115,15 @@ pub struct ModelConfig {
     pub flash_attention: bool,
 
     /// set log callback function for cpp logs (default: None)
-    #[builder(setter(custom))]
-    pub log_callback: (Option<UnsafeLogCallbackFn>, *mut c_void),
+    #[builder(setter(custom, strip_option), default = "None")]
+    pub log_callback: Option<(Option<UnsafeLogCallbackFn>, Arc<Mutex<*mut c_void>>)>,
 
     /// set log callback function for progress logs (default: None)
-    #[builder(setter(custom))]
-    pub progress_callback: (Option<UnsafeProgressCallbackFn>, *mut c_void),
+    #[builder(setter(custom, strip_option), default = "None")]
+    pub progress_callback: Option<(Option<UnsafeProgressCallbackFn>, Arc<Mutex<*mut c_void>>)>,
 }
+
+unsafe impl Send for ModelConfig {}
 
 impl ModelConfigBuilder {
     pub fn n_threads(&mut self, value: i32) -> &mut Self {
@@ -161,7 +164,7 @@ impl ModelConfigBuilder {
         let (state, callback) =
             unsafe { ffi_helpers::split_closure_trailing_data(&mut unsafe_closure) };
         let adapted_callback: UnsafeLogCallbackFn = callback;
-        self.log_callback = Some((Some(adapted_callback), state));
+        self.log_callback = Some(Some((Some(adapted_callback), Arc::new(Mutex::new(state)))));
         self
     }
 
@@ -171,7 +174,7 @@ impl ModelConfigBuilder {
     {
         let (state, callback) = unsafe { ffi_helpers::split_closure_trailing_data(&mut closure) };
         let adapted_callback: UnsafeProgressCallbackFn = callback;
-        self.progress_callback = Some((Some(adapted_callback), state));
+        self.progress_callback = Some(Some((Some(adapted_callback), Arc::new(Mutex::new(state)))));
         self
     }
 }
