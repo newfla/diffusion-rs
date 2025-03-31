@@ -1,6 +1,7 @@
 use std::ffi::{CString, c_void};
 use std::ptr::null;
 use std::slice;
+use std::sync::Arc;
 
 use crate::model_config::ModelConfig;
 use crate::txt2img_config::Txt2ImgConfig;
@@ -27,24 +28,14 @@ impl ModelCtx {
     pub fn new(config: &ModelConfig) -> Result<Self, DiffusionError> {
         match &config.log_callback {
             Some(t) => {
-                unsafe {
-                    diffusion_rs_sys::sd_set_log_callback(
-                        t.0,
-                        t.1.clone().lock().unwrap().as_mut().unwrap(),
-                    )
-                };
+                unsafe { diffusion_rs_sys::sd_set_log_callback(t.callback, t.data) };
             }
             None => {}
         }
 
         match &config.progress_callback {
             Some(t) => {
-                unsafe {
-                    diffusion_rs_sys::sd_set_progress_callback(
-                        t.0,
-                        t.1.clone().lock().unwrap().as_mut().unwrap(),
-                    )
-                };
+                unsafe { diffusion_rs_sys::sd_set_progress_callback(t.callback, t.data) };
             }
             None => {}
         }

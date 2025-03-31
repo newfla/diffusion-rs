@@ -8,6 +8,46 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 #[test]
+fn test_txt2img_failure() {
+    // Build a context with invalid data to force failure
+    let config = ModelConfigBuilder::default()
+        .model("./mistoonAnime_v10Illustrious.safetensors")
+        .build()
+        .unwrap();
+    let ctx = ModelCtx::new(&config).expect("Failed to build model context");
+    let txt2img_conf = Txt2ImgConfigBuilder::default()
+        .prompt("test prompt")
+        .sample_steps(1)
+        .build()
+        .unwrap();
+    // Hypothetical failure scenario
+    let result = ctx.txt2img(&txt2img_conf);
+    // Expect an error if calling with invalid path
+    // This depends on your real implementation
+    assert!(result.is_err() || result.is_ok());
+}
+
+#[test]
+fn test_multiple_images() {
+    let config = ModelConfigBuilder::default()
+        .model("./mistoonAnime_v10Illustrious.safetensors")
+        .build()
+        .unwrap();
+    let ctx = ModelCtx::new(&config).expect("Failed to build model context");
+    let txt2img_conf = Txt2ImgConfigBuilder::default()
+        .prompt("multi-image prompt")
+        .sample_steps(1)
+        .batch_count(3)
+        .build()
+        .unwrap();
+    let result = ctx.txt2img(&txt2img_conf);
+    assert!(result.is_ok());
+    if let Ok(images) = result {
+        assert_eq!(images.len(), 3);
+    }
+}
+
+#[test]
 fn test_txt2img_singlethreaded_success() {
     let model_config = ModelConfigBuilder::default()
         .model("./models/mistoonAnime_v30.safetensors")
@@ -176,8 +216,8 @@ fn test_txt2img_multithreaded_multimodel_success() {
     let mut model_handle = vec![];
     for x in 0..2 {
         let model_config = model_config
-            .log_callback(|level, text| {
-                print!("[Thread {}], ({:?}): {}", x, level, text);
+            .log_callback(move |level, text| {
+                print!("[Thread {}] ({:?}): {}", x, level, text);
             })
             .build()
             .expect("Failed to build model config");
@@ -258,45 +298,5 @@ fn test_txt2img_multithreaded_multimodel_success() {
 
     for handle in handles {
         handle.join().unwrap();
-    }
-}
-
-#[test]
-fn test_txt2img_failure() {
-    // Build a context with invalid data to force failure
-    let config = ModelConfigBuilder::default()
-        .model("./mistoonAnime_v10Illustrious.safetensors")
-        .build()
-        .unwrap();
-    let ctx = ModelCtx::new(&config).expect("Failed to build model context");
-    let txt2img_conf = Txt2ImgConfigBuilder::default()
-        .prompt("test prompt")
-        .sample_steps(1)
-        .build()
-        .unwrap();
-    // Hypothetical failure scenario
-    let result = ctx.txt2img(&txt2img_conf);
-    // Expect an error if calling with invalid path
-    // This depends on your real implementation
-    assert!(result.is_err() || result.is_ok());
-}
-
-#[test]
-fn test_multiple_images() {
-    let config = ModelConfigBuilder::default()
-        .model("./mistoonAnime_v10Illustrious.safetensors")
-        .build()
-        .unwrap();
-    let ctx = ModelCtx::new(&config).expect("Failed to build model context");
-    let txt2img_conf = Txt2ImgConfigBuilder::default()
-        .prompt("multi-image prompt")
-        .sample_steps(1)
-        .batch_count(3)
-        .build()
-        .unwrap();
-    let result = ctx.txt2img(&txt2img_conf);
-    assert!(result.is_ok());
-    if let Ok(images) = result {
-        assert_eq!(images.len(), 3);
     }
 }

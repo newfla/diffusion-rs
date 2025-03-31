@@ -2,7 +2,8 @@ use crate::types::{RngFunction, Schedule, SdLogLevel, WeightType};
 use derive_builder::Builder;
 use std::ffi::{CStr, c_char, c_void};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::ptr;
+use std::sync::Arc;
 
 type UnsafeLogCallbackFn = unsafe extern "C" fn(
     level: diffusion_rs_sys::sd_log_level_t,
@@ -12,6 +13,24 @@ type UnsafeLogCallbackFn = unsafe extern "C" fn(
 
 type UnsafeProgressCallbackFn =
     unsafe extern "C" fn(step: i32, steps: i32, time: f32, data: *mut c_void);
+
+#[derive(Debug, Clone)]
+pub struct LogCallBackWrapper {
+    pub callback: Option<UnsafeLogCallbackFn>,
+    pub data: *mut c_void,
+}
+
+unsafe impl Send for LogCallBackWrapper {}
+unsafe impl Sync for LogCallBackWrapper {}
+
+#[derive(Debug, Clone)]
+pub struct ProgressCallBackWrapper {
+    pub callback: Option<UnsafeProgressCallbackFn>,
+    pub data: *mut c_void,
+}
+
+unsafe impl Send for ProgressCallBackWrapper {}
+unsafe impl Sync for ProgressCallBackWrapper {}
 
 #[derive(Builder, Debug, Clone)]
 #[builder(setter(into), build_fn(validate = "Self::validate"))]
@@ -115,12 +134,12 @@ pub struct ModelConfig {
     pub flash_attention: bool,
 
     /// set log callback function for cpp logs (default: None)
-    #[builder(setter(custom, strip_option), default = "None")]
-    pub log_callback: Option<(Option<UnsafeLogCallbackFn>, Arc<Mutex<*mut c_void>>)>,
+    #[builder(setter(custom), default = "None")]
+    pub log_callback: Option<LogCallBackWrapper>,
 
     /// set log callback function for progress logs (default: None)
-    #[builder(setter(custom, strip_option), default = "None")]
-    pub progress_callback: Option<(Option<UnsafeProgressCallbackFn>, Arc<Mutex<*mut c_void>>)>,
+    #[builder(setter(custom), default = "None")]
+    pub progress_callback: Option<ProgressCallBackWrapper>,
 }
 
 unsafe impl Send for ModelConfig {}
@@ -151,9 +170,9 @@ impl ModelConfigBuilder {
 
     pub fn log_callback<F>(&mut self, mut closure: F) -> &mut Self
     where
-        F: FnMut(SdLogLevel, String) + Send + Sync,
+        F: FnMut(SdLogLevel, String) + Send + Sync + 'static,
     {
-        let mut unsafe_closure = |level: diffusion_rs_sys::sd_log_level_t, text: *const c_char| {
+        let unsafe_closure = move |level: diffusion_rs_sys::sd_log_level_t, text: *const c_char| {
             let msg = unsafe { CStr::from_ptr(text) }
                 .to_str()
                 .unwrap_or("LOG ERROR: Invalid UTF-8");
@@ -161,20 +180,28 @@ impl ModelConfigBuilder {
             (closure)(level, msg.to_string());
         };
 
+        let boxed_closure = Box::new(unsafe_closure);
+
         let (state, callback) =
-            unsafe { ffi_helpers::split_closure_trailing_data(&mut unsafe_closure) };
-        let adapted_callback: UnsafeLogCallbackFn = callback;
-        self.log_callback = Some(Some((Some(adapted_callback), Arc::new(Mutex::new(state)))));
+            unsafe { ffi_helpers::split_closure_trailing_data(Box::leak(boxed_closure)) };
+
+        self.log_callback = Some(Some(LogCallBackWrapper {
+            callback: Some(callback),
+            data: state,
+        }));
         self
     }
 
     pub fn progress_callback<F>(&mut self, mut closure: F) -> &mut Self
     where
-        F: FnMut(i32, i32, f32) + Send + Sync,
+        F: FnMut(i32, i32, f32) + Send + Sync + 'static,
     {
         let (state, callback) = unsafe { ffi_helpers::split_closure_trailing_data(&mut closure) };
-        let adapted_callback: UnsafeProgressCallbackFn = callback;
-        self.progress_callback = Some(Some((Some(adapted_callback), Arc::new(Mutex::new(state)))));
+
+        self.progress_callback = Some(Some(ProgressCallBackWrapper {
+            callback: Some(callback),
+            data: state,
+        }));
         self
     }
 }
