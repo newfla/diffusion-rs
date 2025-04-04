@@ -21,7 +21,6 @@ documentation = "https://docs.rs/diffusion-rs"
 [dependencies]
 derive_builder = "0.20.2"
 diffusion-rs-sys = { path = "sys", version = "0.1.8" }
-ffi_helpers = { git = "https://github.com/anzbert/ffi_helpers.git", branch = "master" }
 image = "0.25.6"
 libc = "0.2.171"
 num_cpus = "1.16.0"

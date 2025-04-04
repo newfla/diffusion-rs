@@ -1,11 +1,11 @@
 use std::ffi::{CString, c_void};
+use std::mem::ManuallyDrop;
 use std::ptr::null;
 use std::slice;
-use std::sync::Arc;
 
 use crate::model_config::ModelConfig;
 use crate::txt2img_config::Txt2ImgConfig;
-use crate::types::DiffusionError;
+use crate::types::{DiffusionError, LogCallback, ProgressCallback, SdLogLevel};
 use crate::utils::{convert_image, pathbuf_to_c_char};
 
 use diffusion_rs_sys::sd_image_t;
@@ -22,24 +22,10 @@ pub struct ModelCtx {
 }
 
 unsafe impl Send for ModelCtx {}
-unsafe impl Sync for ModelCtx {}
+// unsafe impl Sync for ModelCtx {}
 
 impl ModelCtx {
     pub fn new(config: &ModelConfig) -> Result<Self, DiffusionError> {
-        match &config.log_callback {
-            Some(t) => {
-                unsafe { diffusion_rs_sys::sd_set_log_callback(t.callback, t.data) };
-            }
-            None => {}
-        }
-
-        match &config.progress_callback {
-            Some(t) => {
-                unsafe { diffusion_rs_sys::sd_set_progress_callback(t.callback, t.data) };
-            }
-            None => {}
-        }
-
         let ctx = unsafe {
             let ptr = diffusion_rs_sys::new_sd_ctx(
                 pathbuf_to_c_char(&config.model).as_ptr(),
@@ -76,6 +62,24 @@ impl ModelCtx {
             ctx,
             config: config.clone(),
         })
+    }
+
+    pub fn set_log_callback<F>(on_log: F) -> ()
+    where
+        F: Fn(SdLogLevel, String) + Send + Sync + 'static,
+    {
+        // Create a new log callback
+        let t = ManuallyDrop::new(LogCallback::new(on_log));
+        unsafe { diffusion_rs_sys::sd_set_log_callback(t.callback(), t.user_data()) };
+    }
+
+    pub fn set_progress_callback<F>(on_progress: F) -> ()
+    where
+        F: Fn(i32, i32, f32) + Send + Sync + 'static,
+    {
+        // Create a new progress callback
+        let t = ManuallyDrop::new(ProgressCallback::new(on_progress));
+        unsafe { diffusion_rs_sys::sd_set_progress_callback(t.callback(), t.user_data()) };
     }
 
     pub fn txt2img(&self, txt2img_config: &Txt2ImgConfig) -> Result<Vec<RgbImage>, DiffusionError> {

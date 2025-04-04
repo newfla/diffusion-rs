@@ -1,38 +1,9 @@
-use crate::types::{RngFunction, Schedule, SdLogLevel, WeightType};
+use crate::types::{RngFunction, Schedule, WeightType};
 use derive_builder::Builder;
-use std::ffi::{CStr, c_char, c_void};
+
 use std::path::PathBuf;
-use std::ptr;
-use std::sync::Arc;
 
-type UnsafeLogCallbackFn = unsafe extern "C" fn(
-    level: diffusion_rs_sys::sd_log_level_t,
-    text: *const c_char,
-    data: *mut c_void,
-);
-
-type UnsafeProgressCallbackFn =
-    unsafe extern "C" fn(step: i32, steps: i32, time: f32, data: *mut c_void);
-
-#[derive(Debug, Clone)]
-pub struct LogCallBackWrapper {
-    pub callback: Option<UnsafeLogCallbackFn>,
-    pub data: *mut c_void,
-}
-
-unsafe impl Send for LogCallBackWrapper {}
-unsafe impl Sync for LogCallBackWrapper {}
-
-#[derive(Debug, Clone)]
-pub struct ProgressCallBackWrapper {
-    pub callback: Option<UnsafeProgressCallbackFn>,
-    pub data: *mut c_void,
-}
-
-unsafe impl Send for ProgressCallBackWrapper {}
-unsafe impl Sync for ProgressCallBackWrapper {}
-
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Clone, Debug)]
 #[builder(setter(into), build_fn(validate = "Self::validate"))]
 /// Config struct common to all diffusion methods
 pub struct ModelConfig {
@@ -132,14 +103,6 @@ pub struct ModelConfig {
     /// (default: false)
     #[builder(default = "false")]
     pub flash_attention: bool,
-
-    /// set log callback function for cpp logs (default: None)
-    #[builder(setter(custom), default = "None")]
-    pub log_callback: Option<LogCallBackWrapper>,
-
-    /// set log callback function for progress logs (default: None)
-    #[builder(setter(custom), default = "None")]
-    pub progress_callback: Option<ProgressCallBackWrapper>,
 }
 
 unsafe impl Send for ModelConfig {}
@@ -166,43 +129,6 @@ impl ModelConfigBuilder {
             .ok_or(ModelConfigBuilderError::UninitializedField(
                 "Model OR DiffusionModel must be initialized",
             ))
-    }
-
-    pub fn log_callback<F>(&mut self, mut closure: F) -> &mut Self
-    where
-        F: FnMut(SdLogLevel, String) + Send + Sync + 'static,
-    {
-        let unsafe_closure = move |level: diffusion_rs_sys::sd_log_level_t, text: *const c_char| {
-            let msg = unsafe { CStr::from_ptr(text) }
-                .to_str()
-                .unwrap_or("LOG ERROR: Invalid UTF-8");
-            let level = SdLogLevel::from(level);
-            (closure)(level, msg.to_string());
-        };
-
-        let boxed_closure = Box::new(unsafe_closure);
-
-        let (state, callback) =
-            unsafe { ffi_helpers::split_closure_trailing_data(Box::leak(boxed_closure)) };
-
-        self.log_callback = Some(Some(LogCallBackWrapper {
-            callback: Some(callback),
-            data: state,
-        }));
-        self
-    }
-
-    pub fn progress_callback<F>(&mut self, mut closure: F) -> &mut Self
-    where
-        F: FnMut(i32, i32, f32) + Send + Sync + 'static,
-    {
-        let (state, callback) = unsafe { ffi_helpers::split_closure_trailing_data(&mut closure) };
-
-        self.progress_callback = Some(Some(ProgressCallBackWrapper {
-            callback: Some(callback),
-            data: state,
-        }));
-        self
     }
 }
 
