@@ -43,9 +43,9 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 4 steps.
     Flux1Schnell(api::WeightType),
-    /// A 3.2B param rectified flow transformer distilled from FLUX.1-dev <https://huggingface.co/TencentARC/flux-mini>
-    /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. 28 steps.
-    Flux1Mini,
+    /// A 3.2B param rectified flow transformer distilled from FLUX.1-dev <https://huggingface.co/TencentARC/flux-mini> <https://huggingface.co/HyperX-Sentience/Flux-Mini-GGUF>
+    /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 1. 20 steps.
+    Flux1Mini(api::WeightType),
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
     JuggernautXL11,
@@ -67,7 +67,7 @@ impl Preset {
             Preset::StableDiffusion3_5MediumFp16 => stable_diffusion_3_5_medium_fp16(),
             Preset::StableDiffusion3_5LargeTurboFp16 => stable_diffusion_3_5_large_turbo_fp16(),
             Preset::JuggernautXL11 => juggernaut_xl_11(),
-            Preset::Flux1Mini => flux_1_mini(),
+            Preset::Flux1Mini(sd_type_t) => flux_1_mini(sd_type_t),
         }
     }
 }
@@ -238,6 +238,6 @@ mod tests {
     #[test]
     fn test_flux_1_mini() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Mini);
+        run(Preset::Flux1Mini(api::WeightType::SD_TYPE_Q2_K));
     }
 }
