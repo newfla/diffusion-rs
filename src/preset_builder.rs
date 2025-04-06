@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     api::{self, ModelConfigBuilder, SampleMethod},
-    modifier::{sdxl_vae_fp16_fix, t5xxl_fp8_flux_1, t5xxl_fp16_flux_1},
+    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1},
     preset::ConfigsBuilder,
 };
 use hf_hub::api::sync::ApiError;
@@ -90,7 +90,7 @@ pub fn sdxl_base_1_0() -> Result<ConfigsBuilder, ApiError> {
 
 pub fn flux_1_dev(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
     let model_path = flux_1_model_weight("dev", sd_type)?;
-    let mut builder = flux_1("dev", 28)?;
+    let mut builder = flux_1_dev_schnell("dev", 28)?;
 
     builder.1.diffusion_model(model_path);
     t5xxl_fp16_flux_1(builder)
@@ -98,30 +98,39 @@ pub fn flux_1_dev(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> 
 
 pub fn flux_1_schnell(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
     let model_path = flux_1_model_weight("schnell", sd_type)?;
-    let mut builder = flux_1("schnell", 4)?;
+    let mut builder = flux_1_dev_schnell("schnell", 4)?;
 
     builder.1.diffusion_model(model_path);
     t5xxl_fp16_flux_1(builder)
 }
 
 fn flux_1_model_weight(model: &str, sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_flux_type(sd_type);
-    let weight_type = flux_type_to_model(sd_type);
+    check_flux_1_type(sd_type);
+    let weight_type = flux_1_type_to_model(sd_type);
     download_file_hf_hub(
         format!("leejet/FLUX.1-{model}-gguf").as_str(),
         format!("flux1-{model}-{}.gguf", weight_type).as_str(),
     )
 }
 
-fn flux_1(vae_model: &str, steps: i32) -> Result<ConfigsBuilder, ApiError> {
-    let mut config = ConfigBuilder::default();
-    let mut model_config = ModelConfigBuilder::default();
+fn flux_1_dev_schnell(vae_model: &str, steps: i32) -> Result<ConfigsBuilder, ApiError> {
     let vae_path = download_file_hf_hub(
         format!("black-forest-labs/FLUX.1-{vae_model}").as_str(),
         "ae.safetensors",
     )?;
     let clip_l_path =
         download_file_hf_hub("comfyanonymous/flux_text_encoders", "clip_l.safetensors")?;
+
+    flux_1_clip_vae(vae_path, clip_l_path, steps)
+}
+
+fn flux_1_clip_vae(
+    vae_path: PathBuf,
+    clip_l_path: PathBuf,
+    steps: i32,
+) -> Result<ConfigsBuilder, ApiError> {
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
 
     model_config
         .vae(vae_path)
@@ -137,7 +146,7 @@ fn flux_1(vae_model: &str, steps: i32) -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-fn check_flux_type(sd_type: api::WeightType) {
+fn check_flux_1_type(sd_type: api::WeightType) {
     assert!(
         sd_type == api::WeightType::SD_TYPE_Q2_K
             || sd_type == api::WeightType::SD_TYPE_Q3_K
@@ -147,7 +156,7 @@ fn check_flux_type(sd_type: api::WeightType) {
     );
 }
 
-fn flux_type_to_model(sd_type: api::WeightType) -> &'static str {
+fn flux_1_type_to_model(sd_type: api::WeightType) -> &'static str {
     match sd_type {
         api::WeightType::SD_TYPE_Q3_K => "q3_k",
         api::WeightType::SD_TYPE_Q2_K => "q2_k",
@@ -256,10 +265,43 @@ pub fn juggernaut_xl_11() -> Result<ConfigsBuilder, ApiError> {
     Ok(config)
 }
 
-pub fn flux_1_mini() -> Result<ConfigsBuilder, ApiError> {
-    let model_path = download_file_hf_hub("TencentARC/flux-mini", "flux-mini.safetensors")?;
-    let mut builder = flux_1("dev", 28)?;
+pub fn flux_1_mini(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+    let model_path = flux_1_mini_model_weight(sd_type)?;
+    let vae_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "ae-f16.gguf")?;
+    let clip_l_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "clip_l-q8_0.gguf")?;
+    let mut builder = flux_1_clip_vae(vae_path, clip_l_path, 20)?;
     builder.1.diffusion_model(model_path);
-    builder.0.width(512).height(512);
-    t5xxl_fp8_flux_1(builder)
+    builder.0.cfg_scale(1.);
+    t5xxl_q4_k_flux_1(builder)
+}
+
+fn flux_1_mini_model_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    check_flux_1_mini_type(sd_type);
+    flux_1_mini_type_to_model(sd_type)
+}
+
+fn check_flux_1_mini_type(sd_type: api::WeightType) {
+    assert!(
+        sd_type == api::WeightType::SD_TYPE_F32
+            || sd_type == api::WeightType::SD_TYPE_BF16
+            || sd_type == api::WeightType::SD_TYPE_Q2_K
+            || sd_type == api::WeightType::SD_TYPE_Q3_K
+            || sd_type == api::WeightType::SD_TYPE_Q5_K
+            || sd_type == api::WeightType::SD_TYPE_Q6_K
+            || sd_type == api::WeightType::SD_TYPE_Q8_0
+    );
+}
+
+fn flux_1_mini_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        api::WeightType::SD_TYPE_F32 => ("TencentARC/flux-mini", "flux-mini.safetensors"),
+        api::WeightType::SD_TYPE_BF16 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-BF16.gguf"),
+        api::WeightType::SD_TYPE_Q2_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q2_K.gguf"),
+        api::WeightType::SD_TYPE_Q3_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q3_K.gguf"),
+        api::WeightType::SD_TYPE_Q5_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q5_K.gguf"),
+        api::WeightType::SD_TYPE_Q6_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q6_K.gguf"),
+        api::WeightType::SD_TYPE_Q8_0 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q8_0.gguf"),
+        _ => ("not_supported", "not_supported"),
+    };
+    download_file_hf_hub(repo, file)
 }
