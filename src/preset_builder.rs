@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     api::{self, ModelConfigBuilder, SampleMethod},
-    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q2_k_flux_1},
+    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1},
     preset::ConfigsBuilder,
 };
 use hf_hub::api::sync::ApiError;
@@ -272,7 +272,7 @@ pub fn flux_1_mini(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError>
     let mut builder = flux_1_clip_vae(vae_path, clip_l_path, 20)?;
     builder.1.diffusion_model(model_path);
     builder.0.cfg_scale(1.);
-    t5xxl_q2_k_flux_1(builder)
+    t5xxl_q4_k_flux_1(builder)
 }
 
 fn flux_1_mini_model_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {

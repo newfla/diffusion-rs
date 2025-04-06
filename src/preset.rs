@@ -238,6 +238,6 @@ mod tests {
     #[test]
     fn test_flux_1_mini() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Mini(api::WeightType::SD_TYPE_Q2_K));
+        run(Preset::Flux1Mini(api::WeightType::SD_TYPE_Q8_0));
     }
 }
