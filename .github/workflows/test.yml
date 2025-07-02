@@ -96,6 +96,9 @@ jobs:
           submodules: 'recursive'
       - name: Install cuda toolkit
         uses: Jimver/cuda-toolkit@v0.2.25
+        with:
+          use-local-cache: false
+          use-github-cache: false
       - name: Install Windows dependencies
         if: matrix.platform == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
