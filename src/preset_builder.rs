@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     api::{self, ModelConfigBuilder, SampleMethod},
-    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1},
+    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1},
     preset::ConfigsBuilder,
 };
 use hf_hub::api::sync::ApiError;
@@ -109,7 +109,7 @@ fn flux_1_model_weight(model: &str, sd_type: api::WeightType) -> Result<PathBuf,
     let weight_type = flux_1_type_to_model(sd_type);
     download_file_hf_hub(
         format!("leejet/FLUX.1-{model}-gguf").as_str(),
-        format!("flux1-{model}-{}.gguf", weight_type).as_str(),
+        format!("flux1-{model}-{weight_type}.gguf").as_str(),
     )
 }
 
@@ -301,6 +301,64 @@ fn flux_1_mini_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiErr
         api::WeightType::SD_TYPE_Q5_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q5_K.gguf"),
         api::WeightType::SD_TYPE_Q6_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q6_K.gguf"),
         api::WeightType::SD_TYPE_Q8_0 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q8_0.gguf"),
+        _ => ("not_supported", "not_supported"),
+    };
+    download_file_hf_hub(repo, file)
+}
+
+pub fn chroma(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+    let model_path = chroma_model_weight(sd_type)?;
+    let vae_path = download_file_hf_hub("black-forest-labs/FLUX.1-dev", "ae.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model_path)
+        .vae(vae_path)
+        .vae_tiling(true)
+        .chroma_use_dit_mask(false);
+    config
+        .cfg_scale(4.)
+        .sampling_method(SampleMethod::EULER)
+        .steps(20)
+        .height(512)
+        .width(512);
+
+    let builder = (config, model_config);
+    match sd_type {
+        api::WeightType::SD_TYPE_BF16 => t5xxl_fp16_flux_1(builder),
+        api::WeightType::SD_TYPE_Q4_0 => t5xxl_q4_k_flux_1(builder),
+        _ => t5xxl_q8_0_flux_1(builder),
+    }
+}
+
+fn chroma_model_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    check_chroma_type(sd_type);
+    chroma_type_to_model(sd_type)
+}
+
+fn check_chroma_type(sd_type: api::WeightType) {
+    assert!(
+        sd_type == api::WeightType::SD_TYPE_BF16
+            || sd_type == api::WeightType::SD_TYPE_Q4_0
+            || sd_type == api::WeightType::SD_TYPE_Q8_0
+    );
+}
+
+fn chroma_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        api::WeightType::SD_TYPE_BF16 => (
+            "silveroxides/Chroma-GGUF",
+            "chroma-unlocked-v41/chroma-unlocked-v41-BF16.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q4_0 => (
+            "silveroxides/Chroma-GGUF",
+            "chroma-unlocked-v41/chroma-unlocked-v41-Q4_0.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q8_0 => (
+            "silveroxides/Chroma-GGUF",
+            "chroma-unlocked-v41/chroma-unlocked-v41-Q8_0.gguf",
+        ),
         _ => ("not_supported", "not_supported"),
     };
     download_file_hf_hub(repo, file)

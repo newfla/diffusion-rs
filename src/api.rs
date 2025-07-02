@@ -158,6 +158,15 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     flash_attention: bool,
 
+    #[builder(default = "true")]
+    chroma_use_dit_mask: bool,
+
+    #[builder(default = "false")]
+    chroma_use_t5_mask: bool,
+
+    #[builder(default = "1")]
+    chroma_t5_mask_pad: i32,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -242,6 +251,9 @@ impl ModelConfig {
                     self.control_net_cpu,
                     self.vae_on_cpu,
                     self.flash_attention,
+                    self.chroma_use_dit_mask,
+                    self.chroma_use_t5_mask,
+                    self.chroma_t5_mask_pad,
                 );
                 self.diffusion_ctx = Some(ctx)
             }
