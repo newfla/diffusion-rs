@@ -4,7 +4,7 @@ use hf_hub::api::sync::ApiError;
 use crate::{
     api::{self, Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
-        flux_1_dev, flux_1_mini, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0,
+        chroma, flux_1_dev, flux_1_mini, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0,
         sdxl_turbo_1_0_fp16, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
         stable_diffusion_3_5_large_fp16, stable_diffusion_3_5_large_turbo_fp16,
         stable_diffusion_3_5_medium_fp16, stable_diffusion_3_medium_fp16,
@@ -49,6 +49,10 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
     JuggernautXL11,
+    /// Chroma is a 8.9B parameter model based on FLUX.1-schnell
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
+    /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 4. 20 steps
+    Chroma(api::WeightType),
 }
 
 impl Preset {
@@ -68,6 +72,7 @@ impl Preset {
             Preset::StableDiffusion3_5LargeTurboFp16 => stable_diffusion_3_5_large_turbo_fp16(),
             Preset::JuggernautXL11 => juggernaut_xl_11(),
             Preset::Flux1Mini(sd_type_t) => flux_1_mini(sd_type_t),
+            Preset::Chroma(sd_type_t) => chroma(sd_type_t),
         }
     }
 }
@@ -138,7 +143,7 @@ mod tests {
     };
 
     use super::{Preset, PresetBuilder};
-    static PROMPT: &str = "a lovely duck drinking water from a bottle";
+    static PROMPT: &str = "a lovely cat holding a sign says 'diffusion-rs'";
 
     fn run(preset: Preset) {
         let (mut config, mut model_config) = PresetBuilder::default()
@@ -239,5 +244,12 @@ mod tests {
     fn test_flux_1_mini() {
         set_hf_token(include_str!("../token.txt"));
         run(Preset::Flux1Mini(api::WeightType::SD_TYPE_Q8_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_chroma() {
+        set_hf_token(include_str!("../token.txt"));
+        run(Preset::Chroma(api::WeightType::SD_TYPE_Q4_0));
     }
 }

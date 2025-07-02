@@ -13,7 +13,7 @@ fn main() {
     // Link C++ standard library
     let target = env::var("TARGET").unwrap();
     if let Some(cpp_stdlib) = get_cpp_link_stdlib(&target) {
-        println!("cargo:rustc-link-lib=dylib={}", cpp_stdlib);
+        println!("cargo:rustc-link-lib=dylib={cpp_stdlib}");
     }
 
     println!("cargo:rerun-if-changed=wrapper.h");
@@ -48,7 +48,7 @@ fn main() {
             .write_to_file(out.join("bindings.rs"));
 
         if let Err(e) = bindings {
-            println!("cargo:warning=Unable to generate bindings: {}", e);
+            println!("cargo:warning=Unable to generate bindings: {e}");
             println!("cargo:warning=Using bundled bindings.rs, which may be out of date");
             // copy src/bindings.rs to OUT_DIR
             fs::copy("src/bindings.rs", out.join("bindings.rs"))
