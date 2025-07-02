@@ -138,7 +138,7 @@ mod tests {
     };
 
     use super::{Preset, PresetBuilder};
-    static PROMPT: &str = "a lovely duck drinking water from a bottle";
+    static PROMPT: &str = "a lovely cat holding a sign says 'diffusion-rs'";
 
     fn run(preset: Preset) {
         let (mut config, mut model_config) = PresetBuilder::default()
