@@ -315,8 +315,7 @@ pub fn chroma(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
     model_config
         .diffusion_model(model_path)
         .vae(vae_path)
-        .vae_tiling(true)
-        .chroma_use_dit_mask(false);
+        .vae_tiling(true);
     config
         .cfg_scale(4.)
         .sampling_method(SampleMethod::EULER)

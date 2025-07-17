@@ -138,7 +138,7 @@ impl TryFrom<PresetConfig> for ConfigsBuilder {
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::{self, txt2img},
+        api::{self, gen_img},
         util::set_hf_token,
     };
 
@@ -151,7 +151,7 @@ mod tests {
             .prompt(PROMPT)
             .build()
             .unwrap();
-        txt2img(&mut config, &mut model_config).unwrap();
+        gen_img(&mut config, &mut model_config).unwrap();
     }
 
     #[ignore]

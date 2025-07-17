@@ -21,13 +21,13 @@ Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 
 ## Usage 
 ``` rust no_run
-use diffusion_rs::{api::txt2img, preset::{Preset,PresetBuilder}};
+use diffusion_rs::{api::gen_img, preset::{Preset,PresetBuilder}};
 let (mut config, mut model_config) = PresetBuilder::default()
             .preset(Preset::SDXLTurbo1_0Fp16)
             .prompt("a lovely duck drinking water from a bottle")
             .build()
             .unwrap();
-txt2img(&mut config, &mut model_config).unwrap();
+gen_img(&mut config, &mut model_config).unwrap();
 ```
 
 ## Troubleshooting
