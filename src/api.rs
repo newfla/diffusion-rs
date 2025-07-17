@@ -4,12 +4,17 @@ use std::ffi::c_void;
 use std::path::Path;
 use std::path::PathBuf;
 use std::ptr::null;
+use std::ptr::null_mut;
 use std::slice;
 
 use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
+use diffusion_rs_sys::sd_ctx_params_t;
+use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
+use diffusion_rs_sys::sd_img_gen_params_t;
+use diffusion_rs_sys::sd_slg_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
 use image::ImageBuffer;
 use image::ImageError;
@@ -158,11 +163,11 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     flash_attention: bool,
 
-    #[builder(default = "true")]
-    chroma_use_dit_mask: bool,
+    #[builder(default = "false")]
+    chroma_disable_dit_mask: bool,
 
     #[builder(default = "false")]
-    chroma_use_t5_mask: bool,
+    chroma_enable_t5_mask: bool,
 
     #[builder(default = "1")]
     chroma_t5_mask_pad: i32,
@@ -171,7 +176,7 @@ pub struct ModelConfig {
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
     #[builder(default = "None", private)]
-    diffusion_ctx: Option<*mut sd_ctx_t>,
+    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
 }
 
 impl ModelConfigBuilder {
@@ -228,36 +233,37 @@ impl ModelConfig {
     unsafe fn diffusion_ctx(&mut self, vae_decode_only: bool) -> *mut sd_ctx_t {
         unsafe {
             if self.diffusion_ctx.is_none() {
-                let ctx = new_sd_ctx(
-                    self.model.as_ptr(),
-                    self.clip_l.as_ptr(),
-                    self.clip_g.as_ptr(),
-                    self.t5xxl.as_ptr(),
-                    self.diffusion_model.as_ptr(),
-                    self.vae.as_ptr(),
-                    self.taesd.as_ptr(),
-                    self.control_net.as_ptr(),
-                    self.lora_model.as_ptr(),
-                    self.embeddings.as_ptr(),
-                    self.stacked_id_embd.as_ptr(),
+                let sd_ctx_params = sd_ctx_params_t {
+                    model_path: self.model.as_ptr(),
+                    clip_l_path: self.clip_l.as_ptr(),
+                    clip_g_path: self.clip_g.as_ptr(),
+                    t5xxl_path: self.t5xxl.as_ptr(),
+                    diffusion_model_path: self.diffusion_model.as_ptr(),
+                    vae_path: self.vae.as_ptr(),
+                    taesd_path: self.taesd.as_ptr(),
+                    control_net_path: self.control_net.as_ptr(),
+                    lora_model_dir: self.lora_model.as_ptr(),
+                    embedding_dir: self.embeddings.as_ptr(),
+                    stacked_id_embed_dir: self.stacked_id_embd.as_ptr(),
                     vae_decode_only,
-                    self.vae_tiling,
-                    false,
-                    self.n_threads,
-                    self.weight_type,
-                    self.rng,
-                    self.schedule,
-                    self.clip_on_cpu,
-                    self.control_net_cpu,
-                    self.vae_on_cpu,
-                    self.flash_attention,
-                    self.chroma_use_dit_mask,
-                    self.chroma_use_t5_mask,
-                    self.chroma_t5_mask_pad,
-                );
-                self.diffusion_ctx = Some(ctx)
+                    vae_tiling: self.vae_tiling,
+                    free_params_immediately: false,
+                    n_threads: self.n_threads,
+                    wtype: self.weight_type,
+                    rng_type: self.rng,
+                    schedule: self.schedule,
+                    keep_clip_on_cpu: self.clip_on_cpu,
+                    keep_control_net_on_cpu: self.control_net_cpu,
+                    keep_vae_on_cpu: self.vae_on_cpu,
+                    diffusion_flash_attn: self.flash_attention,
+                    chroma_use_dit_mask: !self.chroma_disable_dit_mask,
+                    chroma_use_t5_mask: self.chroma_enable_t5_mask,
+                    chroma_t5_mask_pad: self.chroma_t5_mask_pad,
+                };
+                let ctx = new_sd_ctx(&sd_ctx_params);
+                self.diffusion_ctx = Some((ctx, sd_ctx_params))
             }
-            self.diffusion_ctx.unwrap()
+            self.diffusion_ctx.unwrap().0
         }
     }
 }
@@ -266,7 +272,7 @@ impl Drop for ModelConfig {
     fn drop(&mut self) {
         //Clean-up CTX section
         unsafe {
-            if let Some(sd_ctx) = self.diffusion_ctx {
+            if let Some((sd_ctx, _)) = self.diffusion_ctx {
                 free_sd_ctx(sd_ctx);
             }
 
@@ -312,7 +318,11 @@ pub struct Config {
     #[builder(default = "7.0")]
     cfg_scale: f32,
 
-    /// Guidance (default: 3.5)
+    /// Min guidance scale (default: 1.0)
+    #[builder(default = "1.0")]
+    min_cfg_scale: f32,
+
+    /// Distilled guidance scale for models with guidance input (default: 3.5)
     #[builder(default = "3.5")]
     guidance: f32,
 
@@ -414,6 +424,7 @@ impl From<Config> for ConfigBuilder {
             .prompt(value.prompt)
             .negative_prompt(value.negative_prompt)
             .cfg_scale(value.cfg_scale)
+            .min_cfg_scale(value.min_cfg_scale)
             .strength(value.strength)
             .style_ratio(value.style_ratio)
             .control_strength(value.control_strength)
@@ -515,7 +526,7 @@ unsafe fn upscale(
 }
 
 /// Generate an image with a prompt
-pub fn txt2img(config: &mut Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
+pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
     let prompt: CLibString = match &model_config.prompt_suffix {
         Some(suffix) => format!("{} {suffix}", &config.prompt),
         None => config.prompt.clone(),
@@ -525,32 +536,57 @@ pub fn txt2img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
     unsafe {
         let sd_ctx = model_config.diffusion_ctx(true);
         let upscaler_ctx = model_config.upscaler_ctx();
+        let init_image = sd_image_t {
+            width: 0,
+            height: 0,
+            channel: 3,
+            data: null_mut(),
+        };
+        let mask_image = sd_image_t {
+            width: config.width as u32,
+            height: config.height as u32,
+            channel: 1,
+            data: null_mut(),
+        };
+        let guidance = sd_guidance_params_t {
+            txt_cfg: config.cfg_scale,
+            img_cfg: config.cfg_scale,
+            min_cfg: config.min_cfg_scale,
+            distilled_guidance: config.guidance,
+            slg: sd_slg_params_t {
+                layers: config.skip_layer.as_mut_ptr(),
+                layer_count: config.skip_layer.len(),
+                layer_start: config.skip_layer_start,
+                layer_end: config.skip_layer_end,
+                scale: config.slg_scale,
+            },
+        };
 
-        let slice = diffusion_rs_sys::txt2img(
-            sd_ctx,
-            prompt.as_ptr(),
-            config.negative_prompt.as_ptr(),
-            config.clip_skip as i32,
-            config.cfg_scale,
-            config.guidance,
-            config.eta,
-            config.width,
-            config.height,
-            config.sampling_method,
-            config.steps,
-            config.seed,
-            config.batch_count,
-            null(),
-            config.control_strength,
-            config.style_ratio,
-            config.normalize_input,
-            config.input_id_images.as_ptr(),
-            config.skip_layer.as_mut_ptr(),
-            config.skip_layer.len(),
-            config.slg_scale,
-            config.skip_layer_start,
-            config.skip_layer_end,
-        );
+        let sd_img_gen_params = sd_img_gen_params_t {
+            prompt: prompt.as_ptr(),
+            negative_prompt: config.negative_prompt.as_ptr(),
+            clip_skip: config.clip_skip as i32,
+            guidance,
+            init_image,
+            ref_images: null_mut(),
+            ref_images_count: 0,
+            mask_image,
+            width: config.width,
+            height: config.height,
+            sample_method: config.sampling_method,
+            sample_steps: config.steps,
+            eta: config.eta,
+            strength: config.strength,
+            seed: config.seed,
+            batch_count: config.batch_count,
+            control_cond: null(),
+            control_strength: config.control_strength,
+            style_strength: config.style_ratio,
+            normalize_input: config.normalize_input,
+            input_id_images_path: config.input_id_images.as_ptr(),
+        };
+
+        let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
         if slice.is_null() {
             return Err(DiffusionError::Forward);
         }
@@ -590,7 +626,7 @@ mod tests {
         util::download_file_hf_hub,
     };
 
-    use super::{ConfigBuilder, txt2img};
+    use super::{ConfigBuilder, gen_img};
 
     #[test]
     fn test_required_args_txt2img() {
@@ -652,12 +688,12 @@ mod tests {
             .build()
             .unwrap();
 
-        txt2img(&mut config, &mut model_config).unwrap();
+        gen_img(&mut config, &mut model_config).unwrap();
         let mut config2 = ConfigBuilder::from(config)
             .prompt("a lovely duck drinking water from a straw")
             .output(PathBuf::from("./output_2.png"))
             .build()
             .unwrap();
-        txt2img(&mut config2, &mut model_config).unwrap();
+        gen_img(&mut config2, &mut model_config).unwrap();
     }
 }

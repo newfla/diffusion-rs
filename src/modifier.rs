@@ -144,7 +144,7 @@ pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::txt2img,
+        api::gen_img,
         preset::{Modifier, Preset, PresetBuilder},
     };
 
@@ -161,7 +161,7 @@ mod tests {
             .with_modifier(m)
             .build()
             .unwrap();
-        txt2img(&mut config, &mut model_config).unwrap();
+        gen_img(&mut config, &mut model_config).unwrap();
     }
 
     #[ignore]
