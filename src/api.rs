@@ -406,7 +406,7 @@ impl ConfigBuilder {
             Ok(())
         } else {
             Err(ConfigBuilderError::ValidationError(
-                "When batch_count > 1, ouput should point to folder and viceversa".to_owned(),
+                "When batch_count > 1, output should point to folder and vice versa".to_owned(),
             ))
         }
     }
@@ -487,12 +487,12 @@ impl From<&Path> for CLibPath {
     }
 }
 
-fn output_files(path: &Path, batch_size: i32) -> Vec<PathBuf> {
+fn output_files(path: &Path, prompt: &str, batch_size: i32) -> Vec<PathBuf> {
     if batch_size == 1 {
         vec![path.into()]
     } else {
         (1..=batch_size)
-            .map(|id| path.join(format!("output_{id}.png")))
+            .map(|id| path.join(format!("{prompt}_{id}.png")))
             .collect()
     }
 }
@@ -532,7 +532,7 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
         None => config.prompt.clone(),
     }
     .into();
-    let files = output_files(&config.output, config.batch_count);
+    let files = output_files(&config.output, &config.prompt, config.batch_count);
     unsafe {
         let sd_ctx = model_config.diffusion_ctx(true);
         let upscaler_ctx = model_config.upscaler_ctx();
@@ -665,7 +665,7 @@ mod tests {
 
     #[ignore]
     #[test]
-    fn test_txt2img() {
+    fn test_img_gen() {
         let model_path =
             download_file_hf_hub("CompVis/stable-diffusion-v-1-4-original", "sd-v1-4.ckpt")
                 .unwrap();
@@ -689,11 +689,20 @@ mod tests {
             .unwrap();
 
         gen_img(&mut config, &mut model_config).unwrap();
-        let mut config2 = ConfigBuilder::from(config)
+        let mut config2 = ConfigBuilder::from(config.clone())
             .prompt("a lovely duck drinking water from a straw")
             .output(PathBuf::from("./output_2.png"))
             .build()
             .unwrap();
         gen_img(&mut config2, &mut model_config).unwrap();
+
+        let mut config3 = ConfigBuilder::from(config)
+            .prompt("a lovely dog drinking water from a starbucks cup")
+            .batch_count(2)
+            .output(PathBuf::from("./"))
+            .build()
+            .unwrap();
+
+        gen_img(&mut config3, &mut model_config).unwrap();
     }
 }
