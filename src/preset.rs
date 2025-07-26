@@ -49,7 +49,7 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
     JuggernautXL11,
-    /// Chroma is a 8.9B parameter model based on FLUX.1-schnell
+    /// Chroma is an 8.9B parameter model based on FLUX.1-schnell
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 4. 20 steps
     Chroma(api::WeightType),
