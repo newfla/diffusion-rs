@@ -163,14 +163,27 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     flash_attention: bool,
 
+    /// Disable dit mask for chroma
     #[builder(default = "false")]
     chroma_disable_dit_mask: bool,
 
+    /// Enable t5 mask for chroma
     #[builder(default = "false")]
     chroma_enable_t5_mask: bool,
 
+    /// t5 mask pad size of chroma
     #[builder(default = "1")]
     chroma_t5_mask_pad: i32,
+
+    /// Use Conv2d direct in the diffusion model
+    /// This might crash if it is not supported by the backend.
+    #[builder(default = "false")]
+    diffusion_conv_direct: bool,
+
+    /// Use Conv2d direct in the vae model (should improve the performance)
+    /// This might crash if it is not supported by the backend.
+    #[builder(default = "false")]
+    vae_conv_direct: bool,
 
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
@@ -222,6 +235,7 @@ impl ModelConfig {
                     let upscaler = new_upscaler_ctx(
                         self.upscale_model.as_ref().unwrap().as_ptr(),
                         self.n_threads,
+                        self.diffusion_conv_direct,
                     );
                     self.upscaler_ctx = Some(upscaler);
                 }
@@ -256,9 +270,11 @@ impl ModelConfig {
                     keep_control_net_on_cpu: self.control_net_cpu,
                     keep_vae_on_cpu: self.vae_on_cpu,
                     diffusion_flash_attn: self.flash_attention,
+                    diffusion_conv_direct: self.diffusion_conv_direct,
                     chroma_use_dit_mask: !self.chroma_disable_dit_mask,
                     chroma_use_t5_mask: self.chroma_enable_t5_mask,
                     chroma_t5_mask_pad: self.chroma_t5_mask_pad,
+                    vae_conv_direct: self.vae_conv_direct,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
