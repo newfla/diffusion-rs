@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
+        platform:  [ubuntu-latest, macos-14] #windows-latest, ]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
+        platform:  [ubuntu-latest, macos-14] #windows-latest, ]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
 
   build-metal:
     needs: build-no-features
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
         with:
