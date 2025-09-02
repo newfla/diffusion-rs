@@ -1234,6 +1234,8 @@ pub struct sd_ctx_params_t {
     pub keep_control_net_on_cpu: bool,
     pub keep_vae_on_cpu: bool,
     pub diffusion_flash_attn: bool,
+    pub diffusion_conv_direct: bool,
+    pub vae_conv_direct: bool,
     pub chroma_use_dit_mask: bool,
     pub chroma_use_t5_mask: bool,
     pub chroma_t5_mask_pad: ::std::os::raw::c_int,
@@ -1286,10 +1288,14 @@ const _: () = {
         [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 110usize];
     ["Offset of field: sd_ctx_params_t::diffusion_flash_attn"]
         [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 111usize];
+    ["Offset of field: sd_ctx_params_t::diffusion_conv_direct"]
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 112usize];
+    ["Offset of field: sd_ctx_params_t::vae_conv_direct"]
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 113usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_dit_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 112usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 114usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_t5_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 113usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 115usize];
     ["Offset of field: sd_ctx_params_t::chroma_t5_mask_pad"]
         [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 116usize];
 };
@@ -1577,6 +1583,7 @@ unsafe extern "C" {
     pub fn new_upscaler_ctx(
         esrgan_path: *const ::std::os::raw::c_char,
         n_threads: ::std::os::raw::c_int,
+        direct: bool,
     ) -> *mut upscaler_ctx_t;
 }
 unsafe extern "C" {
