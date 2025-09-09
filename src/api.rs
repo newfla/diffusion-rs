@@ -3,7 +3,6 @@ use std::ffi::c_char;
 use std::ffi::c_void;
 use std::path::Path;
 use std::path::PathBuf;
-use std::ptr::null;
 use std::ptr::null_mut;
 use std::slice;
 
@@ -14,6 +13,7 @@ use diffusion_rs_sys::sd_ctx_params_t;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
+use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_slg_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
 use image::ImageBuffer;
@@ -33,7 +33,7 @@ pub use diffusion_rs_sys::rng_type_t as RngFunction;
 pub use diffusion_rs_sys::sample_method_t as SampleMethod;
 
 /// Denoiser sigma schedule
-pub use diffusion_rs_sys::schedule_t as Schedule;
+pub use diffusion_rs_sys::scheduler_t as Scheduler;
 
 /// Weight type
 pub use diffusion_rs_sys::sd_type_t as WeightType;
@@ -73,6 +73,10 @@ pub struct ModelConfig {
     #[builder(default = "num_cpus::get_physical() as i32", setter(custom))]
     n_threads: i32,
 
+    /// Place the weights in RAM to save VRAM, and automatically load them into VRAM when needed
+    #[builder(default = "false")]
+    offload_params_to_cpu: bool,
+
     /// Path to esrgan model. Upscale images after generate, just RealESRGAN_x4plus_anime_6B supported by now
     #[builder(default = "Default::default()")]
     upscale_model: Option<CLibPath>,
@@ -89,13 +93,17 @@ pub struct ModelConfig {
     #[builder(default = "Default::default()")]
     diffusion_model: CLibPath,
 
-    /// path to the clip-l text encoder
+    /// Path to the clip-l text encoder
     #[builder(default = "Default::default()")]
     clip_l: CLibPath,
 
-    /// path to the clip-g text encoder
+    /// Path to the clip-g text encoder
     #[builder(default = "Default::default()")]
     clip_g: CLibPath,
+
+    /// Path to the clip-vision encoder
+    #[builder(default = "Default::default()")]
+    clip_vision: CLibPath,
 
     /// Path to the t5xxl text encoder
     #[builder(default = "Default::default()")]
@@ -129,6 +137,10 @@ pub struct ModelConfig {
     #[builder(default = "Default::default()", setter(custom))]
     lora_model: CLibPath,
 
+    /// Path to the standalone high noise diffusion model
+    #[builder(default = "Default::default()")]
+    high_noise_diffusion_model: CLibPath,
+
     /// Suffix that needs to be added to prompt (e.g. lora model)
     #[builder(default = "None", private)]
     prompt_suffix: Option<String>,
@@ -142,8 +154,8 @@ pub struct ModelConfig {
     rng: RngFunction,
 
     /// Denoiser sigma schedule (default: DEFAULT)
-    #[builder(default = "Schedule::DEFAULT")]
-    schedule: Schedule,
+    #[builder(default = "Scheduler::DEFAULT")]
+    scheduler: Scheduler,
 
     /// Keep vae in cpu (for low vram) (default: false)
     #[builder(default = "false")]
@@ -184,6 +196,10 @@ pub struct ModelConfig {
     /// This might crash if it is not supported by the backend.
     #[builder(default = "false")]
     vae_conv_direct: bool,
+
+    /// Shift value for Flow models like SD3.x or WAN (default: auto)
+    #[builder(default = "f32::INFINITY")]
+    flow_shift: f32,
 
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
@@ -234,8 +250,9 @@ impl ModelConfig {
                 if self.upscaler_ctx.is_none() {
                     let upscaler = new_upscaler_ctx(
                         self.upscale_model.as_ref().unwrap().as_ptr(),
-                        self.n_threads,
+                        self.offload_params_to_cpu,
                         self.diffusion_conv_direct,
+                        self.n_threads,
                     );
                     self.upscaler_ctx = Some(upscaler);
                 }
@@ -251,6 +268,8 @@ impl ModelConfig {
                     model_path: self.model.as_ptr(),
                     clip_l_path: self.clip_l.as_ptr(),
                     clip_g_path: self.clip_g.as_ptr(),
+                    clip_vision_path: self.clip_vision.as_ptr(),
+                    high_noise_diffusion_model_path: self.high_noise_diffusion_model.as_ptr(),
                     t5xxl_path: self.t5xxl.as_ptr(),
                     diffusion_model_path: self.diffusion_model.as_ptr(),
                     vae_path: self.vae.as_ptr(),
@@ -265,7 +284,6 @@ impl ModelConfig {
                     n_threads: self.n_threads,
                     wtype: self.weight_type,
                     rng_type: self.rng,
-                    schedule: self.schedule,
                     keep_clip_on_cpu: self.clip_on_cpu,
                     keep_control_net_on_cpu: self.control_net_cpu,
                     keep_vae_on_cpu: self.vae_on_cpu,
@@ -275,6 +293,8 @@ impl ModelConfig {
                     chroma_use_t5_mask: self.chroma_enable_t5_mask,
                     chroma_t5_mask_pad: self.chroma_t5_mask_pad,
                     vae_conv_direct: self.vae_conv_direct,
+                    offload_params_to_cpu: self.offload_params_to_cpu,
+                    flow_shift: self.flow_shift,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
@@ -333,10 +353,6 @@ pub struct Config {
     /// Unconditional guidance scale (default: 7.0)
     #[builder(default = "7.0")]
     cfg_scale: f32,
-
-    /// Min guidance scale (default: 1.0)
-    #[builder(default = "1.0")]
-    min_cfg_scale: f32,
 
     /// Distilled guidance scale for models with guidance input (default: 3.5)
     #[builder(default = "3.5")]
@@ -440,7 +456,6 @@ impl From<Config> for ConfigBuilder {
             .prompt(value.prompt)
             .negative_prompt(value.negative_prompt)
             .cfg_scale(value.cfg_scale)
-            .min_cfg_scale(value.min_cfg_scale)
             .strength(value.strength)
             .style_ratio(value.style_ratio)
             .control_strength(value.control_strength)
@@ -567,7 +582,6 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
         let guidance = sd_guidance_params_t {
             txt_cfg: config.cfg_scale,
             img_cfg: config.cfg_scale,
-            min_cfg: config.min_cfg_scale,
             distilled_guidance: config.guidance,
             slg: sd_slg_params_t {
                 layers: config.skip_layer.as_mut_ptr(),
@@ -577,25 +591,36 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
                 scale: config.slg_scale,
             },
         };
+        let sample_params = sd_sample_params_t {
+            guidance,
+            sample_method: config.sampling_method,
+            sample_steps: config.steps,
+            eta: config.eta,
+            scheduler: model_config.scheduler,
+        };
+        let control_image = sd_image_t {
+            width: 0,
+            height: 0,
+            channel: 3,
+            data: null_mut(),
+        };
 
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
             clip_skip: config.clip_skip as i32,
-            guidance,
             init_image,
             ref_images: null_mut(),
             ref_images_count: 0,
+            increase_ref_index: false,
             mask_image,
             width: config.width,
             height: config.height,
-            sample_method: config.sampling_method,
-            sample_steps: config.steps,
-            eta: config.eta,
+            sample_params,
             strength: config.strength,
             seed: config.seed,
             batch_count: config.batch_count,
-            control_cond: null(),
+            control_image,
             control_strength: config.control_strength,
             style_strength: config.style_ratio,
             normalize_input: config.normalize_input,
