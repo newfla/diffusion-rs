@@ -141,18 +141,22 @@ pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
     Ok(builder)
 }
 
+pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.1.offload_params_to_cpu(true);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::gen_img,
-        preset::{Modifier, Preset, PresetBuilder},
+        api::{self, gen_img}, modifier::offload_params_to_cpu, preset::{Modifier, Preset, PresetBuilder}, util::set_hf_token
     };
 
     use super::{
         hybrid_taesd, hybrid_taesd_xl, lcm_lora_sd_1_5, lcm_lora_sdxl_base_1_0, taesd, taesd_xl,
     };
 
-    static PROMPT: &str = "a lovely duck drinking water from a bottle";
+    static PROMPT: &str = "a lovely cat holding a sign says 'diffusion-rs'";
 
     fn run(preset: Preset, m: Modifier) {
         let (mut config, mut model_config) = PresetBuilder::default()
@@ -198,5 +202,12 @@ mod tests {
     #[test]
     fn test_lcm_lora_sdxl_base_1_0() {
         run(Preset::SDXLBase1_0, lcm_lora_sdxl_base_1_0);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_offload_params_to_cpu() {
+        set_hf_token(include_str!("../token.txt"));
+        run(Preset::Flux1Schnell(api::WeightType::SD_TYPE_Q2_K), offload_params_to_cpu);
     }
 }
