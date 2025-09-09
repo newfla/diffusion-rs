@@ -149,7 +149,10 @@ pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuild
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::{self, gen_img}, modifier::offload_params_to_cpu, preset::{Modifier, Preset, PresetBuilder}, util::set_hf_token
+        api::{self, gen_img},
+        modifier::offload_params_to_cpu,
+        preset::{Modifier, Preset, PresetBuilder},
+        util::set_hf_token,
     };
 
     use super::{
@@ -208,6 +211,9 @@ mod tests {
     #[test]
     fn test_offload_params_to_cpu() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Schnell(api::WeightType::SD_TYPE_Q2_K), offload_params_to_cpu);
+        run(
+            Preset::Flux1Schnell(api::WeightType::SD_TYPE_Q2_K),
+            offload_params_to_cpu,
+        );
     }
 }
