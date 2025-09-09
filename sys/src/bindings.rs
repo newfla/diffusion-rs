@@ -1154,7 +1154,7 @@ pub enum sample_method_t {
 #[repr(u32)]
 #[non_exhaustive]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum schedule_t {
+pub enum scheduler_t {
     DEFAULT = 0,
     DISCRETE = 1,
     KARRAS = 2,
@@ -1198,7 +1198,8 @@ pub enum sd_type_t {
     SD_TYPE_BF16 = 30,
     SD_TYPE_TQ1_0 = 34,
     SD_TYPE_TQ2_0 = 35,
-    SD_TYPE_COUNT = 39,
+    SD_TYPE_MXFP4 = 39,
+    SD_TYPE_COUNT = 40,
 }
 #[repr(u32)]
 #[non_exhaustive]
@@ -1215,8 +1216,10 @@ pub struct sd_ctx_params_t {
     pub model_path: *const ::std::os::raw::c_char,
     pub clip_l_path: *const ::std::os::raw::c_char,
     pub clip_g_path: *const ::std::os::raw::c_char,
+    pub clip_vision_path: *const ::std::os::raw::c_char,
     pub t5xxl_path: *const ::std::os::raw::c_char,
     pub diffusion_model_path: *const ::std::os::raw::c_char,
+    pub high_noise_diffusion_model_path: *const ::std::os::raw::c_char,
     pub vae_path: *const ::std::os::raw::c_char,
     pub taesd_path: *const ::std::os::raw::c_char,
     pub control_net_path: *const ::std::os::raw::c_char,
@@ -1229,7 +1232,7 @@ pub struct sd_ctx_params_t {
     pub n_threads: ::std::os::raw::c_int,
     pub wtype: sd_type_t,
     pub rng_type: rng_type_t,
-    pub schedule: schedule_t,
+    pub offload_params_to_cpu: bool,
     pub keep_clip_on_cpu: bool,
     pub keep_control_net_on_cpu: bool,
     pub keep_vae_on_cpu: bool,
@@ -1239,10 +1242,11 @@ pub struct sd_ctx_params_t {
     pub chroma_use_dit_mask: bool,
     pub chroma_use_t5_mask: bool,
     pub chroma_t5_mask_pad: ::std::os::raw::c_int,
+    pub flow_shift: f32,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_ctx_params_t"][::std::mem::size_of::<sd_ctx_params_t>() - 120usize];
+    ["Size of sd_ctx_params_t"][::std::mem::size_of::<sd_ctx_params_t>() - 144usize];
     ["Alignment of sd_ctx_params_t"][::std::mem::align_of::<sd_ctx_params_t>() - 8usize];
     ["Offset of field: sd_ctx_params_t::model_path"]
         [::std::mem::offset_of!(sd_ctx_params_t, model_path) - 0usize];
@@ -1250,54 +1254,60 @@ const _: () = {
         [::std::mem::offset_of!(sd_ctx_params_t, clip_l_path) - 8usize];
     ["Offset of field: sd_ctx_params_t::clip_g_path"]
         [::std::mem::offset_of!(sd_ctx_params_t, clip_g_path) - 16usize];
+    ["Offset of field: sd_ctx_params_t::clip_vision_path"]
+        [::std::mem::offset_of!(sd_ctx_params_t, clip_vision_path) - 24usize];
     ["Offset of field: sd_ctx_params_t::t5xxl_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, t5xxl_path) - 24usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, t5xxl_path) - 32usize];
     ["Offset of field: sd_ctx_params_t::diffusion_model_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_model_path) - 32usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_model_path) - 40usize];
+    ["Offset of field: sd_ctx_params_t::high_noise_diffusion_model_path"]
+        [::std::mem::offset_of!(sd_ctx_params_t, high_noise_diffusion_model_path) - 48usize];
     ["Offset of field: sd_ctx_params_t::vae_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_path) - 40usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_path) - 56usize];
     ["Offset of field: sd_ctx_params_t::taesd_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, taesd_path) - 48usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, taesd_path) - 64usize];
     ["Offset of field: sd_ctx_params_t::control_net_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, control_net_path) - 56usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, control_net_path) - 72usize];
     ["Offset of field: sd_ctx_params_t::lora_model_dir"]
-        [::std::mem::offset_of!(sd_ctx_params_t, lora_model_dir) - 64usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, lora_model_dir) - 80usize];
     ["Offset of field: sd_ctx_params_t::embedding_dir"]
-        [::std::mem::offset_of!(sd_ctx_params_t, embedding_dir) - 72usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, embedding_dir) - 88usize];
     ["Offset of field: sd_ctx_params_t::stacked_id_embed_dir"]
-        [::std::mem::offset_of!(sd_ctx_params_t, stacked_id_embed_dir) - 80usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, stacked_id_embed_dir) - 96usize];
     ["Offset of field: sd_ctx_params_t::vae_decode_only"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_decode_only) - 88usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_decode_only) - 104usize];
     ["Offset of field: sd_ctx_params_t::vae_tiling"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_tiling) - 89usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_tiling) - 105usize];
     ["Offset of field: sd_ctx_params_t::free_params_immediately"]
-        [::std::mem::offset_of!(sd_ctx_params_t, free_params_immediately) - 90usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, free_params_immediately) - 106usize];
     ["Offset of field: sd_ctx_params_t::n_threads"]
-        [::std::mem::offset_of!(sd_ctx_params_t, n_threads) - 92usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, n_threads) - 108usize];
     ["Offset of field: sd_ctx_params_t::wtype"]
-        [::std::mem::offset_of!(sd_ctx_params_t, wtype) - 96usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, wtype) - 112usize];
     ["Offset of field: sd_ctx_params_t::rng_type"]
-        [::std::mem::offset_of!(sd_ctx_params_t, rng_type) - 100usize];
-    ["Offset of field: sd_ctx_params_t::schedule"]
-        [::std::mem::offset_of!(sd_ctx_params_t, schedule) - 104usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, rng_type) - 116usize];
+    ["Offset of field: sd_ctx_params_t::offload_params_to_cpu"]
+        [::std::mem::offset_of!(sd_ctx_params_t, offload_params_to_cpu) - 120usize];
     ["Offset of field: sd_ctx_params_t::keep_clip_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_clip_on_cpu) - 108usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_clip_on_cpu) - 121usize];
     ["Offset of field: sd_ctx_params_t::keep_control_net_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_control_net_on_cpu) - 109usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_control_net_on_cpu) - 122usize];
     ["Offset of field: sd_ctx_params_t::keep_vae_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 110usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 123usize];
     ["Offset of field: sd_ctx_params_t::diffusion_flash_attn"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 111usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 124usize];
     ["Offset of field: sd_ctx_params_t::diffusion_conv_direct"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 112usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 125usize];
     ["Offset of field: sd_ctx_params_t::vae_conv_direct"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 113usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 126usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_dit_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 114usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 127usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_t5_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 115usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 128usize];
     ["Offset of field: sd_ctx_params_t::chroma_t5_mask_pad"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 116usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 132usize];
+    ["Offset of field: sd_ctx_params_t::flow_shift"]
+        [::std::mem::offset_of!(sd_ctx_params_t, flow_shift) - 136usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1345,7 +1355,6 @@ const _: () = {
 pub struct sd_guidance_params_t {
     pub txt_cfg: f32,
     pub img_cfg: f32,
-    pub min_cfg: f32,
     pub distilled_guidance: f32,
     pub slg: sd_slg_params_t,
 }
@@ -1357,12 +1366,34 @@ const _: () = {
         [::std::mem::offset_of!(sd_guidance_params_t, txt_cfg) - 0usize];
     ["Offset of field: sd_guidance_params_t::img_cfg"]
         [::std::mem::offset_of!(sd_guidance_params_t, img_cfg) - 4usize];
-    ["Offset of field: sd_guidance_params_t::min_cfg"]
-        [::std::mem::offset_of!(sd_guidance_params_t, min_cfg) - 8usize];
     ["Offset of field: sd_guidance_params_t::distilled_guidance"]
-        [::std::mem::offset_of!(sd_guidance_params_t, distilled_guidance) - 12usize];
+        [::std::mem::offset_of!(sd_guidance_params_t, distilled_guidance) - 8usize];
     ["Offset of field: sd_guidance_params_t::slg"]
         [::std::mem::offset_of!(sd_guidance_params_t, slg) - 16usize];
+};
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct sd_sample_params_t {
+    pub guidance: sd_guidance_params_t,
+    pub scheduler: scheduler_t,
+    pub sample_method: sample_method_t,
+    pub sample_steps: ::std::os::raw::c_int,
+    pub eta: f32,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sd_sample_params_t"][::std::mem::size_of::<sd_sample_params_t>() - 64usize];
+    ["Alignment of sd_sample_params_t"][::std::mem::align_of::<sd_sample_params_t>() - 8usize];
+    ["Offset of field: sd_sample_params_t::guidance"]
+        [::std::mem::offset_of!(sd_sample_params_t, guidance) - 0usize];
+    ["Offset of field: sd_sample_params_t::scheduler"]
+        [::std::mem::offset_of!(sd_sample_params_t, scheduler) - 48usize];
+    ["Offset of field: sd_sample_params_t::sample_method"]
+        [::std::mem::offset_of!(sd_sample_params_t, sample_method) - 52usize];
+    ["Offset of field: sd_sample_params_t::sample_steps"]
+        [::std::mem::offset_of!(sd_sample_params_t, sample_steps) - 56usize];
+    ["Offset of field: sd_sample_params_t::eta"]
+        [::std::mem::offset_of!(sd_sample_params_t, eta) - 60usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1370,20 +1401,18 @@ pub struct sd_img_gen_params_t {
     pub prompt: *const ::std::os::raw::c_char,
     pub negative_prompt: *const ::std::os::raw::c_char,
     pub clip_skip: ::std::os::raw::c_int,
-    pub guidance: sd_guidance_params_t,
     pub init_image: sd_image_t,
     pub ref_images: *mut sd_image_t,
     pub ref_images_count: ::std::os::raw::c_int,
+    pub increase_ref_index: bool,
     pub mask_image: sd_image_t,
     pub width: ::std::os::raw::c_int,
     pub height: ::std::os::raw::c_int,
-    pub sample_method: sample_method_t,
-    pub sample_steps: ::std::os::raw::c_int,
-    pub eta: f32,
+    pub sample_params: sd_sample_params_t,
     pub strength: f32,
     pub seed: i64,
     pub batch_count: ::std::os::raw::c_int,
-    pub control_cond: *const sd_image_t,
+    pub control_image: sd_image_t,
     pub control_strength: f32,
     pub style_strength: f32,
     pub normalize_input: bool,
@@ -1391,7 +1420,7 @@ pub struct sd_img_gen_params_t {
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_img_gen_params_t"][::std::mem::size_of::<sd_img_gen_params_t>() - 208usize];
+    ["Size of sd_img_gen_params_t"][::std::mem::size_of::<sd_img_gen_params_t>() - 232usize];
     ["Alignment of sd_img_gen_params_t"][::std::mem::align_of::<sd_img_gen_params_t>() - 8usize];
     ["Offset of field: sd_img_gen_params_t::prompt"]
         [::std::mem::offset_of!(sd_img_gen_params_t, prompt) - 0usize];
@@ -1399,87 +1428,86 @@ const _: () = {
         [::std::mem::offset_of!(sd_img_gen_params_t, negative_prompt) - 8usize];
     ["Offset of field: sd_img_gen_params_t::clip_skip"]
         [::std::mem::offset_of!(sd_img_gen_params_t, clip_skip) - 16usize];
-    ["Offset of field: sd_img_gen_params_t::guidance"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, guidance) - 24usize];
     ["Offset of field: sd_img_gen_params_t::init_image"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, init_image) - 72usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, init_image) - 24usize];
     ["Offset of field: sd_img_gen_params_t::ref_images"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, ref_images) - 96usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, ref_images) - 48usize];
     ["Offset of field: sd_img_gen_params_t::ref_images_count"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, ref_images_count) - 104usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, ref_images_count) - 56usize];
+    ["Offset of field: sd_img_gen_params_t::increase_ref_index"]
+        [::std::mem::offset_of!(sd_img_gen_params_t, increase_ref_index) - 60usize];
     ["Offset of field: sd_img_gen_params_t::mask_image"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, mask_image) - 112usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, mask_image) - 64usize];
     ["Offset of field: sd_img_gen_params_t::width"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, width) - 136usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, width) - 88usize];
     ["Offset of field: sd_img_gen_params_t::height"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, height) - 140usize];
-    ["Offset of field: sd_img_gen_params_t::sample_method"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, sample_method) - 144usize];
-    ["Offset of field: sd_img_gen_params_t::sample_steps"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, sample_steps) - 148usize];
-    ["Offset of field: sd_img_gen_params_t::eta"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, eta) - 152usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, height) - 92usize];
+    ["Offset of field: sd_img_gen_params_t::sample_params"]
+        [::std::mem::offset_of!(sd_img_gen_params_t, sample_params) - 96usize];
     ["Offset of field: sd_img_gen_params_t::strength"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, strength) - 156usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, strength) - 160usize];
     ["Offset of field: sd_img_gen_params_t::seed"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, seed) - 160usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, seed) - 168usize];
     ["Offset of field: sd_img_gen_params_t::batch_count"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, batch_count) - 168usize];
-    ["Offset of field: sd_img_gen_params_t::control_cond"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, control_cond) - 176usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, batch_count) - 176usize];
+    ["Offset of field: sd_img_gen_params_t::control_image"]
+        [::std::mem::offset_of!(sd_img_gen_params_t, control_image) - 184usize];
     ["Offset of field: sd_img_gen_params_t::control_strength"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, control_strength) - 184usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, control_strength) - 208usize];
     ["Offset of field: sd_img_gen_params_t::style_strength"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, style_strength) - 188usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, style_strength) - 212usize];
     ["Offset of field: sd_img_gen_params_t::normalize_input"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, normalize_input) - 192usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, normalize_input) - 216usize];
     ["Offset of field: sd_img_gen_params_t::input_id_images_path"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, input_id_images_path) - 200usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, input_id_images_path) - 224usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sd_vid_gen_params_t {
+    pub prompt: *const ::std::os::raw::c_char,
+    pub negative_prompt: *const ::std::os::raw::c_char,
+    pub clip_skip: ::std::os::raw::c_int,
     pub init_image: sd_image_t,
+    pub end_image: sd_image_t,
     pub width: ::std::os::raw::c_int,
     pub height: ::std::os::raw::c_int,
-    pub guidance: sd_guidance_params_t,
-    pub sample_method: sample_method_t,
-    pub sample_steps: ::std::os::raw::c_int,
+    pub sample_params: sd_sample_params_t,
+    pub high_noise_sample_params: sd_sample_params_t,
+    pub moe_boundary: f32,
     pub strength: f32,
     pub seed: i64,
     pub video_frames: ::std::os::raw::c_int,
-    pub motion_bucket_id: ::std::os::raw::c_int,
-    pub fps: ::std::os::raw::c_int,
-    pub augmentation_level: f32,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_vid_gen_params_t"][::std::mem::size_of::<sd_vid_gen_params_t>() - 120usize];
+    ["Size of sd_vid_gen_params_t"][::std::mem::size_of::<sd_vid_gen_params_t>() - 232usize];
     ["Alignment of sd_vid_gen_params_t"][::std::mem::align_of::<sd_vid_gen_params_t>() - 8usize];
+    ["Offset of field: sd_vid_gen_params_t::prompt"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, prompt) - 0usize];
+    ["Offset of field: sd_vid_gen_params_t::negative_prompt"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, negative_prompt) - 8usize];
+    ["Offset of field: sd_vid_gen_params_t::clip_skip"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, clip_skip) - 16usize];
     ["Offset of field: sd_vid_gen_params_t::init_image"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, init_image) - 0usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, init_image) - 24usize];
+    ["Offset of field: sd_vid_gen_params_t::end_image"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, end_image) - 48usize];
     ["Offset of field: sd_vid_gen_params_t::width"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, width) - 24usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, width) - 72usize];
     ["Offset of field: sd_vid_gen_params_t::height"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, height) - 28usize];
-    ["Offset of field: sd_vid_gen_params_t::guidance"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, guidance) - 32usize];
-    ["Offset of field: sd_vid_gen_params_t::sample_method"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, sample_method) - 80usize];
-    ["Offset of field: sd_vid_gen_params_t::sample_steps"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, sample_steps) - 84usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, height) - 76usize];
+    ["Offset of field: sd_vid_gen_params_t::sample_params"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, sample_params) - 80usize];
+    ["Offset of field: sd_vid_gen_params_t::high_noise_sample_params"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, high_noise_sample_params) - 144usize];
+    ["Offset of field: sd_vid_gen_params_t::moe_boundary"]
+        [::std::mem::offset_of!(sd_vid_gen_params_t, moe_boundary) - 208usize];
     ["Offset of field: sd_vid_gen_params_t::strength"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, strength) - 88usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, strength) - 212usize];
     ["Offset of field: sd_vid_gen_params_t::seed"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, seed) - 96usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, seed) - 216usize];
     ["Offset of field: sd_vid_gen_params_t::video_frames"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, video_frames) - 104usize];
-    ["Offset of field: sd_vid_gen_params_t::motion_bucket_id"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, motion_bucket_id) - 108usize];
-    ["Offset of field: sd_vid_gen_params_t::fps"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, fps) - 112usize];
-    ["Offset of field: sd_vid_gen_params_t::augmentation_level"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, augmentation_level) - 116usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, video_frames) - 224usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1532,10 +1560,10 @@ unsafe extern "C" {
     pub fn str_to_sample_method(str_: *const ::std::os::raw::c_char) -> sample_method_t;
 }
 unsafe extern "C" {
-    pub fn sd_schedule_name(schedule: schedule_t) -> *const ::std::os::raw::c_char;
+    pub fn sd_schedule_name(scheduler: scheduler_t) -> *const ::std::os::raw::c_char;
 }
 unsafe extern "C" {
-    pub fn str_to_schedule(str_: *const ::std::os::raw::c_char) -> schedule_t;
+    pub fn str_to_schedule(str_: *const ::std::os::raw::c_char) -> scheduler_t;
 }
 unsafe extern "C" {
     pub fn sd_ctx_params_init(sd_ctx_params: *mut sd_ctx_params_t);
@@ -1550,6 +1578,14 @@ unsafe extern "C" {
 }
 unsafe extern "C" {
     pub fn free_sd_ctx(sd_ctx: *mut sd_ctx_t);
+}
+unsafe extern "C" {
+    pub fn sd_sample_params_init(sample_params: *mut sd_sample_params_t);
+}
+unsafe extern "C" {
+    pub fn sd_sample_params_to_str(
+        sample_params: *const sd_sample_params_t,
+    ) -> *mut ::std::os::raw::c_char;
 }
 unsafe extern "C" {
     pub fn sd_img_gen_params_init(sd_img_gen_params: *mut sd_img_gen_params_t);
@@ -1572,6 +1608,7 @@ unsafe extern "C" {
     pub fn generate_video(
         sd_ctx: *mut sd_ctx_t,
         sd_vid_gen_params: *const sd_vid_gen_params_t,
+        num_frames_out: *mut ::std::os::raw::c_int,
     ) -> *mut sd_image_t;
 }
 #[repr(C)]
@@ -1582,8 +1619,9 @@ pub struct upscaler_ctx_t {
 unsafe extern "C" {
     pub fn new_upscaler_ctx(
         esrgan_path: *const ::std::os::raw::c_char,
-        n_threads: ::std::os::raw::c_int,
+        offload_params_to_cpu: bool,
         direct: bool,
+        n_threads: ::std::os::raw::c_int,
     ) -> *mut upscaler_ctx_t;
 }
 unsafe extern "C" {
