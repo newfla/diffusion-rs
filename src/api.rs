@@ -13,8 +13,10 @@ use diffusion_rs_sys::sd_ctx_params_t;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
+use diffusion_rs_sys::sd_pm_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_slg_params_t;
+use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
 use image::ImageBuffer;
 use image::ImageError;
@@ -125,9 +127,13 @@ pub struct ModelConfig {
     #[builder(default = "Default::default()")]
     embeddings: CLibPath,
 
-    /// Path to PHOTOMAKER stacked id embeddings
+    /// Path to PHOTOMAKER model
     #[builder(default = "Default::default()")]
-    stacked_id_embd: CLibPath,
+    photo_maker: CLibPath,
+
+    /// Path to PHOTOMAKER v2 id embed
+    #[builder(default = "Default::default()")]
+    pm_id_embed_path: CLibPath,
 
     /// Weight type. If not specified, the default is the type of the weight file
     #[builder(default = "WeightType::SD_TYPE_COUNT")]
@@ -148,6 +154,18 @@ pub struct ModelConfig {
     /// Process vae in tiles to reduce memory usage (default: false)
     #[builder(default = "false")]
     vae_tiling: bool,
+
+    /// Tile size for vae tiling (default: 32x32)
+    #[builder(default = "(32,32)")]
+    vae_tile_size: (i32, i32),
+
+    /// Relative tile size for vae tiling, in fraction of image size if < 1, in number of tiles per dim if >=1 (overrides vae_tile_size)
+    #[builder(default = "(0.,0.)")]
+    vae_relative_tile_size: (f32, f32),
+
+    /// Tile overlap for vae tiling, in fraction of tile size (default: 0.5)
+    #[builder(default = "0.5")]
+    vae_tile_overlap: f32,
 
     /// RNG (default: CUDA)
     #[builder(default = "RngFunction::CUDA_RNG")]
@@ -277,9 +295,8 @@ impl ModelConfig {
                     control_net_path: self.control_net.as_ptr(),
                     lora_model_dir: self.lora_model.as_ptr(),
                     embedding_dir: self.embeddings.as_ptr(),
-                    stacked_id_embed_dir: self.stacked_id_embd.as_ptr(),
+                    photo_maker_path: self.photo_maker.as_ptr(),
                     vae_decode_only,
-                    vae_tiling: self.vae_tiling,
                     free_params_immediately: false,
                     n_threads: self.n_threads,
                     wtype: self.weight_type,
@@ -325,7 +342,7 @@ impl Drop for ModelConfig {
 pub struct Config {
     /// Path to PHOTOMAKER input id images dir
     #[builder(default = "Default::default()")]
-    input_id_images: CLibPath,
+    pm_id_images_dir: CLibPath,
 
     /// Normalize PHOTOMAKER input id images
     #[builder(default = "false")]
@@ -364,7 +381,7 @@ pub struct Config {
 
     /// Strength for keeping input identity (default: 20%)
     #[builder(default = "20.0")]
-    style_ratio: f32,
+    pm_style_strength: f32,
 
     /// Strength to apply Control Net (default: 0.9)
     /// 1.0 corresponds to full destruction of information in init
@@ -379,8 +396,8 @@ pub struct Config {
     #[builder(default = "512")]
     width: i32,
 
-    /// Sampling-method (default: EULER_A)
-    #[builder(default = "SampleMethod::EULER_A")]
+    /// Sampling-method (default: SAMPLE_METHOD_DEFAULT)
+    #[builder(default = "SampleMethod::SAMPLE_METHOD_DEFAULT")]
     sampling_method: SampleMethod,
 
     /// eta in DDIM, only for DDIM and TCD: (default: 0)
@@ -448,7 +465,7 @@ impl From<Config> for ConfigBuilder {
     fn from(value: Config) -> Self {
         let mut builder = ConfigBuilder::default();
         builder
-            .input_id_images(value.input_id_images)
+            .pm_id_images_dir(value.pm_id_images_dir)
             .normalize_input(value.normalize_input)
             .init_img(value.init_img)
             .control_image(value.control_image)
@@ -457,7 +474,7 @@ impl From<Config> for ConfigBuilder {
             .negative_prompt(value.negative_prompt)
             .cfg_scale(value.cfg_scale)
             .strength(value.strength)
-            .style_ratio(value.style_ratio)
+            .pm_style_strength(value.pm_style_strength)
             .control_strength(value.control_strength)
             .height(value.height)
             .width(value.width)
@@ -604,6 +621,21 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             channel: 3,
             data: null_mut(),
         };
+        let vae_tiling_params = sd_tiling_params_t {
+            enabled: model_config.vae_tiling,
+            tile_size_x: model_config.vae_tile_size.0,
+            tile_size_y: model_config.vae_tile_size.1,
+            target_overlap: model_config.vae_tile_overlap,
+            rel_size_x: model_config.vae_relative_tile_size.0,
+            rel_size_y: model_config.vae_relative_tile_size.1,
+        };
+
+        let pm_params = sd_pm_params_t {
+            id_images: null_mut(),
+            id_images_count: 0,
+            id_embed_path: model_config.pm_id_embed_path.as_ptr(),
+            style_strength: config.pm_style_strength,
+        };
 
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
@@ -622,9 +654,9 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             batch_count: config.batch_count,
             control_image,
             control_strength: config.control_strength,
-            style_strength: config.style_ratio,
             normalize_input: config.normalize_input,
-            input_id_images_path: config.input_id_images.as_ptr(),
+            pm_params,
+            vae_tiling_params,
         };
 
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
