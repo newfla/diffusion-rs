@@ -58,11 +58,7 @@ pub fn stable_diffusion_3_medium_fp16() -> Result<ConfigsBuilder, ApiError> {
 
     let mut config = ConfigBuilder::default();
 
-    config
-        .cfg_scale(4.5)
-        .steps(30)
-        .height(1024)
-        .width(1024);
+    config.cfg_scale(4.5).steps(30).height(1024).width(1024);
 
     let mut model_config = ModelConfigBuilder::default();
 
@@ -135,11 +131,7 @@ fn flux_1_clip_vae(
         .vae(vae_path)
         .clip_l(clip_l_path)
         .vae_tiling(true);
-    config
-        .cfg_scale(1.)
-        .steps(steps)
-        .height(1024)
-        .width(1024);
+    config.cfg_scale(1.).steps(steps).height(1024).width(1024);
 
     Ok((config, model_config))
 }

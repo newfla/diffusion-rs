@@ -636,7 +636,7 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             id_embed_path: model_config.pm_id_embed_path.as_ptr(),
             style_strength: config.pm_style_strength,
         };
-        
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
