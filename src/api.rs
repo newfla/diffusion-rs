@@ -15,6 +15,7 @@ use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_slg_params_t;
+use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
 use image::ImageBuffer;
 use image::ImageError;
@@ -149,6 +150,18 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     vae_tiling: bool,
 
+    /// Tile size for vae tiling (default: 32x32)
+    #[builder(default = "(32,32)")]
+    vae_tile_size: (i32, i32),
+
+    /// Relative tile size for vae tiling, in fraction of image size if < 1, in number of tiles per dim if >=1 (overrides vae_tile_size)
+    #[builder(default = "(0.,0.)")]
+    vae_relative_tile_size: (f32, f32),
+
+    /// Tile overlap for vae tiling, in fraction of tile size (default: 0.5)
+    #[builder(default = "0.5")]
+    vae_tile_overlap: f32,
+
     /// RNG (default: CUDA)
     #[builder(default = "RngFunction::CUDA_RNG")]
     rng: RngFunction,
@@ -279,7 +292,6 @@ impl ModelConfig {
                     embedding_dir: self.embeddings.as_ptr(),
                     stacked_id_embed_dir: self.stacked_id_embd.as_ptr(),
                     vae_decode_only,
-                    vae_tiling: self.vae_tiling,
                     free_params_immediately: false,
                     n_threads: self.n_threads,
                     wtype: self.weight_type,
@@ -379,8 +391,8 @@ pub struct Config {
     #[builder(default = "512")]
     width: i32,
 
-    /// Sampling-method (default: EULER_A)
-    #[builder(default = "SampleMethod::EULER_A")]
+    /// Sampling-method (default: SAMPLE_METHOD_DEFAULT)
+    #[builder(default = "SampleMethod::SAMPLE_METHOD_DEFAULT")]
     sampling_method: SampleMethod,
 
     /// eta in DDIM, only for DDIM and TCD: (default: 0)
@@ -604,7 +616,15 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             channel: 3,
             data: null_mut(),
         };
-
+        let vae_tiling_params = sd_tiling_params_t {
+            enabled: model_config.vae_tiling,
+            tile_size_x: model_config.vae_tile_size.0,
+            tile_size_y: model_config.vae_tile_size.1,
+            target_overlap: model_config.vae_tile_overlap,
+            rel_size_x: model_config.vae_relative_tile_size.0,
+            rel_size_y: model_config.vae_relative_tile_size.1,
+        };
+        
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -625,6 +645,7 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             style_strength: config.style_ratio,
             normalize_input: config.normalize_input,
             input_id_images_path: config.input_id_images.as_ptr(),
+            vae_tiling_params,
         };
 
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);

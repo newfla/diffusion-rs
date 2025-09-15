@@ -60,7 +60,6 @@ pub fn stable_diffusion_3_medium_fp16() -> Result<ConfigsBuilder, ApiError> {
 
     config
         .cfg_scale(4.5)
-        .sampling_method(SampleMethod::EULER)
         .steps(30)
         .height(1024)
         .width(1024);
@@ -138,7 +137,6 @@ fn flux_1_clip_vae(
         .vae_tiling(true);
     config
         .cfg_scale(1.)
-        .sampling_method(SampleMethod::EULER)
         .steps(steps)
         .height(1024)
         .width(1024);
