@@ -5,6 +5,7 @@ use crate::{
     modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1},
     preset::ConfigsBuilder,
 };
+use diffusion_rs_sys::scheduler_t;
 use hf_hub::api::sync::ApiError;
 
 use crate::{api::ConfigBuilder, util::download_file_hf_hub};
@@ -347,6 +348,159 @@ fn chroma_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
         api::WeightType::SD_TYPE_Q8_0 => (
             "silveroxides/Chroma-GGUF",
             "chroma-unlocked-v41/chroma-unlocked-v41-Q8_0.gguf",
+        ),
+        _ => ("not_supported", "not_supported"),
+    };
+    download_file_hf_hub(repo, file)
+}
+
+pub fn nitro_sd_realism(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+    let model_path = nitro_sd_realism_weight(sd_type)?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .model(model_path)
+        .timestep_shift(250)
+        .scheduler(scheduler_t::SGM_UNIFORM);
+    config.cfg_scale(1.).steps(1).height(1024).width(1024);
+    Ok((config, model_config))
+}
+
+fn nitro_sd_realism_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    check_nitro_sd_realism_type(sd_type);
+    nitro_sd_realism_type_to_model(sd_type)
+}
+
+fn check_nitro_sd_realism_type(sd_type: api::WeightType) {
+    assert!(
+        sd_type == api::WeightType::SD_TYPE_F16
+            || sd_type == api::WeightType::SD_TYPE_Q2_K
+            || sd_type == api::WeightType::SD_TYPE_Q3_K
+            || sd_type == api::WeightType::SD_TYPE_Q4_0
+            || sd_type == api::WeightType::SD_TYPE_Q5_0
+            || sd_type == api::WeightType::SD_TYPE_Q6_K
+            || sd_type == api::WeightType::SD_TYPE_Q8_0
+    );
+}
+
+fn nitro_sd_realism_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        api::WeightType::SD_TYPE_F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_f16.gguf"),
+        api::WeightType::SD_TYPE_Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q2_K.gguf"),
+        api::WeightType::SD_TYPE_Q3_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q3_K.gguf"),
+        api::WeightType::SD_TYPE_Q4_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q4_0.gguf"),
+        api::WeightType::SD_TYPE_Q5_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q5_0.gguf"),
+        api::WeightType::SD_TYPE_Q6_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q6_K.gguf"),
+        api::WeightType::SD_TYPE_Q8_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q8_0.gguf"),
+        _ => ("not_supported", "not_supported"),
+    };
+    download_file_hf_hub(repo, file)
+}
+
+pub fn nitro_sd_vibrant(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+    let model_path = nitro_sd_vibrant_weight(sd_type)?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .model(model_path)
+        .timestep_shift(500)
+        .scheduler(scheduler_t::SGM_UNIFORM);
+    config.cfg_scale(1.).steps(1).height(1024).width(1024);
+    Ok((config, model_config))
+}
+
+fn nitro_sd_vibrant_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    check_nitro_sd_vibrant_type(sd_type);
+    nitro_sd_vibrant_type_to_model(sd_type)
+}
+
+fn check_nitro_sd_vibrant_type(sd_type: api::WeightType) {
+    assert!(
+        sd_type == api::WeightType::SD_TYPE_F16
+            || sd_type == api::WeightType::SD_TYPE_Q2_K
+            || sd_type == api::WeightType::SD_TYPE_Q3_K
+            || sd_type == api::WeightType::SD_TYPE_Q4_0
+            || sd_type == api::WeightType::SD_TYPE_Q5_0
+            || sd_type == api::WeightType::SD_TYPE_Q6_K
+            || sd_type == api::WeightType::SD_TYPE_Q8_0
+    );
+}
+
+fn nitro_sd_vibrant_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        api::WeightType::SD_TYPE_F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_f16.gguf"),
+        api::WeightType::SD_TYPE_Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q2_K.gguf"),
+        api::WeightType::SD_TYPE_Q3_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q3_K.gguf"),
+        api::WeightType::SD_TYPE_Q4_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q4_0.gguf"),
+        api::WeightType::SD_TYPE_Q5_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q5_0.gguf"),
+        api::WeightType::SD_TYPE_Q6_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q6_K.gguf"),
+        api::WeightType::SD_TYPE_Q8_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q8_0.gguf"),
+        _ => ("not_supported", "not_supported"),
+    };
+    download_file_hf_hub(repo, file)
+}
+
+pub fn diff_instruct_star(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+    let model_path = diff_instruct_star_weight(sd_type)?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .model(model_path)
+        .timestep_shift(400)
+        .scheduler(scheduler_t::SGM_UNIFORM);
+    config.cfg_scale(1.).steps(1).height(1024).width(1024);
+    Ok((config, model_config))
+}
+
+fn diff_instruct_star_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    check_diff_instruct_star_type(sd_type);
+    diff_instruct_star_type_to_model(sd_type)
+}
+
+fn check_diff_instruct_star_type(sd_type: api::WeightType) {
+    assert!(
+        sd_type == api::WeightType::SD_TYPE_F16
+            || sd_type == api::WeightType::SD_TYPE_Q2_K
+            || sd_type == api::WeightType::SD_TYPE_Q3_K
+            || sd_type == api::WeightType::SD_TYPE_Q4_0
+            || sd_type == api::WeightType::SD_TYPE_Q5_0
+            || sd_type == api::WeightType::SD_TYPE_Q6_K
+            || sd_type == api::WeightType::SD_TYPE_Q8_0
+    );
+}
+
+fn diff_instruct_star_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        api::WeightType::SD_TYPE_F16 => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_f16.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q2_K => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_q2_K.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q3_K => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_q3_K.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q4_0 => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_q4_0.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q5_0 => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_q5_0.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q6_K => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_q6_K.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q8_0 => (
+            "mrfatso/Diff-InstructStar-GGUF",
+            "Diff-InstructStar_q8_0.gguf",
         ),
         _ => ("not_supported", "not_supported"),
     };

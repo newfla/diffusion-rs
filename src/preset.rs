@@ -4,8 +4,9 @@ use hf_hub::api::sync::ApiError;
 use crate::{
     api::{self, Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
-        chroma, flux_1_dev, flux_1_mini, flux_1_schnell, juggernaut_xl_11, sd_turbo, sdxl_base_1_0,
-        sdxl_turbo_1_0_fp16, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
+        chroma, diff_instruct_star, flux_1_dev, flux_1_mini, flux_1_schnell, juggernaut_xl_11,
+        nitro_sd_realism, nitro_sd_vibrant, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16,
+        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
         stable_diffusion_3_5_large_fp16, stable_diffusion_3_5_large_turbo_fp16,
         stable_diffusion_3_5_medium_fp16, stable_diffusion_3_medium_fp16,
     },
@@ -53,6 +54,12 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 4. 20 steps
     Chroma(api::WeightType),
+    /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 250. 1 steps. 1024x1024
+    NitroSDRealism(api::WeightType),
+    /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 500. 1 steps. 1024x1024
+    NitroSDVibrant(api::WeightType),
+    /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 400. 1 steps. 1024x1024
+    DiffInstructStar(api::WeightType),
 }
 
 impl Preset {
@@ -73,6 +80,9 @@ impl Preset {
             Preset::JuggernautXL11 => juggernaut_xl_11(),
             Preset::Flux1Mini(sd_type_t) => flux_1_mini(sd_type_t),
             Preset::Chroma(sd_type_t) => chroma(sd_type_t),
+            Preset::NitroSDRealism(sd_type_t) => nitro_sd_realism(sd_type_t),
+            Preset::NitroSDVibrant(sd_type_t) => nitro_sd_vibrant(sd_type_t),
+            Preset::DiffInstructStar(sd_type_t) => diff_instruct_star(sd_type_t),
         }
     }
 }
@@ -143,7 +153,7 @@ mod tests {
     };
 
     use super::{Preset, PresetBuilder};
-    static PROMPT: &str = "a lovely cat holding a sign says 'diffusion-rs'";
+    static PROMPT: &str = "a lovely dynosaur made by crochet";
 
     fn run(preset: Preset) {
         let (mut config, mut model_config) = PresetBuilder::default()
@@ -251,5 +261,23 @@ mod tests {
     fn test_chroma() {
         set_hf_token(include_str!("../token.txt"));
         run(Preset::Chroma(api::WeightType::SD_TYPE_Q4_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_nitro_sd_realism() {
+        run(Preset::NitroSDRealism(api::WeightType::SD_TYPE_Q8_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_nitro_sd_vibrant() {
+        run(Preset::NitroSDVibrant(api::WeightType::SD_TYPE_Q8_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_diff_instruct_star() {
+        run(Preset::DiffInstructStar(api::WeightType::SD_TYPE_Q8_0));
     }
 }
