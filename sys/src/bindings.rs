@@ -167,6 +167,9 @@ pub const __MAC_15_2: u32 = 150200;
 pub const __MAC_15_3: u32 = 150300;
 pub const __MAC_15_4: u32 = 150400;
 pub const __MAC_15_5: u32 = 150500;
+pub const __MAC_15_6: u32 = 150600;
+pub const __MAC_16_0: u32 = 160000;
+pub const __MAC_26_0: u32 = 260000;
 pub const __IPHONE_2_0: u32 = 20000;
 pub const __IPHONE_2_1: u32 = 20100;
 pub const __IPHONE_2_2: u32 = 20200;
@@ -219,7 +222,6 @@ pub const __IPHONE_14_1: u32 = 140100;
 pub const __IPHONE_14_2: u32 = 140200;
 pub const __IPHONE_14_3: u32 = 140300;
 pub const __IPHONE_14_5: u32 = 140500;
-pub const __IPHONE_14_4: u32 = 140400;
 pub const __IPHONE_14_6: u32 = 140600;
 pub const __IPHONE_14_7: u32 = 140700;
 pub const __IPHONE_14_8: u32 = 140800;
@@ -254,6 +256,9 @@ pub const __IPHONE_18_2: u32 = 180200;
 pub const __IPHONE_18_3: u32 = 180300;
 pub const __IPHONE_18_4: u32 = 180400;
 pub const __IPHONE_18_5: u32 = 180500;
+pub const __IPHONE_18_6: u32 = 180600;
+pub const __IPHONE_19_0: u32 = 190000;
+pub const __IPHONE_26_0: u32 = 260000;
 pub const __WATCHOS_1_0: u32 = 10000;
 pub const __WATCHOS_2_0: u32 = 20000;
 pub const __WATCHOS_2_1: u32 = 20100;
@@ -309,6 +314,9 @@ pub const __WATCHOS_11_2: u32 = 110200;
 pub const __WATCHOS_11_3: u32 = 110300;
 pub const __WATCHOS_11_4: u32 = 110400;
 pub const __WATCHOS_11_5: u32 = 110500;
+pub const __WATCHOS_11_6: u32 = 110600;
+pub const __WATCHOS_12_0: u32 = 120000;
+pub const __WATCHOS_26_0: u32 = 260000;
 pub const __TVOS_9_0: u32 = 90000;
 pub const __TVOS_9_1: u32 = 90100;
 pub const __TVOS_9_2: u32 = 90200;
@@ -364,6 +372,9 @@ pub const __TVOS_18_2: u32 = 180200;
 pub const __TVOS_18_3: u32 = 180300;
 pub const __TVOS_18_4: u32 = 180400;
 pub const __TVOS_18_5: u32 = 180500;
+pub const __TVOS_18_6: u32 = 180600;
+pub const __TVOS_19_0: u32 = 190000;
+pub const __TVOS_26_0: u32 = 260000;
 pub const __BRIDGEOS_2_0: u32 = 20000;
 pub const __BRIDGEOS_3_0: u32 = 30000;
 pub const __BRIDGEOS_3_1: u32 = 30100;
@@ -397,6 +408,8 @@ pub const __BRIDGEOS_9_2: u32 = 90200;
 pub const __BRIDGEOS_9_3: u32 = 90300;
 pub const __BRIDGEOS_9_4: u32 = 90400;
 pub const __BRIDGEOS_9_5: u32 = 90500;
+pub const __BRIDGEOS_9_6: u32 = 90600;
+pub const __BRIDGEOS_10_0: u32 = 100000;
 pub const __DRIVERKIT_19_0: u32 = 190000;
 pub const __DRIVERKIT_20_0: u32 = 200000;
 pub const __DRIVERKIT_21_0: u32 = 210000;
@@ -417,6 +430,8 @@ pub const __DRIVERKIT_24_2: u32 = 240200;
 pub const __DRIVERKIT_24_3: u32 = 240300;
 pub const __DRIVERKIT_24_4: u32 = 240400;
 pub const __DRIVERKIT_24_5: u32 = 240500;
+pub const __DRIVERKIT_24_6: u32 = 240600;
+pub const __DRIVERKIT_25_0: u32 = 250000;
 pub const __VISIONOS_1_0: u32 = 10000;
 pub const __VISIONOS_1_1: u32 = 10100;
 pub const __VISIONOS_1_2: u32 = 10200;
@@ -427,6 +442,9 @@ pub const __VISIONOS_2_2: u32 = 20200;
 pub const __VISIONOS_2_3: u32 = 20300;
 pub const __VISIONOS_2_4: u32 = 20400;
 pub const __VISIONOS_2_5: u32 = 20500;
+pub const __VISIONOS_2_6: u32 = 20600;
+pub const __VISIONOS_3_0: u32 = 30000;
+pub const __VISIONOS_26_0: u32 = 260000;
 pub const MAC_OS_X_VERSION_10_0: u32 = 1000;
 pub const MAC_OS_X_VERSION_10_1: u32 = 1010;
 pub const MAC_OS_X_VERSION_10_2: u32 = 1020;
@@ -497,14 +515,16 @@ pub const MAC_OS_VERSION_15_2: u32 = 150200;
 pub const MAC_OS_VERSION_15_3: u32 = 150300;
 pub const MAC_OS_VERSION_15_4: u32 = 150400;
 pub const MAC_OS_VERSION_15_5: u32 = 150500;
+pub const MAC_OS_VERSION_15_6: u32 = 150600;
+pub const MAC_OS_VERSION_16_0: u32 = 160000;
+pub const MAC_OS_VERSION_26_0: u32 = 260000;
 pub const __AVAILABILITY_VERSIONS_VERSION_HASH: u32 = 93585900;
 pub const __AVAILABILITY_VERSIONS_VERSION_STRING: &[u8; 6] = b"Local\0";
 pub const __AVAILABILITY_FILE: &[u8; 23] = b"AvailabilityVersions.h\0";
-pub const __MAC_OS_X_VERSION_MAX_ALLOWED: u32 = 150500;
+pub const __MAC_OS_X_VERSION_MAX_ALLOWED: u32 = 260000;
 pub const __ENABLE_LEGACY_MAC_AVAILABILITY: u32 = 1;
 pub const USE_CLANG_STDDEF: u32 = 0;
 pub const _USE_FORTIFY_LEVEL: u32 = 2;
-pub const __HAS_FIXED_CHK_PROTOTYPES: u32 = 1;
 pub type wchar_t = ::std::os::raw::c_int;
 pub type max_align_t = f64;
 pub type int_least8_t = i8;
@@ -1162,8 +1182,10 @@ pub enum scheduler_t {
     EXPONENTIAL = 3,
     AYS = 4,
     GITS = 5,
-    SMOOTHSTEP = 6,
-    SCHEDULE_COUNT = 7,
+    SGM_UNIFORM = 6,
+    SIMPLE = 7,
+    SMOOTHSTEP = 8,
+    SCHEDULE_COUNT = 9,
 }
 #[repr(u32)]
 #[non_exhaustive]
@@ -1405,10 +1427,11 @@ pub struct sd_sample_params_t {
     pub sample_method: sample_method_t,
     pub sample_steps: ::std::os::raw::c_int,
     pub eta: f32,
+    pub shifted_timestep: ::std::os::raw::c_int,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_sample_params_t"][::std::mem::size_of::<sd_sample_params_t>() - 64usize];
+    ["Size of sd_sample_params_t"][::std::mem::size_of::<sd_sample_params_t>() - 72usize];
     ["Alignment of sd_sample_params_t"][::std::mem::align_of::<sd_sample_params_t>() - 8usize];
     ["Offset of field: sd_sample_params_t::guidance"]
         [::std::mem::offset_of!(sd_sample_params_t, guidance) - 0usize];
@@ -1420,6 +1443,8 @@ const _: () = {
         [::std::mem::offset_of!(sd_sample_params_t, sample_steps) - 56usize];
     ["Offset of field: sd_sample_params_t::eta"]
         [::std::mem::offset_of!(sd_sample_params_t, eta) - 60usize];
+    ["Offset of field: sd_sample_params_t::shifted_timestep"]
+        [::std::mem::offset_of!(sd_sample_params_t, shifted_timestep) - 64usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1461,13 +1486,12 @@ pub struct sd_img_gen_params_t {
     pub batch_count: ::std::os::raw::c_int,
     pub control_image: sd_image_t,
     pub control_strength: f32,
-    pub normalize_input: bool,
     pub pm_params: sd_pm_params_t,
     pub vae_tiling_params: sd_tiling_params_t,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_img_gen_params_t"][::std::mem::size_of::<sd_img_gen_params_t>() - 272usize];
+    ["Size of sd_img_gen_params_t"][::std::mem::size_of::<sd_img_gen_params_t>() - 280usize];
     ["Alignment of sd_img_gen_params_t"][::std::mem::align_of::<sd_img_gen_params_t>() - 8usize];
     ["Offset of field: sd_img_gen_params_t::prompt"]
         [::std::mem::offset_of!(sd_img_gen_params_t, prompt) - 0usize];
@@ -1492,21 +1516,19 @@ const _: () = {
     ["Offset of field: sd_img_gen_params_t::sample_params"]
         [::std::mem::offset_of!(sd_img_gen_params_t, sample_params) - 96usize];
     ["Offset of field: sd_img_gen_params_t::strength"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, strength) - 160usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, strength) - 168usize];
     ["Offset of field: sd_img_gen_params_t::seed"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, seed) - 168usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, seed) - 176usize];
     ["Offset of field: sd_img_gen_params_t::batch_count"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, batch_count) - 176usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, batch_count) - 184usize];
     ["Offset of field: sd_img_gen_params_t::control_image"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, control_image) - 184usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, control_image) - 192usize];
     ["Offset of field: sd_img_gen_params_t::control_strength"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, control_strength) - 208usize];
-    ["Offset of field: sd_img_gen_params_t::normalize_input"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, normalize_input) - 212usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, control_strength) - 216usize];
     ["Offset of field: sd_img_gen_params_t::pm_params"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, pm_params) - 216usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, pm_params) - 224usize];
     ["Offset of field: sd_img_gen_params_t::vae_tiling_params"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, vae_tiling_params) - 248usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, vae_tiling_params) - 256usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1530,7 +1552,7 @@ pub struct sd_vid_gen_params_t {
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_vid_gen_params_t"][::std::mem::size_of::<sd_vid_gen_params_t>() - 248usize];
+    ["Size of sd_vid_gen_params_t"][::std::mem::size_of::<sd_vid_gen_params_t>() - 264usize];
     ["Alignment of sd_vid_gen_params_t"][::std::mem::align_of::<sd_vid_gen_params_t>() - 8usize];
     ["Offset of field: sd_vid_gen_params_t::prompt"]
         [::std::mem::offset_of!(sd_vid_gen_params_t, prompt) - 0usize];
@@ -1553,17 +1575,17 @@ const _: () = {
     ["Offset of field: sd_vid_gen_params_t::sample_params"]
         [::std::mem::offset_of!(sd_vid_gen_params_t, sample_params) - 96usize];
     ["Offset of field: sd_vid_gen_params_t::high_noise_sample_params"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, high_noise_sample_params) - 160usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, high_noise_sample_params) - 168usize];
     ["Offset of field: sd_vid_gen_params_t::moe_boundary"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, moe_boundary) - 224usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, moe_boundary) - 240usize];
     ["Offset of field: sd_vid_gen_params_t::strength"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, strength) - 228usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, strength) - 244usize];
     ["Offset of field: sd_vid_gen_params_t::seed"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, seed) - 232usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, seed) - 248usize];
     ["Offset of field: sd_vid_gen_params_t::video_frames"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, video_frames) - 240usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, video_frames) - 256usize];
     ["Offset of field: sd_vid_gen_params_t::vace_strength"]
-        [::std::mem::offset_of!(sd_vid_gen_params_t, vace_strength) - 244usize];
+        [::std::mem::offset_of!(sd_vid_gen_params_t, vace_strength) - 260usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

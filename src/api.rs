@@ -219,6 +219,10 @@ pub struct ModelConfig {
     #[builder(default = "f32::INFINITY")]
     flow_shift: f32,
 
+    /// Shift timestep for NitroFusion models, default: 0, recommended N for NitroSD-Realism around 250 and 500 for NitroSD-Vibrant
+    #[builder(default = "0")]
+    timestep_shift: i32,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -344,10 +348,6 @@ pub struct Config {
     #[builder(default = "Default::default()")]
     pm_id_images_dir: CLibPath,
 
-    /// Normalize PHOTOMAKER input id images
-    #[builder(default = "false")]
-    normalize_input: bool,
-
     /// Path to the input image, required by img2img
     #[builder(default = "Default::default()")]
     init_img: CLibPath,
@@ -466,7 +466,6 @@ impl From<Config> for ConfigBuilder {
         let mut builder = ConfigBuilder::default();
         builder
             .pm_id_images_dir(value.pm_id_images_dir)
-            .normalize_input(value.normalize_input)
             .init_img(value.init_img)
             .control_image(value.control_image)
             .output(value.output)
@@ -614,6 +613,7 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             sample_steps: config.steps,
             eta: config.eta,
             scheduler: model_config.scheduler,
+            shifted_timestep: model_config.timestep_shift,
         };
         let control_image = sd_image_t {
             width: 0,
@@ -654,7 +654,6 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             batch_count: config.batch_count,
             control_image,
             control_strength: config.control_strength,
-            normalize_input: config.normalize_input,
             pm_params,
             vae_tiling_params,
         };
