@@ -101,6 +101,7 @@ fn main() {
         config.define("CMAKE_C_COMPILER", "clang");
         config.define("CMAKE_CXX_COMPILER", "clang++");
         config.define("CMAKE_BUILD_WITH_INSTALL_RPATH", "ON");
+        conffig.define("CMAKE_POSITION_INDEPENDENT_CODE", "ON");
         let hip_lib_path = if target.contains("msvc") {
             let hip_path = env::var("HIP_PATH").expect("Missing HIP_PATH env variable");
             PathBuf::from(hip_path).join("lib")
@@ -114,9 +115,10 @@ fn main() {
         println!("cargo:rustc-link-search={}", hip_lib_path.display());
 
         config.define("SD_HIPBLAS", "ON");
-        if let Ok(target) = env::var("AMDGPU_TARGETS") {
+        if let Ok(target) = env::var("GFX_NAME") {
             config.define("AMDGPU_TARGETS", target);
-        }
+            config.define("GPU_TARGETS", target);
+        }   
     }
 
     #[cfg(feature = "metal")]
