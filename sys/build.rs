@@ -116,7 +116,7 @@ fn main() {
 
         config.define("SD_HIPBLAS", "ON");
         if let Ok(target) = env::var("GFX_NAME") {
-            config.define("AMDGPU_TARGETS", target);
+            config.define("AMDGPU_TARGETS", &target);
             config.define("GPU_TARGETS", target);
         }
     }
