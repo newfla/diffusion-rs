@@ -101,7 +101,7 @@ fn main() {
         config.define("CMAKE_C_COMPILER", "clang");
         config.define("CMAKE_CXX_COMPILER", "clang++");
         config.define("CMAKE_BUILD_WITH_INSTALL_RPATH", "ON");
-        conffig.define("CMAKE_POSITION_INDEPENDENT_CODE", "ON");
+        config.define("CMAKE_POSITION_INDEPENDENT_CODE", "ON");
         let hip_lib_path = if target.contains("msvc") {
             let hip_path = env::var("HIP_PATH").expect("Missing HIP_PATH env variable");
             PathBuf::from(hip_path).join("lib")
