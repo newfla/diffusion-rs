@@ -1269,6 +1269,8 @@ pub struct sd_ctx_params_t {
     pub clip_g_path: *const ::std::os::raw::c_char,
     pub clip_vision_path: *const ::std::os::raw::c_char,
     pub t5xxl_path: *const ::std::os::raw::c_char,
+    pub qwen2vl_path: *const ::std::os::raw::c_char,
+    pub qwen2vl_vision_path: *const ::std::os::raw::c_char,
     pub diffusion_model_path: *const ::std::os::raw::c_char,
     pub high_noise_diffusion_model_path: *const ::std::os::raw::c_char,
     pub vae_path: *const ::std::os::raw::c_char,
@@ -1296,7 +1298,7 @@ pub struct sd_ctx_params_t {
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of sd_ctx_params_t"][::std::mem::size_of::<sd_ctx_params_t>() - 144usize];
+    ["Size of sd_ctx_params_t"][::std::mem::size_of::<sd_ctx_params_t>() - 160usize];
     ["Alignment of sd_ctx_params_t"][::std::mem::align_of::<sd_ctx_params_t>() - 8usize];
     ["Offset of field: sd_ctx_params_t::model_path"]
         [::std::mem::offset_of!(sd_ctx_params_t, model_path) - 0usize];
@@ -1308,54 +1310,58 @@ const _: () = {
         [::std::mem::offset_of!(sd_ctx_params_t, clip_vision_path) - 24usize];
     ["Offset of field: sd_ctx_params_t::t5xxl_path"]
         [::std::mem::offset_of!(sd_ctx_params_t, t5xxl_path) - 32usize];
+    ["Offset of field: sd_ctx_params_t::qwen2vl_path"]
+        [::std::mem::offset_of!(sd_ctx_params_t, qwen2vl_path) - 40usize];
+    ["Offset of field: sd_ctx_params_t::qwen2vl_vision_path"]
+        [::std::mem::offset_of!(sd_ctx_params_t, qwen2vl_vision_path) - 48usize];
     ["Offset of field: sd_ctx_params_t::diffusion_model_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_model_path) - 40usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_model_path) - 56usize];
     ["Offset of field: sd_ctx_params_t::high_noise_diffusion_model_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, high_noise_diffusion_model_path) - 48usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, high_noise_diffusion_model_path) - 64usize];
     ["Offset of field: sd_ctx_params_t::vae_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_path) - 56usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_path) - 72usize];
     ["Offset of field: sd_ctx_params_t::taesd_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, taesd_path) - 64usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, taesd_path) - 80usize];
     ["Offset of field: sd_ctx_params_t::control_net_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, control_net_path) - 72usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, control_net_path) - 88usize];
     ["Offset of field: sd_ctx_params_t::lora_model_dir"]
-        [::std::mem::offset_of!(sd_ctx_params_t, lora_model_dir) - 80usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, lora_model_dir) - 96usize];
     ["Offset of field: sd_ctx_params_t::embedding_dir"]
-        [::std::mem::offset_of!(sd_ctx_params_t, embedding_dir) - 88usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, embedding_dir) - 104usize];
     ["Offset of field: sd_ctx_params_t::photo_maker_path"]
-        [::std::mem::offset_of!(sd_ctx_params_t, photo_maker_path) - 96usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, photo_maker_path) - 112usize];
     ["Offset of field: sd_ctx_params_t::vae_decode_only"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_decode_only) - 104usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_decode_only) - 120usize];
     ["Offset of field: sd_ctx_params_t::free_params_immediately"]
-        [::std::mem::offset_of!(sd_ctx_params_t, free_params_immediately) - 105usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, free_params_immediately) - 121usize];
     ["Offset of field: sd_ctx_params_t::n_threads"]
-        [::std::mem::offset_of!(sd_ctx_params_t, n_threads) - 108usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, n_threads) - 124usize];
     ["Offset of field: sd_ctx_params_t::wtype"]
-        [::std::mem::offset_of!(sd_ctx_params_t, wtype) - 112usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, wtype) - 128usize];
     ["Offset of field: sd_ctx_params_t::rng_type"]
-        [::std::mem::offset_of!(sd_ctx_params_t, rng_type) - 116usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, rng_type) - 132usize];
     ["Offset of field: sd_ctx_params_t::offload_params_to_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, offload_params_to_cpu) - 120usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, offload_params_to_cpu) - 136usize];
     ["Offset of field: sd_ctx_params_t::keep_clip_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_clip_on_cpu) - 121usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_clip_on_cpu) - 137usize];
     ["Offset of field: sd_ctx_params_t::keep_control_net_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_control_net_on_cpu) - 122usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_control_net_on_cpu) - 138usize];
     ["Offset of field: sd_ctx_params_t::keep_vae_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 123usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 139usize];
     ["Offset of field: sd_ctx_params_t::diffusion_flash_attn"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 124usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 140usize];
     ["Offset of field: sd_ctx_params_t::diffusion_conv_direct"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 125usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 141usize];
     ["Offset of field: sd_ctx_params_t::vae_conv_direct"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 126usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 142usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_dit_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 127usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 143usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_t5_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 128usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 144usize];
     ["Offset of field: sd_ctx_params_t::chroma_t5_mask_pad"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 132usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 148usize];
     ["Offset of field: sd_ctx_params_t::flow_shift"]
-        [::std::mem::offset_of!(sd_ctx_params_t, flow_shift) - 136usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, flow_shift) - 152usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1714,6 +1720,9 @@ unsafe extern "C" {
         input_image: sd_image_t,
         upscale_factor: u32,
     ) -> sd_image_t;
+}
+unsafe extern "C" {
+    pub fn get_upscale_factor(upscaler_ctx: *mut upscaler_ctx_t) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
     pub fn convert(
