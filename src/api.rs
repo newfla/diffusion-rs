@@ -95,6 +95,14 @@ pub struct ModelConfig {
     #[builder(default = "Default::default()")]
     diffusion_model: CLibPath,
 
+    /// Path to the qwen2vl text encoder
+    #[builder(default = "Default::default()")]
+    qwen2vl: CLibPath,
+
+    /// Path to the qwen2vl vit
+    #[builder(default = "Default::default()")]
+    qwen2vl_vision: CLibPath,
+
     /// Path to the clip-l text encoder
     #[builder(default = "Default::default()")]
     clip_l: CLibPath,
@@ -288,6 +296,8 @@ impl ModelConfig {
             if self.diffusion_ctx.is_none() {
                 let sd_ctx_params = sd_ctx_params_t {
                     model_path: self.model.as_ptr(),
+                    qwen2vl_path: self.qwen2vl.as_ptr(),
+                    qwen2vl_vision_path: self.qwen2vl_vision.as_ptr(),
                     clip_l_path: self.clip_l.as_ptr(),
                     clip_g_path: self.clip_g.as_ptr(),
                     clip_vision_path: self.clip_vision.as_ptr(),
