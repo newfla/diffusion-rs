@@ -37,6 +37,9 @@ pub use diffusion_rs_sys::sample_method_t as SampleMethod;
 /// Denoiser sigma schedule
 pub use diffusion_rs_sys::scheduler_t as Scheduler;
 
+/// Prediction override
+pub use diffusion_rs_sys::prediction_t as Prediction;
+
 /// Weight type
 pub use diffusion_rs_sys::sd_type_t as WeightType;
 
@@ -183,6 +186,10 @@ pub struct ModelConfig {
     #[builder(default = "Scheduler::DEFAULT")]
     scheduler: Scheduler,
 
+    /// Prediction type override (default: DEFAULT_PRED)
+    #[builder(default = "Prediction::DEFAULT_PRED")]
+    prediction: Prediction,
+
     /// Keep vae in cpu (for low vram) (default: false)
     #[builder(default = "false")]
     vae_on_cpu: bool,
@@ -222,6 +229,10 @@ pub struct ModelConfig {
     /// This might crash if it is not supported by the backend.
     #[builder(default = "false")]
     vae_conv_direct: bool,
+
+    /// Force use of conv scale on sdxl vae
+    #[builder(default = "false")]
+    force_sdxl_vae_conv_scale: bool,
 
     /// Shift value for Flow models like SD3.x or WAN (default: auto)
     #[builder(default = "f32::INFINITY")]
@@ -326,6 +337,8 @@ impl ModelConfig {
                     vae_conv_direct: self.vae_conv_direct,
                     offload_params_to_cpu: self.offload_params_to_cpu,
                     flow_shift: self.flow_shift,
+                    prediction: self.prediction,
+                    force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
@@ -451,6 +464,10 @@ pub struct Config {
     /// SLG disabling point: (default: 0.2)
     #[builder(default = "0.2")]
     skip_layer_end: f32,
+
+    /// Disable auto resize of ref images
+    #[builder(default = "false")]
+    disable_auto_resize_ref_image: bool,
 }
 
 impl ConfigBuilder {
@@ -496,7 +513,8 @@ impl From<Config> for ConfigBuilder {
             .skip_layer(value.skip_layer)
             .skip_layer_start(value.skip_layer_start)
             .skip_layer_end(value.skip_layer_end)
-            .canny(value.canny);
+            .canny(value.canny)
+            .disable_auto_resize_ref_image(value.disable_auto_resize_ref_image);
 
         builder
     }
@@ -666,6 +684,7 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             control_strength: config.control_strength,
             pm_params,
             vae_tiling_params,
+            auto_resize_ref_image: config.disable_auto_resize_ref_image,
         };
 
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);

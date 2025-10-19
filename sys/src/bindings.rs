@@ -1190,6 +1190,18 @@ pub enum scheduler_t {
 #[repr(u32)]
 #[non_exhaustive]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum prediction_t {
+    DEFAULT_PRED = 0,
+    EPS_PRED = 1,
+    V_PRED = 2,
+    EDM_V_PRED = 3,
+    SD3_FLOW_PRED = 4,
+    FLUX_FLOW_PRED = 5,
+    PREDICTION_COUNT = 6,
+}
+#[repr(u32)]
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum sd_type_t {
     SD_TYPE_F32 = 0,
     SD_TYPE_F16 = 1,
@@ -1284,6 +1296,7 @@ pub struct sd_ctx_params_t {
     pub n_threads: ::std::os::raw::c_int,
     pub wtype: sd_type_t,
     pub rng_type: rng_type_t,
+    pub prediction: prediction_t,
     pub offload_params_to_cpu: bool,
     pub keep_clip_on_cpu: bool,
     pub keep_control_net_on_cpu: bool,
@@ -1291,6 +1304,7 @@ pub struct sd_ctx_params_t {
     pub diffusion_flash_attn: bool,
     pub diffusion_conv_direct: bool,
     pub vae_conv_direct: bool,
+    pub force_sdxl_vae_conv_scale: bool,
     pub chroma_use_dit_mask: bool,
     pub chroma_use_t5_mask: bool,
     pub chroma_t5_mask_pad: ::std::os::raw::c_int,
@@ -1340,28 +1354,32 @@ const _: () = {
         [::std::mem::offset_of!(sd_ctx_params_t, wtype) - 128usize];
     ["Offset of field: sd_ctx_params_t::rng_type"]
         [::std::mem::offset_of!(sd_ctx_params_t, rng_type) - 132usize];
+    ["Offset of field: sd_ctx_params_t::prediction"]
+        [::std::mem::offset_of!(sd_ctx_params_t, prediction) - 136usize];
     ["Offset of field: sd_ctx_params_t::offload_params_to_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, offload_params_to_cpu) - 136usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, offload_params_to_cpu) - 140usize];
     ["Offset of field: sd_ctx_params_t::keep_clip_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_clip_on_cpu) - 137usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_clip_on_cpu) - 141usize];
     ["Offset of field: sd_ctx_params_t::keep_control_net_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_control_net_on_cpu) - 138usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_control_net_on_cpu) - 142usize];
     ["Offset of field: sd_ctx_params_t::keep_vae_on_cpu"]
-        [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 139usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, keep_vae_on_cpu) - 143usize];
     ["Offset of field: sd_ctx_params_t::diffusion_flash_attn"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 140usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_flash_attn) - 144usize];
     ["Offset of field: sd_ctx_params_t::diffusion_conv_direct"]
-        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 141usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, diffusion_conv_direct) - 145usize];
     ["Offset of field: sd_ctx_params_t::vae_conv_direct"]
-        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 142usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, vae_conv_direct) - 146usize];
+    ["Offset of field: sd_ctx_params_t::force_sdxl_vae_conv_scale"]
+        [::std::mem::offset_of!(sd_ctx_params_t, force_sdxl_vae_conv_scale) - 147usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_dit_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 143usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_dit_mask) - 148usize];
     ["Offset of field: sd_ctx_params_t::chroma_use_t5_mask"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 144usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_use_t5_mask) - 149usize];
     ["Offset of field: sd_ctx_params_t::chroma_t5_mask_pad"]
-        [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 148usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, chroma_t5_mask_pad) - 152usize];
     ["Offset of field: sd_ctx_params_t::flow_shift"]
-        [::std::mem::offset_of!(sd_ctx_params_t, flow_shift) - 152usize];
+        [::std::mem::offset_of!(sd_ctx_params_t, flow_shift) - 156usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1482,6 +1500,7 @@ pub struct sd_img_gen_params_t {
     pub init_image: sd_image_t,
     pub ref_images: *mut sd_image_t,
     pub ref_images_count: ::std::os::raw::c_int,
+    pub auto_resize_ref_image: bool,
     pub increase_ref_index: bool,
     pub mask_image: sd_image_t,
     pub width: ::std::os::raw::c_int,
@@ -1511,8 +1530,10 @@ const _: () = {
         [::std::mem::offset_of!(sd_img_gen_params_t, ref_images) - 48usize];
     ["Offset of field: sd_img_gen_params_t::ref_images_count"]
         [::std::mem::offset_of!(sd_img_gen_params_t, ref_images_count) - 56usize];
+    ["Offset of field: sd_img_gen_params_t::auto_resize_ref_image"]
+        [::std::mem::offset_of!(sd_img_gen_params_t, auto_resize_ref_image) - 60usize];
     ["Offset of field: sd_img_gen_params_t::increase_ref_index"]
-        [::std::mem::offset_of!(sd_img_gen_params_t, increase_ref_index) - 60usize];
+        [::std::mem::offset_of!(sd_img_gen_params_t, increase_ref_index) - 61usize];
     ["Offset of field: sd_img_gen_params_t::mask_image"]
         [::std::mem::offset_of!(sd_img_gen_params_t, mask_image) - 64usize];
     ["Offset of field: sd_img_gen_params_t::width"]
@@ -1648,6 +1669,12 @@ unsafe extern "C" {
 }
 unsafe extern "C" {
     pub fn str_to_schedule(str_: *const ::std::os::raw::c_char) -> scheduler_t;
+}
+unsafe extern "C" {
+    pub fn sd_prediction_name(prediction: prediction_t) -> *const ::std::os::raw::c_char;
+}
+unsafe extern "C" {
+    pub fn str_to_prediction(str_: *const ::std::os::raw::c_char) -> prediction_t;
 }
 unsafe extern "C" {
     pub fn sd_ctx_params_init(sd_ctx_params: *mut sd_ctx_params_t);
