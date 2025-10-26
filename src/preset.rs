@@ -6,9 +6,10 @@ use crate::{
     preset_builder::{
         chroma, chroma_radiance, diff_instruct_star, flux_1_dev, flux_1_mini, flux_1_schnell,
         juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, sd_turbo, sdxl_base_1_0,
-        sdxl_turbo_1_0_fp16, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
-        stable_diffusion_3_5_large_fp16, stable_diffusion_3_5_large_turbo_fp16,
-        stable_diffusion_3_5_medium_fp16, stable_diffusion_3_medium_fp16,
+        sdxl_turbo_1_0_fp16, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
+        stable_diffusion_2_1, stable_diffusion_3_5_large_fp16,
+        stable_diffusion_3_5_large_turbo_fp16, stable_diffusion_3_5_medium_fp16,
+        stable_diffusion_3_medium_fp16,
     },
 };
 
@@ -62,6 +63,8 @@ pub enum Preset {
     DiffInstructStar(api::WeightType),
     /// Enabled [api::SampleMethod::EULER]. cfg_scale 4.0. 20 steps.
     ChromaRadiance(api::WeightType),
+    /// cfg_scale 9.0. 20 steps. 1024x1024
+    SSD1B,
 }
 
 impl Preset {
@@ -86,6 +89,7 @@ impl Preset {
             Preset::NitroSDVibrant(sd_type_t) => nitro_sd_vibrant(sd_type_t),
             Preset::DiffInstructStar(sd_type_t) => diff_instruct_star(sd_type_t),
             Preset::ChromaRadiance(sd_type_t) => chroma_radiance(sd_type_t),
+            Preset::SSD1B => ssd_1b(),
         }
     }
 }
@@ -288,5 +292,11 @@ mod tests {
     #[test]
     fn test_chroma_radiance() {
         run(Preset::ChromaRadiance(api::WeightType::SD_TYPE_Q8_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_ssd1b() {
+        run(Preset::SSD1B);
     }
 }
