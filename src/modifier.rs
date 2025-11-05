@@ -158,11 +158,17 @@ pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
     Ok(builder)
 }
 
+/// Enable vae tiling
+pub fn vae_tiling(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.1.vae_tiling(true);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         api::gen_img,
-        modifier::{lcm_lora_ssd_1b, offload_params_to_cpu},
+        modifier::{lcm_lora_ssd_1b, offload_params_to_cpu, vae_tiling},
         preset::{Flux1Weight, Modifier, Preset, PresetBuilder},
         util::set_hf_token,
     };
@@ -235,6 +241,15 @@ mod tests {
         run(
             Preset::SSD1B(crate::preset::SSD1BWeight::F8_E4M3),
             lcm_lora_ssd_1b,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_vae_tiling() {
+        run(
+            Preset::SSD1B(crate::preset::SSD1BWeight::F8_E4M3),
+            vae_tiling,
         );
     }
 }

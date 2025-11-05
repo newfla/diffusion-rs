@@ -145,6 +145,9 @@ fn main() {
                 let vulkan_lib_path = vulkan_path.join("lib");
                 println!("cargo:rustc-link-search={}", vulkan_lib_path.display());
             }
+            if target.contains("darwin") {
+                println!("cargo:rustc-link-search=/usr/local/lib");
+            }
             println!("cargo:rustc-link-lib=vulkan");
         }
         config.define("SD_VULKAN", "ON");
