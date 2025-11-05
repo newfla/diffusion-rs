@@ -506,3 +506,47 @@ fn diff_instruct_star_type_to_model(sd_type: api::WeightType) -> Result<PathBuf,
     };
     download_file_hf_hub(repo, file)
 }
+
+pub fn chroma_radiance(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+    let model_path = chroma_radiance_weight(sd_type)?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.model(model_path);
+    config.cfg_scale(4.).sampling_method(SampleMethod::EULER);
+    t5xxl_fp16_flux_1((config, model_config))
+}
+
+fn chroma_radiance_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    check_chroma_radiance_type(sd_type);
+    chroma_radiance_type_to_model(sd_type)
+}
+
+fn check_chroma_radiance_type(sd_type: api::WeightType) {
+    assert!(sd_type == api::WeightType::SD_TYPE_BF16 || sd_type == api::WeightType::SD_TYPE_Q8_0);
+}
+
+fn chroma_radiance_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        api::WeightType::SD_TYPE_BF16 => (
+            "silveroxides/Chroma1-Radiance-GGUF",
+            "Chroma1-Radiance-v0.4/Chroma1-Radiance-v0.4-BF16.gguf",
+        ),
+        api::WeightType::SD_TYPE_Q8_0 => (
+            "silveroxides/Chroma1-Radiance-GGUF",
+            "Chroma1-Radiance-v0.4/Chroma1-Radiance-v0.4-Q8_0.gguf",
+        ),
+        _ => ("not_supported", "not_supported"),
+    };
+    download_file_hf_hub(repo, file)
+}
+
+pub fn ssd_1b() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub("segmind/SSD-1B", "SSD-1B-A1111.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.model(model);
+    config.cfg_scale(9.).height(1024).width(1024);
+    Ok((config, model_config))
+}
