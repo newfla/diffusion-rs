@@ -1,8 +1,9 @@
 use derive_builder::Builder;
 use hf_hub::api::sync::ApiError;
+use subenum::subenum;
 
 use crate::{
-    api::{self, Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
+    api::{Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
         chroma, chroma_radiance, diff_instruct_star, flux_1_dev, flux_1_mini, flux_1_schnell,
         juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, sd_turbo, sdxl_base_1_0,
@@ -12,6 +13,104 @@ use crate::{
         stable_diffusion_3_medium_fp16,
     },
 };
+
+#[non_exhaustive]
+#[allow(non_camel_case_types)]
+#[subenum(
+    Flux1Weight,
+    Flux1MiniWeight,
+    ChromaWeight,
+    NitroSDRealismWeight,
+    NitroSDVibrantWeight,
+    DiffInstructStarWeight,
+    ChromaRadianceWeight,
+    SSD1BWeight
+)]
+#[derive(Debug, Clone, Copy)]
+/// Models weight types
+pub enum WeightType {
+    #[subenum(Flux1MiniWeight)]
+    F32,
+    #[subenum(
+        NitroSDRealismWeight,
+        NitroSDVibrantWeight,
+        DiffInstructStarWeight,
+        SSD1BWeight
+    )]
+    F16,
+    #[subenum(
+        Flux1Weight,
+        ChromaWeight,
+        NitroSDRealismWeight,
+        NitroSDVibrantWeight,
+        DiffInstructStarWeight
+    )]
+    Q4_0,
+    Q4_1,
+    #[subenum(NitroSDRealismWeight, NitroSDVibrantWeight, DiffInstructStarWeight)]
+    Q5_0,
+    Q5_1,
+    #[subenum(
+        Flux1Weight,
+        Flux1MiniWeight,
+        ChromaWeight,
+        NitroSDRealismWeight,
+        NitroSDVibrantWeight,
+        DiffInstructStarWeight,
+        ChromaRadianceWeight
+    )]
+    Q8_0,
+    Q8_1,
+    #[subenum(
+        Flux1Weight,
+        Flux1MiniWeight,
+        NitroSDRealismWeight,
+        NitroSDVibrantWeight,
+        DiffInstructStarWeight
+    )]
+    Q2_K,
+    #[subenum(
+        Flux1Weight,
+        Flux1MiniWeight,
+        NitroSDRealismWeight,
+        NitroSDVibrantWeight,
+        DiffInstructStarWeight
+    )]
+    Q3_K,
+    #[subenum(Flux1Weight)]
+    Q4_K,
+    #[subenum(Flux1MiniWeight)]
+    Q5_K,
+    #[subenum(
+        Flux1MiniWeight,
+        NitroSDRealismWeight,
+        NitroSDVibrantWeight,
+        DiffInstructStarWeight
+    )]
+    Q6_K,
+    Q8_K,
+    IQ2_XXS,
+    IQ2_XS,
+    IQ3_XXS,
+    IQ1_S,
+    IQ4_NL,
+    IQ3_S,
+    IQ2_S,
+    IQ4_XS,
+    I8,
+    I16,
+    I32,
+    I64,
+    F64,
+    IQ1_M,
+    #[subenum(Flux1MiniWeight, ChromaWeight, ChromaRadianceWeight)]
+    BF16,
+    TQ1_0,
+    TQ2_0,
+    MXFP4,
+    #[subenum(SSD1BWeight)]
+    F8_E4M3,
+}
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
@@ -41,30 +140,30 @@ pub enum Preset {
     SDXLTurbo1_0Fp16,
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 28 steps.
-    Flux1Dev(api::WeightType),
+    Flux1Dev(Flux1Weight),
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 4 steps.
-    Flux1Schnell(api::WeightType),
+    Flux1Schnell(Flux1Weight),
     /// A 3.2B param rectified flow transformer distilled from FLUX.1-dev <https://huggingface.co/TencentARC/flux-mini> <https://huggingface.co/HyperX-Sentience/Flux-Mini-GGUF>
     /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 1. 20 steps.
-    Flux1Mini(api::WeightType),
+    Flux1Mini(Flux1MiniWeight),
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
     JuggernautXL11,
     /// Chroma is an 8.9B parameter model based on FLUX.1-schnell
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 4. 20 steps
-    Chroma(api::WeightType),
+    Chroma(ChromaWeight),
     /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 250. 1 steps. 1024x1024
-    NitroSDRealism(api::WeightType),
+    NitroSDRealism(NitroSDRealismWeight),
     /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 500. 1 steps. 1024x1024
-    NitroSDVibrant(api::WeightType),
+    NitroSDVibrant(NitroSDVibrantWeight),
     /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 400. 1 steps. 1024x1024
-    DiffInstructStar(api::WeightType),
+    DiffInstructStar(DiffInstructStarWeight),
     /// Enabled [api::SampleMethod::EULER]. cfg_scale 4.0. 20 steps.
-    ChromaRadiance(api::WeightType),
+    ChromaRadiance(ChromaRadianceWeight),
     /// cfg_scale 9.0. 20 steps. 1024x1024
-    SSD1B,
+    SSD1B(SSD1BWeight),
 }
 
 impl Preset {
@@ -89,7 +188,7 @@ impl Preset {
             Preset::NitroSDVibrant(sd_type_t) => nitro_sd_vibrant(sd_type_t),
             Preset::DiffInstructStar(sd_type_t) => diff_instruct_star(sd_type_t),
             Preset::ChromaRadiance(sd_type_t) => chroma_radiance(sd_type_t),
-            Preset::SSD1B => ssd_1b(),
+            Preset::SSD1B(sd_type_t) => ssd_1b(sd_type_t),
         }
     }
 }
@@ -155,7 +254,11 @@ impl TryFrom<PresetConfig> for ConfigsBuilder {
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::{self, gen_img},
+        api::gen_img,
+        preset::{
+            ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
+            Flux1Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
+        },
         util::set_hf_token,
     };
 
@@ -206,14 +309,14 @@ mod tests {
     #[test]
     fn test_flux_1_dev() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Dev(api::WeightType::SD_TYPE_Q2_K));
+        run(Preset::Flux1Dev(Flux1Weight::Q2_K));
     }
 
     #[ignore]
     #[test]
     fn test_flux_1_schnell() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Schnell(api::WeightType::SD_TYPE_Q2_K));
+        run(Preset::Flux1Schnell(Flux1Weight::Q2_K));
     }
 
     #[ignore]
@@ -260,43 +363,43 @@ mod tests {
     #[test]
     fn test_flux_1_mini() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Mini(api::WeightType::SD_TYPE_Q8_0));
+        run(Preset::Flux1Mini(Flux1MiniWeight::Q8_0));
     }
 
     #[ignore]
     #[test]
     fn test_chroma() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Chroma(api::WeightType::SD_TYPE_Q4_0));
+        run(Preset::Chroma(ChromaWeight::Q4_0));
     }
 
     #[ignore]
     #[test]
     fn test_nitro_sd_realism() {
-        run(Preset::NitroSDRealism(api::WeightType::SD_TYPE_Q8_0));
+        run(Preset::NitroSDRealism(NitroSDRealismWeight::Q8_0));
     }
 
     #[ignore]
     #[test]
     fn test_nitro_sd_vibrant() {
-        run(Preset::NitroSDVibrant(api::WeightType::SD_TYPE_Q8_0));
+        run(Preset::NitroSDVibrant(NitroSDVibrantWeight::Q8_0));
     }
 
     #[ignore]
     #[test]
     fn test_diff_instruct_star() {
-        run(Preset::DiffInstructStar(api::WeightType::SD_TYPE_Q8_0));
+        run(Preset::DiffInstructStar(DiffInstructStarWeight::Q8_0));
     }
 
     #[ignore]
     #[test]
     fn test_chroma_radiance() {
-        run(Preset::ChromaRadiance(api::WeightType::SD_TYPE_Q8_0));
+        run(Preset::ChromaRadiance(ChromaRadianceWeight::Q8_0));
     }
 
     #[ignore]
     #[test]
-    fn test_ssd1b() {
-        run(Preset::SSD1B);
+    fn test_ssd_1b() {
+        run(Preset::SSD1B(super::SSD1BWeight::F8_E4M3));
     }
 }

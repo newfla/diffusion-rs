@@ -57,15 +57,15 @@ pub fn hybrid_taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
     Ok(builder)
 }
 
-/// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdv1-5> to reduce inference steps for SD v1 between 2-8
-/// cfg_scale 1. 4 steps.
+/// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdv1-5> to reduce inference steps for SD v1 between 2-8 (default 8)
+/// cfg_scale 1. 8 steps.
 pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     let lora_path = download_file_hf_hub(
         "latent-consistency/lcm-lora-sdv1-5",
         "pytorch_lora_weights.safetensors",
     )?;
     builder.1.lora_model(&lora_path);
-    builder.0.cfg_scale(1.).steps(4);
+    builder.0.cfg_scale(1.).steps(8);
     Ok(builder)
 }
 
@@ -85,7 +85,7 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
     Ok(builder)
 }
 
-/// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors> Fp8 t5xxl text encoder to reduce memory usage
+/// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors> fp8_e4m3fn t5xxl text encoder to reduce memory usage
 pub fn t5xxl_fp8_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     let t5xxl_path = download_file_hf_hub(
         "comfyanonymous/flux_text_encoders",
@@ -146,12 +146,24 @@ pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuild
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/kylielee505/mylcmlorassd> to reduce inference steps for SD v1 between 2-8 (default 8)
+/// cfg_scale 1. 8 steps.
+pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "kylielee505/mylcmlorassd",
+        "pytorch_lora_weights.safetensors",
+    )?;
+    builder.1.lora_model(&lora_path);
+    builder.0.cfg_scale(1.).steps(8);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::{self, gen_img},
-        modifier::offload_params_to_cpu,
-        preset::{Modifier, Preset, PresetBuilder},
+        api::gen_img,
+        modifier::{lcm_lora_ssd_1b, offload_params_to_cpu},
+        preset::{Flux1Weight, Modifier, Preset, PresetBuilder},
         util::set_hf_token,
     };
 
@@ -159,7 +171,7 @@ mod tests {
         hybrid_taesd, hybrid_taesd_xl, lcm_lora_sd_1_5, lcm_lora_sdxl_base_1_0, taesd, taesd_xl,
     };
 
-    static PROMPT: &str = "a lovely cat holding a sign says 'diffusion-rs'";
+    static PROMPT: &str = "a lovely dynosaur made by crochet";
 
     fn run(preset: Preset, m: Modifier) {
         let (mut config, mut model_config) = PresetBuilder::default()
@@ -212,8 +224,17 @@ mod tests {
     fn test_offload_params_to_cpu() {
         set_hf_token(include_str!("../token.txt"));
         run(
-            Preset::Flux1Schnell(api::WeightType::SD_TYPE_Q2_K),
+            Preset::Flux1Schnell(Flux1Weight::Q2_K),
             offload_params_to_cpu,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lcm_lora_ssd_1b() {
+        run(
+            Preset::SSD1B(crate::preset::SSD1BWeight::F8_E4M3),
+            lcm_lora_ssd_1b,
         );
     }
 }
