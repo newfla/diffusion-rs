@@ -1,9 +1,12 @@
 use std::path::PathBuf;
 
 use crate::{
-    api::{self, ModelConfigBuilder, SampleMethod},
+    api::{ModelConfigBuilder, SampleMethod},
     modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1},
-    preset::ConfigsBuilder,
+    preset::{
+        ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
+        Flux1MiniWeight, Flux1Weight, NitroSDRealismWeight, NitroSDVibrantWeight, SSD1BWeight,
+    },
 };
 use diffusion_rs_sys::scheduler_t;
 use hf_hub::api::sync::ApiError;
@@ -84,7 +87,7 @@ pub fn sdxl_base_1_0() -> Result<ConfigsBuilder, ApiError> {
     sdxl_vae_fp16_fix((config, model_config))
 }
 
-pub fn flux_1_dev(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_1_dev(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = flux_1_model_weight("dev", sd_type)?;
     let mut builder = flux_1_dev_schnell("dev", 28)?;
 
@@ -92,7 +95,7 @@ pub fn flux_1_dev(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> 
     t5xxl_fp16_flux_1(builder)
 }
 
-pub fn flux_1_schnell(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_1_schnell(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = flux_1_model_weight("schnell", sd_type)?;
     let mut builder = flux_1_dev_schnell("schnell", 4)?;
 
@@ -100,9 +103,14 @@ pub fn flux_1_schnell(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiErr
     t5xxl_fp16_flux_1(builder)
 }
 
-fn flux_1_model_weight(model: &str, sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_flux_1_type(sd_type);
-    let weight_type = flux_1_type_to_model(sd_type);
+fn flux_1_model_weight(model: &str, sd_type: Flux1Weight) -> Result<PathBuf, ApiError> {
+    let weight_type = match sd_type {
+        Flux1Weight::Q3_K => "q3_k",
+        Flux1Weight::Q2_K => "q2_k",
+        Flux1Weight::Q4_0 => "q4_0",
+        Flux1Weight::Q4_K => "q4_k",
+        Flux1Weight::Q8_0 => "q8_0",
+    };
     download_file_hf_hub(
         format!("leejet/FLUX.1-{model}-gguf").as_str(),
         format!("flux1-{model}-{weight_type}.gguf").as_str(),
@@ -135,27 +143,6 @@ fn flux_1_clip_vae(
     config.cfg_scale(1.).steps(steps).height(1024).width(1024);
 
     Ok((config, model_config))
-}
-
-fn check_flux_1_type(sd_type: api::WeightType) {
-    assert!(
-        sd_type == api::WeightType::SD_TYPE_Q2_K
-            || sd_type == api::WeightType::SD_TYPE_Q3_K
-            || sd_type == api::WeightType::SD_TYPE_Q4_0
-            || sd_type == api::WeightType::SD_TYPE_Q4_K
-            || sd_type == api::WeightType::SD_TYPE_Q8_0
-    );
-}
-
-fn flux_1_type_to_model(sd_type: api::WeightType) -> &'static str {
-    match sd_type {
-        api::WeightType::SD_TYPE_Q3_K => "q3_k",
-        api::WeightType::SD_TYPE_Q2_K => "q2_k",
-        api::WeightType::SD_TYPE_Q4_0 => "q4_0",
-        api::WeightType::SD_TYPE_Q4_K => "q4_k",
-        api::WeightType::SD_TYPE_Q8_0 => "q8_0",
-        _ => "not_supported",
-    }
 }
 
 pub fn sd_turbo() -> Result<ConfigsBuilder, ApiError> {
@@ -256,7 +243,7 @@ pub fn juggernaut_xl_11() -> Result<ConfigsBuilder, ApiError> {
     Ok(config)
 }
 
-pub fn flux_1_mini(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_1_mini(sd_type: Flux1MiniWeight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = flux_1_mini_model_weight(sd_type)?;
     let vae_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "ae-f16.gguf")?;
     let clip_l_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "clip_l-q8_0.gguf")?;
@@ -266,38 +253,20 @@ pub fn flux_1_mini(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError>
     t5xxl_q4_k_flux_1(builder)
 }
 
-fn flux_1_mini_model_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_flux_1_mini_type(sd_type);
-    flux_1_mini_type_to_model(sd_type)
-}
-
-fn check_flux_1_mini_type(sd_type: api::WeightType) {
-    assert!(
-        sd_type == api::WeightType::SD_TYPE_F32
-            || sd_type == api::WeightType::SD_TYPE_BF16
-            || sd_type == api::WeightType::SD_TYPE_Q2_K
-            || sd_type == api::WeightType::SD_TYPE_Q3_K
-            || sd_type == api::WeightType::SD_TYPE_Q5_K
-            || sd_type == api::WeightType::SD_TYPE_Q6_K
-            || sd_type == api::WeightType::SD_TYPE_Q8_0
-    );
-}
-
-fn flux_1_mini_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+fn flux_1_mini_model_weight(sd_type: Flux1MiniWeight) -> Result<PathBuf, ApiError> {
     let (repo, file) = match sd_type {
-        api::WeightType::SD_TYPE_F32 => ("TencentARC/flux-mini", "flux-mini.safetensors"),
-        api::WeightType::SD_TYPE_BF16 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-BF16.gguf"),
-        api::WeightType::SD_TYPE_Q2_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q2_K.gguf"),
-        api::WeightType::SD_TYPE_Q3_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q3_K.gguf"),
-        api::WeightType::SD_TYPE_Q5_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q5_K.gguf"),
-        api::WeightType::SD_TYPE_Q6_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q6_K.gguf"),
-        api::WeightType::SD_TYPE_Q8_0 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q8_0.gguf"),
-        _ => ("not_supported", "not_supported"),
+        Flux1MiniWeight::F32 => ("TencentARC/flux-mini", "flux-mini.safetensors"),
+        Flux1MiniWeight::BF16 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-BF16.gguf"),
+        Flux1MiniWeight::Q2_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q2_K.gguf"),
+        Flux1MiniWeight::Q3_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q3_K.gguf"),
+        Flux1MiniWeight::Q5_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q5_K.gguf"),
+        Flux1MiniWeight::Q6_K => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q6_K.gguf"),
+        Flux1MiniWeight::Q8_0 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-Q8_0.gguf"),
     };
     download_file_hf_hub(repo, file)
 }
 
-pub fn chroma(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn chroma(sd_type: ChromaWeight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = chroma_model_weight(sd_type)?;
     let vae_path = download_file_hf_hub("black-forest-labs/FLUX.1-dev", "ae.safetensors")?;
     let mut config = ConfigBuilder::default();
@@ -316,45 +285,31 @@ pub fn chroma(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
 
     let builder = (config, model_config);
     match sd_type {
-        api::WeightType::SD_TYPE_BF16 => t5xxl_fp16_flux_1(builder),
-        api::WeightType::SD_TYPE_Q4_0 => t5xxl_q4_k_flux_1(builder),
+        ChromaWeight::BF16 => t5xxl_fp16_flux_1(builder),
+        ChromaWeight::Q4_0 => t5xxl_q4_k_flux_1(builder),
         _ => t5xxl_q8_0_flux_1(builder),
     }
 }
 
-fn chroma_model_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_chroma_type(sd_type);
-    chroma_type_to_model(sd_type)
-}
-
-fn check_chroma_type(sd_type: api::WeightType) {
-    assert!(
-        sd_type == api::WeightType::SD_TYPE_BF16
-            || sd_type == api::WeightType::SD_TYPE_Q4_0
-            || sd_type == api::WeightType::SD_TYPE_Q8_0
-    );
-}
-
-fn chroma_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+fn chroma_model_weight(sd_type: ChromaWeight) -> Result<PathBuf, ApiError> {
     let (repo, file) = match sd_type {
-        api::WeightType::SD_TYPE_BF16 => (
+        ChromaWeight::BF16 => (
             "silveroxides/Chroma-GGUF",
             "chroma-unlocked-v41/chroma-unlocked-v41-BF16.gguf",
         ),
-        api::WeightType::SD_TYPE_Q4_0 => (
+        ChromaWeight::Q4_0 => (
             "silveroxides/Chroma-GGUF",
             "chroma-unlocked-v41/chroma-unlocked-v41-Q4_0.gguf",
         ),
-        api::WeightType::SD_TYPE_Q8_0 => (
+        ChromaWeight::Q8_0 => (
             "silveroxides/Chroma-GGUF",
             "chroma-unlocked-v41/chroma-unlocked-v41-Q8_0.gguf",
         ),
-        _ => ("not_supported", "not_supported"),
     };
     download_file_hf_hub(repo, file)
 }
 
-pub fn nitro_sd_realism(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn nitro_sd_realism(sd_type: NitroSDRealismWeight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = nitro_sd_realism_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -367,38 +322,20 @@ pub fn nitro_sd_realism(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiE
     Ok((config, model_config))
 }
 
-fn nitro_sd_realism_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_nitro_sd_realism_type(sd_type);
-    nitro_sd_realism_type_to_model(sd_type)
-}
-
-fn check_nitro_sd_realism_type(sd_type: api::WeightType) {
-    assert!(
-        sd_type == api::WeightType::SD_TYPE_F16
-            || sd_type == api::WeightType::SD_TYPE_Q2_K
-            || sd_type == api::WeightType::SD_TYPE_Q3_K
-            || sd_type == api::WeightType::SD_TYPE_Q4_0
-            || sd_type == api::WeightType::SD_TYPE_Q5_0
-            || sd_type == api::WeightType::SD_TYPE_Q6_K
-            || sd_type == api::WeightType::SD_TYPE_Q8_0
-    );
-}
-
-fn nitro_sd_realism_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+fn nitro_sd_realism_weight(sd_type: NitroSDRealismWeight) -> Result<PathBuf, ApiError> {
     let (repo, file) = match sd_type {
-        api::WeightType::SD_TYPE_F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_f16.gguf"),
-        api::WeightType::SD_TYPE_Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q2_K.gguf"),
-        api::WeightType::SD_TYPE_Q3_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q3_K.gguf"),
-        api::WeightType::SD_TYPE_Q4_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q4_0.gguf"),
-        api::WeightType::SD_TYPE_Q5_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q5_0.gguf"),
-        api::WeightType::SD_TYPE_Q6_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q6_K.gguf"),
-        api::WeightType::SD_TYPE_Q8_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q8_0.gguf"),
-        _ => ("not_supported", "not_supported"),
+        NitroSDRealismWeight::F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_f16.gguf"),
+        NitroSDRealismWeight::Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q2_K.gguf"),
+        NitroSDRealismWeight::Q3_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q3_K.gguf"),
+        NitroSDRealismWeight::Q4_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q4_0.gguf"),
+        NitroSDRealismWeight::Q5_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q5_0.gguf"),
+        NitroSDRealismWeight::Q6_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q6_K.gguf"),
+        NitroSDRealismWeight::Q8_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q8_0.gguf"),
     };
     download_file_hf_hub(repo, file)
 }
 
-pub fn nitro_sd_vibrant(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn nitro_sd_vibrant(sd_type: NitroSDVibrantWeight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = nitro_sd_vibrant_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -411,38 +348,20 @@ pub fn nitro_sd_vibrant(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiE
     Ok((config, model_config))
 }
 
-fn nitro_sd_vibrant_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_nitro_sd_vibrant_type(sd_type);
-    nitro_sd_vibrant_type_to_model(sd_type)
-}
-
-fn check_nitro_sd_vibrant_type(sd_type: api::WeightType) {
-    assert!(
-        sd_type == api::WeightType::SD_TYPE_F16
-            || sd_type == api::WeightType::SD_TYPE_Q2_K
-            || sd_type == api::WeightType::SD_TYPE_Q3_K
-            || sd_type == api::WeightType::SD_TYPE_Q4_0
-            || sd_type == api::WeightType::SD_TYPE_Q5_0
-            || sd_type == api::WeightType::SD_TYPE_Q6_K
-            || sd_type == api::WeightType::SD_TYPE_Q8_0
-    );
-}
-
-fn nitro_sd_vibrant_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+fn nitro_sd_vibrant_weight(sd_type: NitroSDVibrantWeight) -> Result<PathBuf, ApiError> {
     let (repo, file) = match sd_type {
-        api::WeightType::SD_TYPE_F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_f16.gguf"),
-        api::WeightType::SD_TYPE_Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q2_K.gguf"),
-        api::WeightType::SD_TYPE_Q3_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q3_K.gguf"),
-        api::WeightType::SD_TYPE_Q4_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q4_0.gguf"),
-        api::WeightType::SD_TYPE_Q5_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q5_0.gguf"),
-        api::WeightType::SD_TYPE_Q6_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q6_K.gguf"),
-        api::WeightType::SD_TYPE_Q8_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q8_0.gguf"),
-        _ => ("not_supported", "not_supported"),
+        NitroSDVibrantWeight::F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_f16.gguf"),
+        NitroSDVibrantWeight::Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q2_K.gguf"),
+        NitroSDVibrantWeight::Q3_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q3_K.gguf"),
+        NitroSDVibrantWeight::Q4_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q4_0.gguf"),
+        NitroSDVibrantWeight::Q5_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q5_0.gguf"),
+        NitroSDVibrantWeight::Q6_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q6_K.gguf"),
+        NitroSDVibrantWeight::Q8_0 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q8_0.gguf"),
     };
     download_file_hf_hub(repo, file)
 }
 
-pub fn diff_instruct_star(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn diff_instruct_star(sd_type: DiffInstructStarWeight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = diff_instruct_star_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -455,59 +374,41 @@ pub fn diff_instruct_star(sd_type: api::WeightType) -> Result<ConfigsBuilder, Ap
     Ok((config, model_config))
 }
 
-fn diff_instruct_star_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_diff_instruct_star_type(sd_type);
-    diff_instruct_star_type_to_model(sd_type)
-}
-
-fn check_diff_instruct_star_type(sd_type: api::WeightType) {
-    assert!(
-        sd_type == api::WeightType::SD_TYPE_F16
-            || sd_type == api::WeightType::SD_TYPE_Q2_K
-            || sd_type == api::WeightType::SD_TYPE_Q3_K
-            || sd_type == api::WeightType::SD_TYPE_Q4_0
-            || sd_type == api::WeightType::SD_TYPE_Q5_0
-            || sd_type == api::WeightType::SD_TYPE_Q6_K
-            || sd_type == api::WeightType::SD_TYPE_Q8_0
-    );
-}
-
-fn diff_instruct_star_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+fn diff_instruct_star_weight(sd_type: DiffInstructStarWeight) -> Result<PathBuf, ApiError> {
     let (repo, file) = match sd_type {
-        api::WeightType::SD_TYPE_F16 => (
+        DiffInstructStarWeight::F16 => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_f16.gguf",
         ),
-        api::WeightType::SD_TYPE_Q2_K => (
+        DiffInstructStarWeight::Q2_K => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_q2_K.gguf",
         ),
-        api::WeightType::SD_TYPE_Q3_K => (
+        DiffInstructStarWeight::Q3_K => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_q3_K.gguf",
         ),
-        api::WeightType::SD_TYPE_Q4_0 => (
+        DiffInstructStarWeight::Q4_0 => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_q4_0.gguf",
         ),
-        api::WeightType::SD_TYPE_Q5_0 => (
+        DiffInstructStarWeight::Q5_0 => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_q5_0.gguf",
         ),
-        api::WeightType::SD_TYPE_Q6_K => (
+        DiffInstructStarWeight::Q6_K => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_q6_K.gguf",
         ),
-        api::WeightType::SD_TYPE_Q8_0 => (
+        DiffInstructStarWeight::Q8_0 => (
             "mrfatso/Diff-InstructStar-GGUF",
             "Diff-InstructStar_q8_0.gguf",
         ),
-        _ => ("not_supported", "not_supported"),
     };
     download_file_hf_hub(repo, file)
 }
 
-pub fn chroma_radiance(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiError> {
+pub fn chroma_radiance(sd_type: ChromaRadianceWeight) -> Result<ConfigsBuilder, ApiError> {
     let model_path = chroma_radiance_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -517,36 +418,37 @@ pub fn chroma_radiance(sd_type: api::WeightType) -> Result<ConfigsBuilder, ApiEr
     t5xxl_fp16_flux_1((config, model_config))
 }
 
-fn chroma_radiance_weight(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
-    check_chroma_radiance_type(sd_type);
-    chroma_radiance_type_to_model(sd_type)
-}
-
-fn check_chroma_radiance_type(sd_type: api::WeightType) {
-    assert!(sd_type == api::WeightType::SD_TYPE_BF16 || sd_type == api::WeightType::SD_TYPE_Q8_0);
-}
-
-fn chroma_radiance_type_to_model(sd_type: api::WeightType) -> Result<PathBuf, ApiError> {
+fn chroma_radiance_weight(sd_type: ChromaRadianceWeight) -> Result<PathBuf, ApiError> {
     let (repo, file) = match sd_type {
-        api::WeightType::SD_TYPE_BF16 => (
+        ChromaRadianceWeight::BF16 => (
             "silveroxides/Chroma1-Radiance-GGUF",
             "Chroma1-Radiance-v0.4/Chroma1-Radiance-v0.4-BF16.gguf",
         ),
-        api::WeightType::SD_TYPE_Q8_0 => (
+        ChromaRadianceWeight::Q8_0 => (
             "silveroxides/Chroma1-Radiance-GGUF",
             "Chroma1-Radiance-v0.4/Chroma1-Radiance-v0.4-Q8_0.gguf",
         ),
-        _ => ("not_supported", "not_supported"),
     };
     download_file_hf_hub(repo, file)
 }
 
-pub fn ssd_1b() -> Result<ConfigsBuilder, ApiError> {
-    let model = download_file_hf_hub("segmind/SSD-1B", "SSD-1B-A1111.safetensors")?;
+pub fn ssd_1b(sd_type: SSD1BWeight) -> Result<ConfigsBuilder, ApiError> {
+    let model = ssd_1b_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
     model_config.model(model);
     config.cfg_scale(9.).height(1024).width(1024);
     Ok((config, model_config))
+}
+
+fn ssd_1b_weight(sd_type: SSD1BWeight) -> Result<PathBuf, ApiError> {
+    let (repo, file) = match sd_type {
+        SSD1BWeight::F16 => ("segmind/SSD-1B", "SSD-1B-A1111.safetensors"),
+        SSD1BWeight::F8_E4M3 => (
+            "hassenhamdi/SSD-1B-fp8_e4m3fn",
+            "SSD-1B_fp8_e4m3fn.safetensors",
+        ),
+    };
+    download_file_hf_hub(repo, file)
 }
