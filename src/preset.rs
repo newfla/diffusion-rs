@@ -27,7 +27,7 @@ use crate::{
     SSD1BWeight
 )]
 #[derive(Debug, Clone, Copy)]
-/// Models weight types
+/// Model weight types
 pub enum WeightType {
     #[subenum(Flux1MiniWeight)]
     F32,
@@ -122,16 +122,16 @@ pub enum Preset {
     ///  Vae-tiling enabled. 768x768.
     StableDiffusion2_1,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3-medium> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 30 steps.
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. 30 steps.
     StableDiffusion3MediumFp16,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-medium> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. cfg_scale 4.5. 40 steps.
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4.5. 40 steps.
     StableDiffusion3_5MediumFp16,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. cfg_scale 4.5. 28 steps.
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4.5. 28 steps.
     StableDiffusion3_5LargeFp16,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large-turbo> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. cfg_scale 0. 4 steps.
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 0. 4 steps.
     StableDiffusion3_5LargeTurboFp16,
     SDXLBase1_0,
     /// cfg_scale 1. guidance 0. 4 steps
@@ -139,20 +139,20 @@ pub enum Preset {
     /// cfg_scale 1. guidance 0. 4 steps
     SDXLTurbo1_0Fp16,
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 28 steps.
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. 28 steps.
     Flux1Dev(Flux1Weight),
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::EULER]. 4 steps.
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER]. 4 steps.
     Flux1Schnell(Flux1Weight),
     /// A 3.2B param rectified flow transformer distilled from FLUX.1-dev <https://huggingface.co/TencentARC/flux-mini> <https://huggingface.co/HyperX-Sentience/Flux-Mini-GGUF>
-    /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 1. 20 steps.
+    /// Vae-tiling enabled. 512x512. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 1. 20 steps.
     Flux1Mini(Flux1MiniWeight),
     /// Requires access rights to <https://huggingface.co/RunDiffusion/Juggernaut-XI-v11> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 1024x1024. Enabled [api::SampleMethod::DPM2]. guidance 6. 20 steps
+    /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::DPM2]. guidance 6. 20 steps
     JuggernautXL11,
     /// Chroma is an 8.9B parameter model based on FLUX.1-schnell
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
-    /// Vae-tiling enabled. 512x512. Enabled [api::SampleMethod::EULER]. cfg_scale 4. 20 steps
+    /// Vae-tiling enabled. 512x512. Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4. 20 steps
     Chroma(ChromaWeight),
     /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 250. 1 steps. 1024x1024
     NitroSDRealism(NitroSDRealismWeight),
@@ -160,7 +160,7 @@ pub enum Preset {
     NitroSDVibrant(NitroSDVibrantWeight),
     /// sgm_uniform scheduler. cfg_scale 1. timestep_shift 400. 1 steps. 1024x1024
     DiffInstructStar(DiffInstructStarWeight),
-    /// Enabled [api::SampleMethod::EULER]. cfg_scale 4.0. 20 steps.
+    /// Enabled [crate::api::SampleMethod::EULER]. cfg_scale 4.0. 20 steps.
     ChromaRadiance(ChromaRadianceWeight),
     /// cfg_scale 9.0. 20 steps. 1024x1024
     SSD1B(SSD1BWeight),
