@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, macos-14] #windows-latest, ]
+        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, macos-14] #windows-latest, ]
+        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
       - name: Install Vulkan SDK
         uses: humbletim/install-vulkan-sdk@0ef43dbc8af56d77bcb1e8b1ebbbaa8718ead524
         with:
-          version: 1.4.321.0
+          version: 1.4.328.1
           cache: true
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -72,7 +72,7 @@ jobs:
 
   build-metal:
     needs: build-no-features
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
