@@ -389,13 +389,12 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .force_sdxl_vae_conv_scale(value.force_sdxl_vae_conv_scale)
             .flow_shift(value.flow_shift)
             .timestep_shift(value.timestep_shift)
-            .taesd_preview_only(value.taesd_preview_only);
+            .taesd_preview_only(value.taesd_preview_only)
+            .lora_model(&Into::<PathBuf>::into(&value.lora_model));
 
         if let Some(model) = value.upscale_model {
             builder.upscale_model(model.clone());
         }
-        
-        builder.lora_model(&Into::<PathBuf>::into(&value.lora_model));
 
         if let Some(suffix) = value.prompt_suffix {
             builder.prompt_suffix(suffix.clone());
