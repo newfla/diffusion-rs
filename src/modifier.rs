@@ -1,6 +1,10 @@
 use hf_hub::api::sync::ApiError;
 
-use crate::{api::SampleMethod, preset::ConfigsBuilder, util::download_file_hf_hub};
+use crate::{
+    api::{PreviewType, SampleMethod},
+    preset::ConfigsBuilder,
+    util::download_file_hf_hub,
+};
 
 /// Add the <https://huggingface.co/ximso/RealESRGAN_x4plus_anime_6B> upscaler
 pub fn real_esrgan_x4plus_anime_6_b(
@@ -164,11 +168,32 @@ pub fn vae_tiling(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiErro
     Ok(builder)
 }
 
+/// Enable preview with [crate::api::PreviewType::PREVIEW_PROJ]
+pub fn preview_proj(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.0.preview_mode(PreviewType::PREVIEW_PROJ);
+    Ok(builder)
+}
+
+/// Enable preview with [crate::api::PreviewType::PREVIEW_TAE]
+pub fn preview_tae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.0.preview_mode(PreviewType::PREVIEW_TAE);
+    Ok(builder)
+}
+
+/// Enable preview with [crate::api::PreviewType::PREVIEW_VAE]
+pub fn preview_vae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.0.preview_mode(PreviewType::PREVIEW_VAE);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         api::gen_img,
-        modifier::{lcm_lora_ssd_1b, offload_params_to_cpu, vae_tiling},
+        modifier::{
+            lcm_lora_ssd_1b, offload_params_to_cpu, preview_proj, preview_tae, preview_vae,
+            vae_tiling,
+        },
         preset::{Flux1Weight, Modifier, Preset, PresetBuilder},
         util::set_hf_token,
     };
@@ -180,13 +205,13 @@ mod tests {
     static PROMPT: &str = "a lovely dynosaur made by crochet";
 
     fn run(preset: Preset, m: Modifier) {
-        let (mut config, mut model_config) = PresetBuilder::default()
+        let (config, model_config) = PresetBuilder::default()
             .preset(preset)
             .prompt(PROMPT)
             .with_modifier(m)
             .build()
             .unwrap();
-        gen_img(&mut config, &mut model_config).unwrap();
+        gen_img(config, model_config).unwrap();
     }
 
     #[ignore]
@@ -251,5 +276,23 @@ mod tests {
             Preset::SSD1B(crate::preset::SSD1BWeight::F8_E4M3),
             vae_tiling,
         );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_preview_proj() {
+        run(Preset::SDXLTurbo1_0Fp16, preview_proj);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_preview_tae() {
+        run(Preset::SDXLTurbo1_0Fp16, preview_tae);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_preview_vae() {
+        run(Preset::SDXLTurbo1_0Fp16, preview_vae);
     }
 }

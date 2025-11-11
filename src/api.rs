@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::ffi::CString;
 use std::ffi::c_char;
 use std::ffi::c_void;
@@ -5,6 +6,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::ptr::null_mut;
 use std::slice;
+use std::thread::spawn;
 
 use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
@@ -15,6 +17,7 @@ use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
 use diffusion_rs_sys::sd_pm_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
+use diffusion_rs_sys::sd_set_preview_callback;
 use diffusion_rs_sys::sd_slg_params_t;
 use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
@@ -42,6 +45,9 @@ pub use diffusion_rs_sys::prediction_t as Prediction;
 
 /// Weight type
 pub use diffusion_rs_sys::sd_type_t as WeightType;
+
+/// Preview mode
+pub use diffusion_rs_sys::preview_t as PreviewType;
 
 #[non_exhaustive]
 #[derive(Error, Debug)]
@@ -242,11 +248,9 @@ pub struct ModelConfig {
     #[builder(default = "0")]
     timestep_shift: i32,
 
-    #[builder(default = "None", private)]
-    upscaler_ctx: Option<*mut upscaler_ctx_t>,
-
-    #[builder(default = "None", private)]
-    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
+    /// Prevents usage of taesd for decoding the final image
+    #[builder(default = "false")]
+    taesd_preview_only: bool,
 }
 
 impl ModelConfigBuilder {
@@ -288,78 +292,116 @@ impl ModelConfig {
             if self.upscale_model.is_none() || self.upscale_repeats == 0 {
                 None
             } else {
-                if self.upscaler_ctx.is_none() {
-                    let upscaler = new_upscaler_ctx(
-                        self.upscale_model.as_ref().unwrap().as_ptr(),
-                        self.offload_params_to_cpu,
-                        self.diffusion_conv_direct,
-                        self.n_threads,
-                    );
-                    self.upscaler_ctx = Some(upscaler);
-                }
-                self.upscaler_ctx
+                let upscaler = new_upscaler_ctx(
+                    self.upscale_model.as_ref().unwrap().as_ptr(),
+                    self.offload_params_to_cpu,
+                    self.diffusion_conv_direct,
+                    self.n_threads,
+                );
+                Some(upscaler)
             }
         }
     }
 
     unsafe fn diffusion_ctx(&mut self, vae_decode_only: bool) -> *mut sd_ctx_t {
         unsafe {
-            if self.diffusion_ctx.is_none() {
-                let sd_ctx_params = sd_ctx_params_t {
-                    model_path: self.model.as_ptr(),
-                    qwen2vl_path: self.qwen2vl.as_ptr(),
-                    qwen2vl_vision_path: self.qwen2vl_vision.as_ptr(),
-                    clip_l_path: self.clip_l.as_ptr(),
-                    clip_g_path: self.clip_g.as_ptr(),
-                    clip_vision_path: self.clip_vision.as_ptr(),
-                    high_noise_diffusion_model_path: self.high_noise_diffusion_model.as_ptr(),
-                    t5xxl_path: self.t5xxl.as_ptr(),
-                    diffusion_model_path: self.diffusion_model.as_ptr(),
-                    vae_path: self.vae.as_ptr(),
-                    taesd_path: self.taesd.as_ptr(),
-                    control_net_path: self.control_net.as_ptr(),
-                    lora_model_dir: self.lora_model.as_ptr(),
-                    embedding_dir: self.embeddings.as_ptr(),
-                    photo_maker_path: self.photo_maker.as_ptr(),
-                    vae_decode_only,
-                    free_params_immediately: false,
-                    n_threads: self.n_threads,
-                    wtype: self.weight_type,
-                    rng_type: self.rng,
-                    keep_clip_on_cpu: self.clip_on_cpu,
-                    keep_control_net_on_cpu: self.control_net_cpu,
-                    keep_vae_on_cpu: self.vae_on_cpu,
-                    diffusion_flash_attn: self.flash_attention,
-                    diffusion_conv_direct: self.diffusion_conv_direct,
-                    chroma_use_dit_mask: !self.chroma_disable_dit_mask,
-                    chroma_use_t5_mask: self.chroma_enable_t5_mask,
-                    chroma_t5_mask_pad: self.chroma_t5_mask_pad,
-                    vae_conv_direct: self.vae_conv_direct,
-                    offload_params_to_cpu: self.offload_params_to_cpu,
-                    flow_shift: self.flow_shift,
-                    prediction: self.prediction,
-                    force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
-                };
-                let ctx = new_sd_ctx(&sd_ctx_params);
-                self.diffusion_ctx = Some((ctx, sd_ctx_params))
-            }
-            self.diffusion_ctx.unwrap().0
+            let sd_ctx_params = sd_ctx_params_t {
+                model_path: self.model.as_ptr(),
+                qwen2vl_path: self.qwen2vl.as_ptr(),
+                qwen2vl_vision_path: self.qwen2vl_vision.as_ptr(),
+                clip_l_path: self.clip_l.as_ptr(),
+                clip_g_path: self.clip_g.as_ptr(),
+                clip_vision_path: self.clip_vision.as_ptr(),
+                high_noise_diffusion_model_path: self.high_noise_diffusion_model.as_ptr(),
+                t5xxl_path: self.t5xxl.as_ptr(),
+                diffusion_model_path: self.diffusion_model.as_ptr(),
+                vae_path: self.vae.as_ptr(),
+                taesd_path: self.taesd.as_ptr(),
+                control_net_path: self.control_net.as_ptr(),
+                lora_model_dir: self.lora_model.as_ptr(),
+                embedding_dir: self.embeddings.as_ptr(),
+                photo_maker_path: self.photo_maker.as_ptr(),
+                vae_decode_only,
+                free_params_immediately: false,
+                n_threads: self.n_threads,
+                wtype: self.weight_type,
+                rng_type: self.rng,
+                keep_clip_on_cpu: self.clip_on_cpu,
+                keep_control_net_on_cpu: self.control_net_cpu,
+                keep_vae_on_cpu: self.vae_on_cpu,
+                diffusion_flash_attn: self.flash_attention,
+                diffusion_conv_direct: self.diffusion_conv_direct,
+                chroma_use_dit_mask: !self.chroma_disable_dit_mask,
+                chroma_use_t5_mask: self.chroma_enable_t5_mask,
+                chroma_t5_mask_pad: self.chroma_t5_mask_pad,
+                vae_conv_direct: self.vae_conv_direct,
+                offload_params_to_cpu: self.offload_params_to_cpu,
+                flow_shift: self.flow_shift,
+                prediction: self.prediction,
+                force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
+                tae_preview_only: self.taesd_preview_only,
+            };
+            new_sd_ctx(&sd_ctx_params)
         }
     }
 }
 
-impl Drop for ModelConfig {
-    fn drop(&mut self) {
-        //Clean-up CTX section
-        unsafe {
-            if let Some((sd_ctx, _)) = self.diffusion_ctx {
-                free_sd_ctx(sd_ctx);
-            }
+impl From<ModelConfig> for ModelConfigBuilder {
+    fn from(value: ModelConfig) -> Self {
+        let mut builder = ModelConfigBuilder::default();
+        builder
+            .n_threads(value.n_threads)
+            .offload_params_to_cpu(value.offload_params_to_cpu)
+            .upscale_repeats(value.upscale_repeats)
+            .model(value.model.clone())
+            .diffusion_model(value.diffusion_model.clone())
+            .qwen2vl(value.qwen2vl.clone())
+            .qwen2vl_vision(value.qwen2vl_vision.clone())
+            .clip_l(value.clip_l.clone())
+            .clip_g(value.clip_g.clone())
+            .clip_vision(value.clip_vision.clone())
+            .t5xxl(value.t5xxl.clone())
+            .vae(value.vae.clone())
+            .taesd(value.taesd.clone())
+            .control_net(value.control_net.clone())
+            .embeddings(value.embeddings.clone())
+            .photo_maker(value.photo_maker.clone())
+            .pm_id_embed_path(value.pm_id_embed_path.clone())
+            .weight_type(value.weight_type)
+            .high_noise_diffusion_model(value.high_noise_diffusion_model.clone())
+            .vae_tiling(value.vae_tiling)
+            .vae_tile_size(value.vae_tile_size)
+            .vae_relative_tile_size(value.vae_relative_tile_size)
+            .vae_tile_overlap(value.vae_tile_overlap)
+            .rng(value.rng)
+            .scheduler(value.scheduler)
+            .prediction(value.prediction)
+            .vae_on_cpu(value.vae_on_cpu)
+            .clip_on_cpu(value.clip_on_cpu)
+            .control_net(value.control_net)
+            .control_net_cpu(value.control_net_cpu)
+            .flash_attention(value.flash_attention)
+            .chroma_disable_dit_mask(value.chroma_disable_dit_mask)
+            .chroma_enable_t5_mask(value.chroma_enable_t5_mask)
+            .chroma_t5_mask_pad(value.chroma_t5_mask_pad)
+            .diffusion_conv_direct(value.diffusion_conv_direct)
+            .vae_conv_direct(value.vae_conv_direct)
+            .force_sdxl_vae_conv_scale(value.force_sdxl_vae_conv_scale)
+            .flow_shift(value.flow_shift)
+            .timestep_shift(value.timestep_shift)
+            .taesd_preview_only(value.taesd_preview_only);
 
-            if let Some(upscaler_ctx) = self.upscaler_ctx {
-                free_upscaler_ctx(upscaler_ctx);
-            }
+        if let Some(model) = value.upscale_model {
+            builder.upscale_model(model.clone());
         }
+        
+        builder.lora_model(&Into::<PathBuf>::into(&value.lora_model));
+
+        if let Some(suffix) = value.prompt_suffix {
+            builder.prompt_suffix(suffix.clone());
+        }
+
+        builder
     }
 }
 
@@ -382,6 +424,22 @@ pub struct Config {
     /// Path to write result image to (default: ./output.png)
     #[builder(default = "PathBuf::from(\"./output.png\")")]
     output: PathBuf,
+
+    /// Path to write result image to (default: ./output.png)
+    #[builder(default = "PathBuf::from(\"./preview_output.png\")")]
+    preview_output: PathBuf,
+
+    /// Preview method
+    #[builder(default = "PreviewType::PREVIEW_NONE")]
+    preview_mode: PreviewType,
+
+    /// Enables previewing noisy inputs of the models rather than the denoised outputs
+    #[builder(default = "false")]
+    preview_noisy: bool,
+
+    /// Interval in denoising steps between consecutive updates of the image preview file (default is 1, meaning updating at every step)
+    #[builder(default = "1")]
+    preview_interval: i32,
 
     /// The prompt to render
     prompt: String,
@@ -514,8 +572,11 @@ impl From<Config> for ConfigBuilder {
             .skip_layer_start(value.skip_layer_start)
             .skip_layer_end(value.skip_layer_end)
             .canny(value.canny)
-            .disable_auto_resize_ref_image(value.disable_auto_resize_ref_image);
-
+            .disable_auto_resize_ref_image(value.disable_auto_resize_ref_image)
+            .preview_output(value.preview_output)
+            .preview_mode(value.preview_mode)
+            .preview_noisy(value.preview_noisy)
+            .preview_interval(value.preview_interval);
         builder
     }
 }
@@ -562,6 +623,12 @@ impl From<&Path> for CLibPath {
     }
 }
 
+impl From<&CLibPath> for PathBuf {
+    fn from(value: &CLibPath) -> Self {
+        PathBuf::from(value.0.to_str().unwrap())
+    }
+}
+
 fn output_files(path: &Path, prompt: &str, batch_size: i32) -> Vec<PathBuf> {
     if batch_size == 1 {
         vec![path.into()]
@@ -601,7 +668,17 @@ unsafe fn upscale(
 }
 
 /// Generate an image with a prompt
-pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
+pub fn gen_img(config: Config, model_config: ModelConfig) -> Result<(), DiffusionError> {
+    spawn(|| gen_img_internal(config, model_config))
+        .join()
+        .map_err(|_| DiffusionError::Forward)
+        .flatten()
+}
+
+fn gen_img_internal(
+    mut config: Config,
+    mut model_config: ModelConfig,
+) -> Result<(), DiffusionError> {
     let prompt: CLibString = match &model_config.prompt_suffix {
         Some(suffix) => format!("{} {suffix}", &config.prompt),
         None => config.prompt.clone(),
@@ -657,13 +734,41 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             rel_size_x: model_config.vae_relative_tile_size.0,
             rel_size_y: model_config.vae_relative_tile_size.1,
         };
-
         let pm_params = sd_pm_params_t {
             id_images: null_mut(),
             id_images_count: 0,
             id_embed_path: model_config.pm_id_embed_path.as_ptr(),
             style_strength: config.pm_style_strength,
         };
+        thread_local! {
+            pub static LOCAL_PREVIEW_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+        }
+
+        unsafe extern "C" fn save_preview_local(
+            _step: ::std::os::raw::c_int,
+            _frame_count: ::std::os::raw::c_int,
+            frames: *mut sd_image_t,
+            _is_noisy: bool,
+        ) {
+            LOCAL_PREVIEW_PATH.with_borrow(|p| {
+                if let Some(path) = p {
+                    unsafe {
+                        let _ = save_img(*frames, path);
+                    };
+                }
+            });
+        }
+
+        if config.preview_mode != PreviewType::PREVIEW_NONE {
+            LOCAL_PREVIEW_PATH.replace(Some(config.preview_output.clone()));
+            sd_set_preview_callback(
+                Some(save_preview_local),
+                config.preview_mode,
+                config.preview_interval,
+                !config.preview_noisy,
+                config.preview_noisy,
+            );
+        }
 
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
@@ -686,36 +791,44 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             vae_tiling_params,
             auto_resize_ref_image: config.disable_auto_resize_ref_image,
         };
-
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
-        if slice.is_null() {
-            return Err(DiffusionError::Forward);
-        }
-        for (img, path) in slice::from_raw_parts(slice, config.batch_count as usize)
-            .iter()
-            .zip(files)
-        {
-            match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
-                Ok(img) => {
-                    // Thx @wandbrandon
-                    let len = (img.width * img.height * img.channel) as usize;
-                    let buffer = slice::from_raw_parts(img.data, len).to_vec();
-                    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer)
-                        .map(|img| RgbImage::from(img).save(path));
-                    if let Some(Err(err)) = save_state {
-                        return Err(DiffusionError::StoreImages(err));
+        let ret = {
+            if slice.is_null() {
+                return Err(DiffusionError::Forward);
+            }
+            for (img, path) in slice::from_raw_parts(slice, config.batch_count as usize)
+                .iter()
+                .zip(files)
+            {
+                match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
+                    Ok(img) => save_img(img, &path)?,
+                    Err(err) => {
+                        return Err(err);
                     }
                 }
-                Err(err) => {
-                    return Err(err);
-                }
             }
+            Ok(())
+        };
+        free(slice as *mut c_void);
+        free_sd_ctx(sd_ctx);
+        if let Some(upscaler_ctx) = upscaler_ctx {
+            free_upscaler_ctx(upscaler_ctx);
         }
 
-        //Clean-up slice section
-        free(slice as *mut c_void);
-        Ok(())
+        ret
     }
+}
+
+fn save_img(img: sd_image_t, path: &Path) -> Result<(), DiffusionError> {
+    // Thx @wandbrandon
+    let len = (img.width * img.height * img.channel) as usize;
+    let buffer = unsafe { slice::from_raw_parts(img.data, len).to_vec() };
+    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer)
+        .map(|img| RgbImage::from(img).save(path));
+    if let Some(Err(err)) = save_state {
+        return Err(DiffusionError::StoreImages(err));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -776,34 +889,34 @@ mod tests {
             "RealESRGAN_x4plus_anime_6B.pth",
         )
         .unwrap();
-        let mut config = ConfigBuilder::default()
+        let config = ConfigBuilder::default()
             .prompt("a lovely duck drinking water from a bottle")
             .output(PathBuf::from("./output_1.png"))
             .batch_count(1)
             .build()
             .unwrap();
-        let mut model_config = ModelConfigBuilder::default()
+        let model_config = ModelConfigBuilder::default()
             .model(model_path)
             .upscale_model(upscaler_path)
             .upscale_repeats(1)
             .build()
             .unwrap();
 
-        gen_img(&mut config, &mut model_config).unwrap();
-        let mut config2 = ConfigBuilder::from(config.clone())
+        gen_img(config.clone(), model_config.clone()).unwrap();
+        let config2 = ConfigBuilder::from(config.clone())
             .prompt("a lovely duck drinking water from a straw")
             .output(PathBuf::from("./output_2.png"))
             .build()
             .unwrap();
-        gen_img(&mut config2, &mut model_config).unwrap();
+        gen_img(config2, model_config.clone()).unwrap();
 
-        let mut config3 = ConfigBuilder::from(config)
+        let config3 = ConfigBuilder::from(config)
             .prompt("a lovely dog drinking water from a starbucks cup")
             .batch_count(2)
             .output(PathBuf::from("./"))
             .build()
             .unwrap();
 
-        gen_img(&mut config3, &mut model_config).unwrap();
+        gen_img(config3, model_config).unwrap();
     }
 }
