@@ -49,6 +49,9 @@ pub use diffusion_rs_sys::sd_type_t as WeightType;
 /// Preview mode
 pub use diffusion_rs_sys::preview_t as PreviewType;
 
+/// Lora mode
+pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
+
 #[non_exhaustive]
 #[derive(Error, Debug)]
 /// Error that can occurs while forwarding models
@@ -188,6 +191,10 @@ pub struct ModelConfig {
     #[builder(default = "RngFunction::CUDA_RNG")]
     rng: RngFunction,
 
+    /// Sampler RNG. If [RngFunction::RNG_TYPE_COUNT] is used will default to rng value. (default: [RngFunction::RNG_TYPE_COUNT])",
+    #[builder(default = "RngFunction::RNG_TYPE_COUNT")]
+    sampler_rng_type: RngFunction,
+
     /// Denoiser sigma schedule (default: DEFAULT)
     #[builder(default = "Scheduler::DEFAULT")]
     scheduler: Scheduler,
@@ -251,6 +258,10 @@ pub struct ModelConfig {
     /// Prevents usage of taesd for decoding the final image
     #[builder(default = "false")]
     taesd_preview_only: bool,
+
+    /// In auto mode, if the model weights contain any quantized parameters, the at_runtime mode will be used; otherwise, immediately will be used.The immediately mode may have precision and compatibility issues with quantized parameters, but it usually offers faster inference speed and, in some cases, lower memory usage. The at_runtime mode, on the other hand, is exactly the opposite
+    #[builder(default = "LoraModeType::LORA_APPLY_AUTO")]
+    lora_apply_mode: LoraModeType,
 }
 
 impl ModelConfigBuilder {
@@ -340,6 +351,9 @@ impl ModelConfig {
                 prediction: self.prediction,
                 force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
                 tae_preview_only: self.taesd_preview_only,
+                lora_apply_mode: self.lora_apply_mode,
+                tensor_type_rules: null_mut(),
+                sampler_rng_type: self.sampler_rng_type,
             };
             new_sd_ctx(&sd_ctx_params)
         }
@@ -374,6 +388,7 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .vae_relative_tile_size(value.vae_relative_tile_size)
             .vae_tile_overlap(value.vae_tile_overlap)
             .rng(value.rng)
+            .sampler_rng_type(value.rng)
             .scheduler(value.scheduler)
             .prediction(value.prediction)
             .vae_on_cpu(value.vae_on_cpu)
@@ -390,7 +405,8 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .flow_shift(value.flow_shift)
             .timestep_shift(value.timestep_shift)
             .taesd_preview_only(value.taesd_preview_only)
-            .lora_model(&Into::<PathBuf>::into(&value.lora_model));
+            .lora_model(&Into::<PathBuf>::into(&value.lora_model))
+            .lora_apply_mode(value.lora_apply_mode);
 
         if let Some(model) = value.upscale_model {
             builder.upscale_model(model.clone());
