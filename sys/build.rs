@@ -34,26 +34,19 @@ fn main() {
     }
 
     // Bindgen
-    if env::var("DIFFUSION_SKIP_BINDINGS").is_ok() {
-        fs::copy("src/bindings.rs", out.join("bindings.rs")).expect("Failed to copy bindings.rs");
-    } else {
-        let bindings = bindgen::Builder::default()
-            .header("wrapper.h")
-            .clang_arg("-I./stable-diffusion.cpp")
-            .clang_arg("-I./stable-diffusion.cpp/ggml/include")
-            .rustified_non_exhaustive_enum(".*")
-            .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-            .generate()
-            .unwrap()
-            .write_to_file(out.join("bindings.rs"));
+    let bindings = bindgen::Builder::default()
+        .header("wrapper.h")
+        .clang_arg("-I./stable-diffusion.cpp")
+        .clang_arg("-I./stable-diffusion.cpp/ggml/include")
+        .rustified_non_exhaustive_enum(".*")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .generate()
+        .unwrap()
+        .write_to_file(out.join("bindings.rs"));
 
-        if let Err(e) = bindings {
-            println!("cargo:warning=Unable to generate bindings: {e}");
-            println!("cargo:warning=Using bundled bindings.rs, which may be out of date");
-            // copy src/bindings.rs to OUT_DIR
-            fs::copy("src/bindings.rs", out.join("bindings.rs"))
-                .expect("Unable to copy bindings.rs");
-        }
+    if let Err(e) = bindings {
+        println!("cargo:warning=Unable to generate bindings: {e}");
+        println!("cargo:warning=Using bundled bindings.rs, which may be out of date");
     }
 
     // stop if we're on docs.rs

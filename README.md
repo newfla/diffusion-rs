@@ -34,11 +34,6 @@ gen_img(config, model_config).unwrap();
 
 * Something other than Windows/Linux isn't working!
     * I don't have a way to test these platforms, so I can't really help you.
-* I get a panic during binding generation build!
-    * You can attempt to fix it yourself, or you can set the `DIFFUSION_SKIP_BINDINGS` environment variable.
-      This skips attempting to build the bindings whatsoever and copies the existing ones. They may be out of date,
-      but it's better than nothing.
-        * `DIFFUSION_SKIP_BINDINGS=1 cargo build`
     * If you can fix the issue, please open a PR!
 
 ## Roadmap
