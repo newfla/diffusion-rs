@@ -186,13 +186,25 @@ pub fn preview_vae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiErr
     Ok(builder)
 }
 
+/// Enable easycache support with default values
+pub fn enable_easycache(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.1.easy_cache(true);
+    Ok(builder)
+}
+
+/// Enable flash attention
+pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    builder.1.flash_attention(true);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         api::gen_img,
         modifier::{
-            lcm_lora_ssd_1b, offload_params_to_cpu, preview_proj, preview_tae, preview_vae,
-            vae_tiling,
+            enable_easycache, enable_flash_attention, lcm_lora_ssd_1b, offload_params_to_cpu,
+            preview_proj, preview_tae, preview_vae, vae_tiling,
         },
         preset::{Flux1Weight, Modifier, Preset, PresetBuilder},
         util::set_hf_token,
@@ -294,5 +306,25 @@ mod tests {
     #[test]
     fn test_preview_vae() {
         run(Preset::SDXLTurbo1_0Fp16, preview_vae);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_easy_cache() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Mini(crate::preset::Flux1MiniWeight::Q2_K),
+            enable_easycache,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_flash_attention() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Mini(crate::preset::Flux1MiniWeight::Q2_K),
+            enable_flash_attention,
+        );
     }
 }

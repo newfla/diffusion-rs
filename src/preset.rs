@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn test_flux_1_mini() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Mini(Flux1MiniWeight::Q8_0));
+        run(Preset::Flux1Mini(Flux1MiniWeight::Q2_K));
     }
 
     #[ignore]

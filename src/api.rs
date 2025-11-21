@@ -12,6 +12,7 @@ use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_ctx_params_t;
+use diffusion_rs_sys::sd_easycache_params_t;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
@@ -215,9 +216,8 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     control_net_cpu: bool,
 
-    /// Use flash attention in the diffusion model (for low vram).
-    /// Might lower quality, since it implies converting k and v to f16.
-    /// This might crash if it is not supported by the backend.
+    /// Use flash attention to reduce memory usage (for low vram).
+    // /For most backends, it slows things down, but for cuda it generally speeds it up too. At the moment, it is only supported for some models and some backends (like cpu, cuda/rocm, metal).
     #[builder(default = "false")]
     flash_attention: bool,
 
@@ -262,6 +262,22 @@ pub struct ModelConfig {
     /// In auto mode, if the model weights contain any quantized parameters, the at_runtime mode will be used; otherwise, immediately will be used.The immediately mode may have precision and compatibility issues with quantized parameters, but it usually offers faster inference speed and, in some cases, lower memory usage. The at_runtime mode, on the other hand, is exactly the opposite
     #[builder(default = "LoraModeType::LORA_APPLY_AUTO")]
     lora_apply_mode: LoraModeType,
+
+    /// Enable easycache to achieve speedup (default: false)
+    #[builder(default = "false")]
+    easy_cache: bool,
+
+    /// Easycache reuse threashold (default: 0.2)
+    #[builder(default = "0.2")]
+    easy_cache_reuse_threshold: f32,
+
+    /// Easycache start percent (default: 0.15)
+    #[builder(default = "0.15")]
+    easy_cache_start_percent: f32,
+
+    /// Easycache end percent (default: 0.95)
+    #[builder(default = "0.95")]
+    easy_cache_end_percent: f32,
 }
 
 impl ModelConfigBuilder {
@@ -785,6 +801,13 @@ fn gen_img_internal(
             );
         }
 
+        let easy_cache = sd_easycache_params_t {
+            enabled: model_config.easy_cache,
+            reuse_threshold: model_config.easy_cache_reuse_threshold,
+            start_percent: model_config.easy_cache_start_percent,
+            end_percent: model_config.easy_cache_end_percent,
+        };
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -805,6 +828,7 @@ fn gen_img_internal(
             pm_params,
             vae_tiling_params,
             auto_resize_ref_image: config.disable_auto_resize_ref_image,
+            easycache: easy_cache,
         };
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
         let ret = {
