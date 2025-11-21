@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use crate::{
     api::{ModelConfigBuilder, SampleMethod},
-    modifier::{sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1},
+    modifier::{
+        sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q2_k_flux_1, t5xxl_q3_k_flux_1,
+        t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1,
+    },
     preset::{
         ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
         Flux1MiniWeight, Flux1Weight, NitroSDRealismWeight, NitroSDVibrantWeight, SSD1BWeight,
@@ -92,7 +95,13 @@ pub fn flux_1_dev(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
     let mut builder = flux_1_dev_schnell("dev", 28)?;
 
     builder.1.diffusion_model(model_path);
-    t5xxl_fp16_flux_1(builder)
+    match sd_type {
+        Flux1Weight::Q4_0 => t5xxl_q4_k_flux_1(builder),
+        Flux1Weight::Q8_0 => t5xxl_q8_0_flux_1(builder),
+        Flux1Weight::Q2_K => t5xxl_q2_k_flux_1(builder),
+        Flux1Weight::Q3_K => t5xxl_q3_k_flux_1(builder),
+        Flux1Weight::Q4_K => t5xxl_q4_k_flux_1(builder),
+    }
 }
 
 pub fn flux_1_schnell(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
@@ -100,7 +109,13 @@ pub fn flux_1_schnell(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> 
     let mut builder = flux_1_dev_schnell("schnell", 4)?;
 
     builder.1.diffusion_model(model_path);
-    t5xxl_fp16_flux_1(builder)
+    match sd_type {
+        Flux1Weight::Q4_0 => t5xxl_q4_k_flux_1(builder),
+        Flux1Weight::Q8_0 => t5xxl_q8_0_flux_1(builder),
+        Flux1Weight::Q2_K => t5xxl_q2_k_flux_1(builder),
+        Flux1Weight::Q3_K => t5xxl_q3_k_flux_1(builder),
+        Flux1Weight::Q4_K => t5xxl_q4_k_flux_1(builder),
+    }
 }
 
 fn flux_1_model_weight(model: &str, sd_type: Flux1Weight) -> Result<PathBuf, ApiError> {
@@ -250,7 +265,15 @@ pub fn flux_1_mini(sd_type: Flux1MiniWeight) -> Result<ConfigsBuilder, ApiError>
     let mut builder = flux_1_clip_vae(vae_path, clip_l_path, 20)?;
     builder.1.diffusion_model(model_path);
     builder.0.cfg_scale(1.);
-    t5xxl_q4_k_flux_1(builder)
+    match sd_type {
+        Flux1MiniWeight::F32 => t5xxl_fp16_flux_1(builder),
+        Flux1MiniWeight::Q8_0 => t5xxl_q8_0_flux_1(builder),
+        Flux1MiniWeight::Q2_K => t5xxl_q2_k_flux_1(builder),
+        Flux1MiniWeight::Q3_K => t5xxl_q3_k_flux_1(builder),
+        Flux1MiniWeight::Q5_K => t5xxl_q4_k_flux_1(builder),
+        Flux1MiniWeight::Q6_K => t5xxl_q4_k_flux_1(builder),
+        Flux1MiniWeight::BF16 => t5xxl_fp16_flux_1(builder),
+    }
 }
 
 fn flux_1_mini_model_weight(sd_type: Flux1MiniWeight) -> Result<PathBuf, ApiError> {

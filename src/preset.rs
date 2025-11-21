@@ -266,12 +266,12 @@ mod tests {
     static PROMPT: &str = "a lovely dynosaur made by crochet";
 
     fn run(preset: Preset) {
-        let (mut config, mut model_config) = PresetBuilder::default()
+        let (config, model_config) = PresetBuilder::default()
             .preset(preset)
             .prompt(PROMPT)
             .build()
             .unwrap();
-        gen_img(&mut config, &mut model_config).unwrap();
+        gen_img(config, model_config).unwrap();
     }
 
     #[ignore]
@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn test_flux_1_mini() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::Flux1Mini(Flux1MiniWeight::Q8_0));
+        run(Preset::Flux1Mini(Flux1MiniWeight::Q2_K));
     }
 
     #[ignore]
