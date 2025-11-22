@@ -198,7 +198,9 @@ pub struct ModelConfig {
     #[builder(default = "RngFunction::RNG_TYPE_COUNT")]
     sampler_rng_type: RngFunction,
 
-    /// Denoiser sigma schedule (default: Scheduler::SCHEDULER_COUNT)
+    /// Denoiser sigma schedule (default: [Scheduler::SCHEDULER_COUNT]).
+    /// Will default to [Scheduler::EXPONENTIAL_SCHEDULER] if a denoiser is already instantiated.
+    /// Otherwise, [Scheduler::DISCRETE_SCHEDULER] is used.
     #[builder(default = "Scheduler::SCHEDULER_COUNT")]
     scheduler: Scheduler,
 
@@ -510,7 +512,9 @@ pub struct Config {
     #[builder(default = "512")]
     width: i32,
 
-    /// Sampling-method (default: SAMPLE_METHOD_COUNT)
+    /// Sampling-method (default: [SampleMethod::SAMPLE_METHOD_COUNT]).
+    /// [SampleMethod::EULER_SAMPLE_METHOD] will be used for flux, sd3, wan, qwen_image.
+    /// Otherwise [SampleMethod::EULER_A_SAMPLE_METHOD] is used.
     #[builder(default = "SampleMethod::SAMPLE_METHOD_COUNT")]
     sampling_method: SampleMethod,
 

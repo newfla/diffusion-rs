@@ -74,7 +74,7 @@ pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
 }
 
 /// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdxl> to reduce inference steps for SD v1 between 2-8 (default 8)
-/// Enabled [SampleMethod::LCM]. cfg_scale 2. 8 steps.
+/// Enabled [SampleMethod::LCM_SAMPLE_METHOD]. cfg_scale 2. 8 steps.
 pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     let lora_path = download_file_hf_hub(
         "latent-consistency/lcm-lora-sdxl",
