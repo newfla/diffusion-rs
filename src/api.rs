@@ -13,6 +13,8 @@ use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_ctx_params_t;
 use diffusion_rs_sys::sd_easycache_params_t;
+use diffusion_rs_sys::sd_get_default_sample_method;
+use diffusion_rs_sys::sd_get_default_scheduler;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
@@ -196,8 +198,8 @@ pub struct ModelConfig {
     #[builder(default = "RngFunction::RNG_TYPE_COUNT")]
     sampler_rng_type: RngFunction,
 
-    /// Denoiser sigma schedule (default: DEFAULT)
-    #[builder(default = "Scheduler::DEFAULT")]
+    /// Denoiser sigma schedule (default: Scheduler::SCHEDULER_COUNT)
+    #[builder(default = "Scheduler::SCHEDULER_COUNT")]
     scheduler: Scheduler,
 
     /// Prediction type override (default: DEFAULT_PRED)
@@ -508,8 +510,8 @@ pub struct Config {
     #[builder(default = "512")]
     width: i32,
 
-    /// Sampling-method (default: SAMPLE_METHOD_DEFAULT)
-    #[builder(default = "SampleMethod::SAMPLE_METHOD_DEFAULT")]
+    /// Sampling-method (default: SAMPLE_METHOD_COUNT)
+    #[builder(default = "SampleMethod::SAMPLE_METHOD_COUNT")]
     sampling_method: SampleMethod,
 
     /// eta in DDIM, only for DDIM and TCD: (default: 0)
@@ -743,12 +745,22 @@ fn gen_img_internal(
                 scale: config.slg_scale,
             },
         };
+        let scheduler = if model_config.scheduler == Scheduler::SCHEDULER_COUNT {
+            sd_get_default_scheduler(sd_ctx)
+        } else {
+            model_config.scheduler
+        };
+        let sample_method = if config.sampling_method == SampleMethod::SAMPLE_METHOD_COUNT {
+            sd_get_default_sample_method(sd_ctx)
+        } else {
+            config.sampling_method
+        };
         let sample_params = sd_sample_params_t {
             guidance,
-            sample_method: config.sampling_method,
+            sample_method,
             sample_steps: config.steps,
             eta: config.eta,
-            scheduler: model_config.scheduler,
+            scheduler,
             shifted_timestep: model_config.timestep_shift,
         };
         let control_image = sd_image_t {

@@ -85,7 +85,7 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
         .0
         .cfg_scale(2.)
         .steps(8)
-        .sampling_method(SampleMethod::LCM);
+        .sampling_method(SampleMethod::LCM_SAMPLE_METHOD);
     Ok(builder)
 }
 
