@@ -230,7 +230,7 @@ pub fn stable_diffusion_3_5(
     config
         .0
         .cfg_scale(cfg_scale)
-        .sampling_method(SampleMethod::EULER)
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
         .steps(steps)
         .height(1024)
         .width(1024);
@@ -249,7 +249,7 @@ pub fn juggernaut_xl_11() -> Result<ConfigsBuilder, ApiError> {
     config.1.model(model_path).vae_tiling(true);
     config
         .0
-        .sampling_method(SampleMethod::DPM2)
+        .sampling_method(SampleMethod::DPM2_SAMPLE_METHOD)
         .steps(20)
         .guidance(6.)
         .height(1024)
@@ -301,7 +301,7 @@ pub fn chroma(sd_type: ChromaWeight) -> Result<ConfigsBuilder, ApiError> {
         .vae_tiling(true);
     config
         .cfg_scale(4.)
-        .sampling_method(SampleMethod::EULER)
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
         .steps(20)
         .height(512)
         .width(512);
@@ -340,7 +340,7 @@ pub fn nitro_sd_realism(sd_type: NitroSDRealismWeight) -> Result<ConfigsBuilder,
     model_config
         .model(model_path)
         .timestep_shift(250)
-        .scheduler(scheduler_t::SGM_UNIFORM);
+        .scheduler(scheduler_t::SGM_UNIFORM_SCHEDULER);
     config.cfg_scale(1.).steps(1).height(1024).width(1024);
     Ok((config, model_config))
 }
@@ -366,7 +366,7 @@ pub fn nitro_sd_vibrant(sd_type: NitroSDVibrantWeight) -> Result<ConfigsBuilder,
     model_config
         .model(model_path)
         .timestep_shift(500)
-        .scheduler(scheduler_t::SGM_UNIFORM);
+        .scheduler(scheduler_t::SGM_UNIFORM_SCHEDULER);
     config.cfg_scale(1.).steps(1).height(1024).width(1024);
     Ok((config, model_config))
 }
@@ -392,7 +392,7 @@ pub fn diff_instruct_star(sd_type: DiffInstructStarWeight) -> Result<ConfigsBuil
     model_config
         .model(model_path)
         .timestep_shift(400)
-        .scheduler(scheduler_t::SGM_UNIFORM);
+        .scheduler(scheduler_t::SGM_UNIFORM_SCHEDULER);
     config.cfg_scale(1.).steps(1).height(1024).width(1024);
     Ok((config, model_config))
 }
@@ -437,7 +437,9 @@ pub fn chroma_radiance(sd_type: ChromaRadianceWeight) -> Result<ConfigsBuilder, 
     let mut model_config = ModelConfigBuilder::default();
 
     model_config.model(model_path);
-    config.cfg_scale(4.).sampling_method(SampleMethod::EULER);
+    config
+        .cfg_scale(4.)
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
     t5xxl_fp16_flux_1((config, model_config))
 }
 
