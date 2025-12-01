@@ -266,12 +266,12 @@ mod tests {
     static PROMPT: &str = "a lovely dynosaur made by crochet";
 
     fn run(preset: Preset) {
-        let (config, model_config) = PresetBuilder::default()
+        let (mut config, mut model_config) = PresetBuilder::default()
             .preset(preset)
             .prompt(PROMPT)
             .build()
             .unwrap();
-        gen_img(config, model_config).unwrap();
+        gen_img(&mut config, &mut model_config).unwrap();
     }
 
     #[ignore]
