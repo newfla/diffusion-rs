@@ -10,7 +10,7 @@ use crate::{
         sdxl_turbo_1_0_fp16, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
         stable_diffusion_2_1, stable_diffusion_3_5_large_fp16,
         stable_diffusion_3_5_large_turbo_fp16, stable_diffusion_3_5_medium_fp16,
-        stable_diffusion_3_medium_fp16,
+        stable_diffusion_3_medium_fp16, z_image_turbo,
     },
 };
 
@@ -25,7 +25,8 @@ use crate::{
     DiffInstructStarWeight,
     ChromaRadianceWeight,
     SSD1BWeight,
-    Flux2Weight
+    Flux2Weight,
+    ZImageTurboWeight
 )]
 #[derive(Debug, Clone, Copy)]
 /// Model weight types
@@ -45,7 +46,8 @@ pub enum WeightType {
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
-        Flux2Weight
+        Flux2Weight,
+        ZImageTurboWeight
     )]
     Q4_0,
     #[subenum(Flux2Weight)]
@@ -54,7 +56,8 @@ pub enum WeightType {
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
-        Flux2Weight
+        Flux2Weight,
+        ZImageTurboWeight
     )]
     Q5_0,
     #[subenum(Flux2Weight)]
@@ -67,7 +70,8 @@ pub enum WeightType {
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
         ChromaRadianceWeight,
-        Flux2Weight
+        Flux2Weight,
+        ZImageTurboWeight
     )]
     Q8_0,
     Q8_1,
@@ -77,7 +81,8 @@ pub enum WeightType {
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
-        Flux2Weight
+        Flux2Weight,
+        ZImageTurboWeight
     )]
     Q2_K,
     #[subenum(
@@ -85,31 +90,22 @@ pub enum WeightType {
         Flux1MiniWeight,
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
-        DiffInstructStarWeight
+        DiffInstructStarWeight,
+        ZImageTurboWeight,
+        Flux2Weight
     )]
     Q3_K,
-    #[subenum(Flux2Weight)]
-    Q3_K_M,
-    #[subenum(Flux2Weight)]
-    Q3_K_S,
-    #[subenum(Flux1Weight)]
+    #[subenum(Flux1Weight, ZImageTurboWeight, Flux2Weight)]
     Q4_K,
-    #[subenum(Flux2Weight)]
-    Q4_K_M,
-    #[subenum(Flux2Weight)]
-    Q4_K_S,
-    #[subenum(Flux1MiniWeight)]
+    #[subenum(Flux1MiniWeight, Flux2Weight)]
     Q5_K,
-    #[subenum(Flux2Weight)]
-    Q5_K_M,
-    #[subenum(Flux2Weight)]
-    Q5_K_S,
     #[subenum(
         Flux1MiniWeight,
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
-        Flux2Weight
+        Flux2Weight,
+        ZImageTurboWeight
     )]
     Q6_K,
     Q8_K,
@@ -127,7 +123,13 @@ pub enum WeightType {
     I64,
     F64,
     IQ1_M,
-    #[subenum(Flux1MiniWeight, ChromaWeight, ChromaRadianceWeight, Flux2Weight)]
+    #[subenum(
+        Flux1MiniWeight,
+        ChromaWeight,
+        ChromaRadianceWeight,
+        Flux2Weight,
+        ZImageTurboWeight
+    )]
     BF16,
     TQ1_0,
     TQ2_0,
@@ -191,6 +193,9 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.2-dev> providing a token via [crate::util::set_hf_token]
     /// Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 1.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. 512x512. Vae-tiling enabled.
     Flux2Dev(Flux2Weight),
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
+    /// cfg_scale 1.0. 20 steps. Flash attention enabled. 1024x512. Vae-tiling enabled.
+    ZImageTurbo(ZImageTurboWeight),
 }
 
 impl Preset {
@@ -217,6 +222,7 @@ impl Preset {
             Preset::ChromaRadiance(sd_type_t) => chroma_radiance(sd_type_t),
             Preset::SSD1B(sd_type_t) => ssd_1b(sd_type_t),
             Preset::Flux2Dev(sd_type_t) => flux_2_dev(sd_type_t),
+            Preset::ZImageTurbo(sd_type_t) => z_image_turbo(sd_type_t),
         }
     }
 }

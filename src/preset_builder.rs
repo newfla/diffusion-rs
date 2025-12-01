@@ -9,7 +9,7 @@ use crate::{
     preset::{
         ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
         Flux1MiniWeight, Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-        SSD1BWeight,
+        SSD1BWeight, ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -544,46 +544,25 @@ fn flux_2_dev_weight(sd_type: Flux2Weight) -> Result<(PathBuf, PathBuf), ApiErro
                 "Mistral-Small-3.2-24B-Instruct-2506-Q2_K.gguf",
             ),
         ),
-        Flux2Weight::Q3_K_M => (
+        Flux2Weight::Q3_K => (
             ("city96/FLUX.2-dev-gguf", "flux2-dev-Q3_K_M.gguf"),
             (
                 "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
                 "Mistral-Small-3.2-24B-Instruct-2506-Q3_K_M.gguf",
             ),
         ),
-        Flux2Weight::Q3_K_S => (
-            ("city96/FLUX.2-dev-gguf", "flux2-dev-Q3_K_S.gguf"),
-            (
-                "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
-                "Mistral-Small-3.2-24B-Instruct-2506-Q3_K_S.gguf",
-            ),
-        ),
-        Flux2Weight::Q4_K_M => (
+        Flux2Weight::Q4_K => (
             ("city96/FLUX.2-dev-gguf", "flux2-dev-Q4_K_M.gguf"),
             (
                 "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
                 "Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf",
             ),
         ),
-        Flux2Weight::Q4_K_S => (
-            ("city96/FLUX.2-dev-gguf", "flux2-dev-Q4_K_S.gguf"),
-            (
-                "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
-                "Mistral-Small-3.2-24B-Instruct-2506-Q4_K_S.gguf",
-            ),
-        ),
-        Flux2Weight::Q5_K_M => (
+        Flux2Weight::Q5_K => (
             ("city96/FLUX.2-dev-gguf", "flux2-dev-Q5_K_M.gguf"),
             (
                 "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
                 "Mistral-Small-3.2-24B-Instruct-2506-Q5_K_M.gguf",
-            ),
-        ),
-        Flux2Weight::Q5_K_S => (
-            ("city96/FLUX.2-dev-gguf", "flux2-dev-Q5_K_S.gguf"),
-            (
-                "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
-                "Mistral-Small-3.2-24B-Instruct-2506-Q5_K_S.gguf",
             ),
         ),
         Flux2Weight::Q6_K => (
@@ -598,6 +577,94 @@ fn flux_2_dev_weight(sd_type: Flux2Weight) -> Result<(PathBuf, PathBuf), ApiErro
             (
                 "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
                 "Mistral-Small-3.2-24B-Instruct-2506-BF16.gguf",
+            ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn z_image_turbo(sd_type: ZImageTurboWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = z_image_turbo_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.1-schnell",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.diffusion_model(model);
+    model_config.llm(llm);
+    model_config.flash_attention(true);
+    model_config.vae(vae);
+    model_config.vae_tiling(true);
+    config.cfg_scale(1.);
+    config.height(1024);
+    config.width(512);
+
+    Ok((config, model_config))
+}
+
+fn z_image_turbo_weight(sd_type: ZImageTurboWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        ZImageTurboWeight::Q4_0 => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q4_0.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q4_0.gguf",
+            ),
+        ),
+        ZImageTurboWeight::Q5_0 => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q5_0.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q4_0.gguf",
+            ),
+        ),
+        ZImageTurboWeight::Q8_0 => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q8_0.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q8_0.gguf",
+            ),
+        ),
+        ZImageTurboWeight::Q2_K => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q2_K.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q2_K.gguf",
+            ),
+        ),
+        ZImageTurboWeight::Q3_K => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q3_K.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q3_K_M.gguf",
+            ),
+        ),
+        ZImageTurboWeight::Q4_K => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q4_K.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+            ),
+        ),
+        ZImageTurboWeight::Q6_K => (
+            ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q6_0.gguf"),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q6_K.gguf",
+            ),
+        ),
+        ZImageTurboWeight::BF16 => (
+            (
+                "Comfy-Org/z_image_turbo",
+                "split_files/diffusion_models/z_image_turbo_bf16.safetensors",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-F16.gguf",
             ),
         ),
     };
