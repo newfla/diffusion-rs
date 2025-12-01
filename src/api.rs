@@ -732,7 +732,7 @@ unsafe fn upscale(
 }
 
 /// Generate an image with a prompt
-pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
+pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
     let prompt: CLibString = match &model_config.prompt_suffix {
         Some(suffix) => format!("{} {suffix}", &config.prompt),
         None => config.prompt.clone(),
@@ -754,12 +754,13 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             channel: 1,
             data: null_mut(),
         };
+        let mut layers = config.skip_layer.clone();
         let guidance = sd_guidance_params_t {
             txt_cfg: config.cfg_scale,
             img_cfg: config.cfg_scale,
             distilled_guidance: config.guidance,
             slg: sd_slg_params_t {
-                layers: config.skip_layer.as_mut_ptr(),
+                layers: layers.as_mut_ptr(),
                 layer_count: config.skip_layer.len(),
                 layer_start: config.skip_layer_start,
                 layer_end: config.skip_layer_end,
@@ -953,7 +954,7 @@ mod tests {
             "RealESRGAN_x4plus_anime_6B.pth",
         )
         .unwrap();
-        let mut config = ConfigBuilder::default()
+        let config = ConfigBuilder::default()
             .prompt("a lovely duck drinking water from a bottle")
             .output(PathBuf::from("./output_1.png"))
             .batch_count(1)
@@ -966,21 +967,21 @@ mod tests {
             .build()
             .unwrap();
 
-        gen_img(&mut config, &mut model_config).unwrap();
-        let mut config2 = ConfigBuilder::from(config.clone())
+        gen_img(&config, &mut model_config).unwrap();
+        let config2 = ConfigBuilder::from(config.clone())
             .prompt("a lovely duck drinking water from a straw")
             .output(PathBuf::from("./output_2.png"))
             .build()
             .unwrap();
-        gen_img(&mut config2, &mut model_config).unwrap();
+        gen_img(&config2, &mut model_config).unwrap();
 
-        let mut config3 = ConfigBuilder::from(config)
+        let config3 = ConfigBuilder::from(config)
             .prompt("a lovely dog drinking water from a starbucks cup")
             .batch_count(2)
             .output(PathBuf::from("./"))
             .build()
             .unwrap();
 
-        gen_img(&mut config3, &mut model_config).unwrap();
+        gen_img(&config3, &mut model_config).unwrap();
     }
 }

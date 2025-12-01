@@ -291,7 +291,8 @@ mod tests {
         api::gen_img,
         preset::{
             ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
-            Flux1Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
+            Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, SSD1BWeight,
+            ZImageTurboWeight,
         },
         util::set_hf_token,
     };
@@ -300,12 +301,12 @@ mod tests {
     static PROMPT: &str = "a lovely dynosaur made by crochet";
 
     fn run(preset: Preset) {
-        let (mut config, mut model_config) = PresetBuilder::default()
+        let (config, mut model_config) = PresetBuilder::default()
             .preset(preset)
             .prompt(PROMPT)
             .build()
             .unwrap();
-        gen_img(&mut config, &mut model_config).unwrap();
+        gen_img(&config, &mut model_config).unwrap();
     }
 
     #[ignore]
@@ -434,12 +435,18 @@ mod tests {
     #[ignore]
     #[test]
     fn test_ssd_1b() {
-        run(Preset::SSD1B(super::SSD1BWeight::F8_E4M3));
+        run(Preset::SSD1B(SSD1BWeight::F8_E4M3));
     }
 
     #[ignore]
     #[test]
     fn test_flux_2_dev() {
-        run(Preset::Flux2Dev(super::Flux2Weight::Q2_K));
+        run(Preset::Flux2Dev(Flux2Weight::Q2_K));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_z_image_turbo() {
+        run(Preset::ZImageTurbo(ZImageTurboWeight::Q2_K));
     }
 }
