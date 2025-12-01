@@ -4,9 +4,7 @@ use std::ffi::c_void;
 use std::path::Path;
 use std::path::PathBuf;
 use std::ptr::null_mut;
-use std::ptr::read_unaligned;
 use std::slice;
-use std::slice::from_raw_parts;
 
 use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
@@ -815,13 +813,13 @@ pub fn gen_img(config: &mut Config, model_config: &mut ModelConfig) -> Result<()
             data: *mut ::std::os::raw::c_void,
         ) {
             unsafe {
-                let path=  &*data.cast::<PathBuf>();
-                let _ = save_img(*frames, &path);
+                let path = &*data.cast::<PathBuf>();
+                let _ = save_img(*frames, path);
             }
         }
 
         if config.preview_mode != PreviewType::PREVIEW_NONE {
-            let data  = config.preview_output.as_path() as *const Path;
+            let data = config.preview_output.as_path() as *const Path;
 
             sd_set_preview_callback(
                 Some(save_preview_local),
