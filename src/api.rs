@@ -820,7 +820,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
         }
 
         if config.preview_mode != PreviewType::PREVIEW_NONE {
-            let data = config.preview_output.as_path() as *const Path;
+            let data = &config.preview_output as *const PathBuf;
 
             sd_set_preview_callback(
                 Some(save_preview_local),
