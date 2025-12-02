@@ -599,6 +599,7 @@ pub fn z_image_turbo(sd_type: ZImageTurboWeight) -> Result<ConfigsBuilder, ApiEr
     model_config.flash_attention(true);
     model_config.vae(vae);
     model_config.vae_tiling(true);
+    config.steps(9);
     config.cfg_scale(1.);
     config.height(1024);
     config.width(512);

@@ -194,7 +194,7 @@ pub enum Preset {
     /// Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 1.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. 512x512. Vae-tiling enabled.
     Flux2Dev(Flux2Weight),
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
-    /// cfg_scale 1.0. 20 steps. Flash attention enabled. 1024x512. Vae-tiling enabled.
+    /// cfg_scale 1.0. 9 steps. Flash attention enabled. 1024x1024. Vae-tiling enabled.
     ZImageTurbo(ZImageTurboWeight),
 }
 
@@ -441,12 +441,14 @@ mod tests {
     #[ignore]
     #[test]
     fn test_flux_2_dev() {
+        set_hf_token(include_str!("../token.txt"));
         run(Preset::Flux2Dev(Flux2Weight::Q2_K));
     }
 
     #[ignore]
     #[test]
     fn test_z_image_turbo() {
+        set_hf_token(include_str!("../token.txt"));
         run(Preset::ZImageTurbo(ZImageTurboWeight::Q2_K));
     }
 }
