@@ -9,7 +9,7 @@ use crate::{
     preset::{
         ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
         Flux1MiniWeight, Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-        SSD1BWeight, ZImageTurboWeight,
+        QwenImageWeight, SSD1BWeight, ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -666,6 +666,128 @@ fn z_image_turbo_weight(sd_type: ZImageTurboWeight) -> Result<(PathBuf, PathBuf)
             (
                 "unsloth/Qwen3-4B-Instruct-2507-GGUF",
                 "Qwen3-4B-Instruct-2507-F16.gguf",
+            ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = qwen_image_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "Comfy-Org/Qwen-Image_ComfyUI",
+        "split_files/vae/qwen_image_vae.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.diffusion_model(model);
+    model_config.llm(llm);
+    model_config.vae(vae);
+    model_config.offload_params_to_cpu(true);
+    model_config.flash_attention(true);
+    model_config.vae_tiling(true);
+    model_config.flow_shift(3.0);
+    config.sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
+    config.cfg_scale(2.5);
+    config.height(1024);
+    config.width(1024);
+
+    Ok((config, model_config))
+}
+
+fn qwen_image_weight(sd_type: QwenImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        QwenImageWeight::Q4_0 => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q4_0.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q4_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q4_1 => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q4_1.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q4_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q5_0 => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q5_0.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q5_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q5_1 => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q5_1.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q5_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q8_0 => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q8_0.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q8_0.gguf",
+            ),
+        ),
+        QwenImageWeight::Q2_K => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q2_K.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q2_K.gguf",
+            ),
+        ),
+        QwenImageWeight::Q3_K => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q3_K_M.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q3_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q4_K => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q4_K_M.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q4_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q5_K => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q5_K_M.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q5_K_M.gguf",
+            ),
+        ),
+        QwenImageWeight::Q6_K => (
+            ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q6_K.gguf"),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q6_K.gguf",
+            ),
+        ),
+        QwenImageWeight::BF16 => (
+            (
+                "Comfy-Org/Qwen-Image_ComfyUI",
+                "split_files/diffusion_models/qwen_image_bf16.safetensors",
+            ),
+            (
+                "Comfy-Org/Qwen-Image_ComfyUI",
+                "split_files/text_encoders/qwen_2.5_vl_7b.safetensors",
+            ),
+        ),
+        QwenImageWeight::F8_E4M3 => (
+            (
+                "Comfy-Org/Qwen-Image_ComfyUI",
+                "split_files/diffusion_models/qwen_image_fp8_e4m3fn.safetensors",
+            ),
+            (
+                "Comfy-Org/Qwen-Image_ComfyUI",
+                "split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
             ),
         ),
     };
