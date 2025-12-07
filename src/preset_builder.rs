@@ -9,7 +9,7 @@ use crate::{
     preset::{
         ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
         Flux1MiniWeight, Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-        QwenImageWeight, SSD1BWeight, ZImageTurboWeight,
+        OvisImageWeight, QwenImageWeight, SSD1BWeight, ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -793,5 +793,45 @@ fn qwen_image_weight(sd_type: QwenImageWeight) -> Result<(PathBuf, PathBuf), Api
     };
     let model_path = download_file_hf_hub(model.0, model.1)?;
     let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn ovis_image(sd_type: OvisImageWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = ovis_image_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.1-schnell",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.diffusion_model(model);
+    model_config.llm(llm);
+    model_config.vae(vae);
+    model_config.offload_params_to_cpu(true);
+    model_config.flash_attention(true);
+    model_config.vae_tiling(true);
+    config.steps(20);
+    config.cfg_scale(5.);
+    config.height(512);
+    config.width(512);
+
+    Ok((config, model_config))
+}
+
+fn ovis_image_weight(sd_type: OvisImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let model = match sd_type {
+        OvisImageWeight::Q4_0 => ("leejet/Ovis-Image-7B-GGUF", "ovis_image-Q4_0.gguf"),
+        OvisImageWeight::Q8_0 => ("leejet/Ovis-Image-7B-GGUF", "ovis_image-Q8_0.gguf"),
+        OvisImageWeight::BF16 => (
+            "Comfy-Org/Ovis-Image",
+            "split_files/diffusion_models/ovis_image_bf16.safetensors",
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(
+        "Comfy-Org/Ovis-Image",
+        "split_files/text_encoders/ovis_2.5.safetensors",
+    )?;
     Ok((model_path, llm_path))
 }

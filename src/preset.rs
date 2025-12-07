@@ -6,9 +6,9 @@ use crate::{
     api::{Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
         chroma, chroma_radiance, diff_instruct_star, flux_1_dev, flux_1_mini, flux_1_schnell,
-        flux_2_dev, juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, qwen_image, sd_turbo,
-        sdxl_base_1_0, sdxl_turbo_1_0_fp16, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
-        stable_diffusion_2_1, stable_diffusion_3_5_large_fp16,
+        flux_2_dev, juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image,
+        sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16, ssd_1b, stable_diffusion_1_4,
+        stable_diffusion_1_5, stable_diffusion_2_1, stable_diffusion_3_5_large_fp16,
         stable_diffusion_3_5_large_turbo_fp16, stable_diffusion_3_5_medium_fp16,
         stable_diffusion_3_medium_fp16, z_image_turbo,
     },
@@ -27,7 +27,8 @@ use crate::{
     SSD1BWeight,
     Flux2Weight,
     ZImageTurboWeight,
-    QwenImageWeight
+    QwenImageWeight,
+    OvisImageWeight
 )]
 #[derive(Debug, Clone, Copy)]
 /// Model weight types
@@ -49,7 +50,8 @@ pub enum WeightType {
         DiffInstructStarWeight,
         Flux2Weight,
         ZImageTurboWeight,
-        QwenImageWeight
+        QwenImageWeight,
+        OvisImageWeight
     )]
     Q4_0,
     #[subenum(Flux2Weight, QwenImageWeight)]
@@ -75,7 +77,8 @@ pub enum WeightType {
         ChromaRadianceWeight,
         Flux2Weight,
         ZImageTurboWeight,
-        QwenImageWeight
+        QwenImageWeight,
+        OvisImageWeight
     )]
     Q8_0,
     Q8_1,
@@ -136,7 +139,8 @@ pub enum WeightType {
         ChromaRadianceWeight,
         Flux2Weight,
         ZImageTurboWeight,
-        QwenImageWeight
+        QwenImageWeight,
+        OvisImageWeight
     )]
     BF16,
     TQ1_0,
@@ -206,6 +210,9 @@ pub enum Preset {
     ZImageTurbo(ZImageTurboWeight),
     /// Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 2.5. flow_shift 3.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. 1024x1024. Vae-tiling enabled.
     QwenImage(QwenImageWeight),
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnel> providing a token via [crate::util::set_hf_token]
+    /// cfg_scale 5.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. Vae-tiling enabled. 512x512.
+    OvisImage(OvisImageWeight),
 }
 
 impl Preset {
@@ -234,6 +241,7 @@ impl Preset {
             Preset::Flux2Dev(sd_type_t) => flux_2_dev(sd_type_t),
             Preset::ZImageTurbo(sd_type_t) => z_image_turbo(sd_type_t),
             Preset::QwenImage(sd_type_t) => qwen_image(sd_type_t),
+            Preset::OvisImage(sd_type_t) => ovis_image(sd_type_t),
         }
     }
 }
@@ -302,8 +310,8 @@ mod tests {
         api::gen_img,
         preset::{
             ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
-            Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, QwenImageWeight,
-            SSD1BWeight, ZImageTurboWeight,
+            Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight,
+            QwenImageWeight, SSD1BWeight, ZImageTurboWeight,
         },
         util::set_hf_token,
     };
@@ -467,5 +475,12 @@ mod tests {
     #[test]
     fn qwen_image() {
         run(Preset::QwenImage(QwenImageWeight::Q2_K));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_ovis_image() {
+        set_hf_token(include_str!("../token.txt"));
+        run(Preset::OvisImage(OvisImageWeight::Q4_0));
     }
 }

@@ -202,8 +202,8 @@ pub struct ModelConfig {
     #[builder(default = "Scheduler::SCHEDULER_COUNT")]
     scheduler: Scheduler,
 
-    /// Prediction type override (default: DEFAULT_PRED)
-    #[builder(default = "Prediction::DEFAULT_PRED")]
+    /// Prediction type override (default: PREDICTION_COUNT)
+    #[builder(default = "Prediction::PREDICTION_COUNT")]
     prediction: Prediction,
 
     /// Keep vae in cpu (for low vram) (default: false)
