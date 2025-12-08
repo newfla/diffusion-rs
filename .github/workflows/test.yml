@@ -100,6 +100,7 @@ jobs:
           use-local-cache: false
           use-github-cache: false
           method: "network"
+          cuda: "12.8.1"
           sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "thrust", "visual_studio_integration"]'
       - name: Install Windows dependencies
         if: matrix.platform == 'windows-2022'
