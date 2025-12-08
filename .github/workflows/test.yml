@@ -83,33 +83,35 @@ jobs:
       - name: Test
         run: cargo test --features metal
 
-  # build-cuda:
-  #   needs: build-no-features
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       platform: [ubuntu-22.04] #, windows-2022]
-  #   runs-on: ${{ matrix.platform }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: 'recursive'
-  #     - name: Install cuda toolkit
-  #       uses: Jimver/cuda-toolkit@v0.2.25
-  #       with:
-  #         use-local-cache: false
-  #         use-github-cache: false
-  #     - name: Install Windows dependencies
-  #       if: matrix.platform == 'windows-2022'
-  #       uses: ilammy/msvc-dev-cmd@v1
-  #     - name: Ubuntu build dependencies
-  #       if: matrix.platform == 'ubuntu-22.04'
-  #       run: sudo apt update && sudo apt install -y clang cmake
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - name: Build
-  #       env:
-  #         CUDA_COMPUTE_CAP: "75" 
-  #       run: cargo build --features cuda
+  build-cuda:
+    needs: build-no-features
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Install cuda toolkit
+        uses: Jimver/cuda-toolkit@v0.2.29
+        with:
+          use-local-cache: false
+          use-github-cache: false
+          method: "network"
+          cuda: "12.8.1"
+      - name: Install Windows dependencies
+        if: matrix.platform == 'windows-2022'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Ubuntu build dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: sudo apt update && sudo apt install -y clang cmake
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        env:
+          CUDA_COMPUTE_CAP: "75" 
+        run: cargo build --features cuda
 
   build-rocm:
     needs: build-no-features
