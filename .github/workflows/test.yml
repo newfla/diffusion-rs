@@ -99,6 +99,7 @@ jobs:
         with:
           use-local-cache: false
           use-github-cache: false
+          sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "thrust", "visual_studio_integration"]'
       - name: Install Windows dependencies
         if: matrix.platform == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
