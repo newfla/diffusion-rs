@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::ffi::c_char;
 use std::ffi::c_void;
@@ -11,11 +12,13 @@ use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_ctx_params_t;
 use diffusion_rs_sys::sd_easycache_params_t;
+use diffusion_rs_sys::sd_embedding_t;
 use diffusion_rs_sys::sd_get_default_sample_method;
 use diffusion_rs_sys::sd_get_default_scheduler;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
+use diffusion_rs_sys::sd_lora_t;
 use diffusion_rs_sys::sd_pm_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_set_preview_callback;
@@ -27,6 +30,8 @@ use image::ImageError;
 use image::RgbImage;
 use libc::free;
 use thiserror::Error;
+use walkdir::DirEntry;
+use walkdir::WalkDir;
 
 use diffusion_rs_sys::free_sd_ctx;
 use diffusion_rs_sys::new_sd_ctx;
@@ -53,6 +58,8 @@ pub use diffusion_rs_sys::preview_t as PreviewType;
 /// Lora mode
 pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
 
+static VALID_EXT: [&str; 3] = ["pt", "safetensors", "gguf"];
+
 #[non_exhaustive]
 #[derive(Error, Debug)]
 /// Error that can occurs while forwarding models
@@ -77,6 +84,23 @@ pub enum ClipSkip {
     OneLayer = 2,
 }
 
+type EmbeddingsStorage = (PathBuf, Vec<(CLibString, CLibPath)>, Vec<sd_embedding_t>);
+
+#[derive(Default, Debug, Clone)]
+struct LoraStorage {
+    lora_model_dir: CLibPath,
+    data: Vec<(CLibPath, String, f32)>,
+    loras_t: Vec<sd_lora_t>,
+}
+
+/// Specify the instructions for a Lora model
+#[derive(Default, Debug, Clone)]
+pub struct LoraSpec {
+    pub file_name: String,
+    pub is_high_noise: bool,
+    pub multiplier: f32,
+}
+
 #[derive(Builder, Debug, Clone)]
 #[builder(
     setter(into, strip_option),
@@ -97,8 +121,12 @@ pub struct ModelConfig {
     upscale_model: Option<CLibPath>,
 
     /// Run the ESRGAN upscaler this many times (default 1)
-    #[builder(default = "0")]
+    #[builder(default = "1")]
     upscale_repeats: i32,
+
+    /// Tile size for ESRGAN upscaler (default 128)
+    #[builder(default = "128")]
+    upscale_tile_size: i32,
 
     /// Path to full model
     #[builder(default = "Default::default()")]
@@ -145,8 +173,8 @@ pub struct ModelConfig {
     control_net: CLibPath,
 
     /// Path to embeddings
-    #[builder(default = "Default::default()")]
-    embeddings: CLibPath,
+    #[builder(default = "Default::default()", setter(custom))]
+    embeddings: EmbeddingsStorage,
 
     /// Path to PHOTOMAKER model
     #[builder(default = "Default::default()")]
@@ -162,15 +190,11 @@ pub struct ModelConfig {
 
     /// Lora model directory
     #[builder(default = "Default::default()", setter(custom))]
-    lora_model: CLibPath,
+    lora_models: LoraStorage,
 
     /// Path to the standalone high noise diffusion model
     #[builder(default = "Default::default()")]
     high_noise_diffusion_model: CLibPath,
-
-    /// Suffix that needs to be added to prompt (e.g. lora model)
-    #[builder(default = "None", private)]
-    prompt_suffix: Option<String>,
 
     /// Process vae in tiles to reduce memory usage (default: false)
     #[builder(default = "false")]
@@ -303,11 +327,96 @@ impl ModelConfigBuilder {
             ))
     }
 
-    pub fn lora_model(&mut self, lora_model: &Path) -> &mut Self {
-        let folder = lora_model.parent().unwrap();
-        let file_name = lora_model.file_stem().unwrap().to_str().unwrap().to_owned();
-        self.prompt_suffix(format!("<lora:{file_name}:1>"));
-        self.lora_model = Some(folder.into());
+    fn filter_valid_extensions(&self, path: &Path) -> impl Iterator<Item = DirEntry> {
+        WalkDir::new(path)
+            .into_iter()
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| {
+                entry
+                    .path()
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext_str| VALID_EXT.contains(&ext_str))
+                    .unwrap_or(false)
+            })
+    }
+
+    fn build_single_lora_storage(
+        spec: &LoraSpec,
+        is_high_noise: bool,
+        valid_loras: &HashMap<String, PathBuf>,
+    ) -> ((CLibPath, String, f32), sd_lora_t) {
+        let path = valid_loras.get(&spec.file_name).unwrap().as_path();
+        let c_path = CLibPath::from(path);
+        let lora = sd_lora_t {
+            is_high_noise,
+            multiplier: spec.multiplier,
+            path: c_path.as_ptr(),
+        };
+        let data = (c_path, spec.file_name.clone(), spec.multiplier);
+        (data, lora)
+    }
+
+    pub fn embeddings(&mut self, embeddings_dir: &Path) -> &mut Self {
+        let data: Vec<(CLibString, CLibPath)> = self
+            .filter_valid_extensions(embeddings_dir)
+            .map(|entry| {
+                let file_stem = entry
+                    .path()
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or_default()
+                    .to_owned();
+                (CLibString::from(file_stem), CLibPath::from(entry.path()))
+            })
+            .collect();
+        let data_pointer = data
+            .iter()
+            .map(|(name, path)| sd_embedding_t {
+                name: name.as_ptr(),
+                path: path.as_ptr(),
+            })
+            .collect();
+        self.embeddings = Some((embeddings_dir.to_path_buf(), data, data_pointer));
+        self
+    }
+
+    pub fn lora_models(&mut self, lora_model_dir: &Path, specs: Vec<LoraSpec>) -> &mut Self {
+        let valid_loras: HashMap<String, PathBuf> = self
+            .filter_valid_extensions(lora_model_dir)
+            .map(|entry| {
+                let path = entry.path();
+                (
+                    path.file_stem()
+                        .and_then(|stem| stem.to_str())
+                        .unwrap_or_default()
+                        .to_owned(),
+                    path.to_path_buf(),
+                )
+            })
+            .collect();
+        let valid_lora_names: Vec<&String> = valid_loras.keys().collect();
+        let standard = specs
+            .iter()
+            .filter(|s| valid_lora_names.contains(&&s.file_name) && !s.is_high_noise)
+            .map(|s| Self::build_single_lora_storage(s, false, &valid_loras));
+        let high_noise = specs
+            .iter()
+            .filter(|s| valid_lora_names.contains(&&s.file_name) && s.is_high_noise)
+            .map(|s| Self::build_single_lora_storage(s, true, &valid_loras));
+
+        let mut data = Vec::new();
+        let mut loras_t = Vec::new();
+        for lora in standard.chain(high_noise) {
+            data.push(lora.0);
+            loras_t.push(lora.1);
+        }
+
+        self.lora_models = Some(LoraStorage {
+            lora_model_dir: lora_model_dir.into(),
+            data,
+            loras_t,
+        });
         self
     }
 
@@ -333,10 +442,10 @@ impl ModelConfig {
                         self.offload_params_to_cpu,
                         self.diffusion_conv_direct,
                         self.n_threads,
+                        self.upscale_tile_size,
                     );
                     self.upscaler_ctx = Some(upscaler);
                 }
-
                 self.upscaler_ctx
             }
         }
@@ -358,8 +467,9 @@ impl ModelConfig {
                     vae_path: self.vae.as_ptr(),
                     taesd_path: self.taesd.as_ptr(),
                     control_net_path: self.control_net.as_ptr(),
-                    lora_model_dir: self.lora_model.as_ptr(),
-                    embedding_dir: self.embeddings.as_ptr(),
+                    lora_model_dir: self.lora_models.lora_model_dir.as_ptr(),
+                    embeddings: self.embeddings.2.as_ptr(),
+                    embedding_count: self.embeddings.1.len() as u32,
                     photo_maker_path: self.photo_maker.as_ptr(),
                     vae_decode_only,
                     free_params_immediately: false,
@@ -425,7 +535,7 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .vae(value.vae.clone())
             .taesd(value.taesd.clone())
             .control_net(value.control_net.clone())
-            .embeddings(value.embeddings.clone())
+            .embeddings(&value.embeddings.0)
             .photo_maker(value.photo_maker.clone())
             .pm_id_embed_path(value.pm_id_embed_path.clone())
             .weight_type(value.weight_type)
@@ -452,17 +562,25 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .flow_shift(value.flow_shift)
             .timestep_shift(value.timestep_shift)
             .taesd_preview_only(value.taesd_preview_only)
-            .lora_model(&Into::<PathBuf>::into(&value.lora_model))
             .lora_apply_mode(value.lora_apply_mode);
+
+        let lora_model_dir = Into::<PathBuf>::into(&value.lora_models.lora_model_dir);
+        let lora_specs = value
+            .lora_models
+            .data
+            .iter()
+            .map(|(_, name, multiplier)| LoraSpec {
+                file_name: name.clone(),
+                is_high_noise: false,
+                multiplier: *multiplier,
+            })
+            .collect();
+
+        builder.lora_models(&lora_model_dir, lora_specs);
 
         if let Some(model) = &value.upscale_model {
             builder.upscale_model(model.clone());
         }
-
-        if let Some(suffix) = &value.prompt_suffix {
-            builder.prompt_suffix(suffix.clone());
-        }
-
         builder
     }
 }
@@ -733,11 +851,7 @@ unsafe fn upscale(
 
 /// Generate an image with a prompt
 pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
-    let prompt: CLibString = match &model_config.prompt_suffix {
-        Some(suffix) => format!("{} {suffix}", &config.prompt),
-        None => config.prompt.clone(),
-    }
-    .into();
+    let prompt: CLibString = CLibString::from(config.prompt.as_str());
     let files = output_files(&config.output, &config.prompt, config.batch_count);
     unsafe {
         let sd_ctx = model_config.diffusion_ctx(true);
@@ -860,6 +974,8 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             vae_tiling_params,
             auto_resize_ref_image: config.disable_auto_resize_ref_image,
             easycache: easy_cache,
+            loras: model_config.lora_models.loras_t.as_ptr(),
+            lora_count: model_config.lora_models.loras_t.len() as u32,
         };
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
         let ret = {
