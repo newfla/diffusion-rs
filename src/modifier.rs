@@ -71,7 +71,7 @@ pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
     builder.1.lora_models(
         lora_path.parent().unwrap(),
         vec![LoraSpec {
-            file_name: "pytorch_lora_weights.safetensors".to_string(),
+            file_name: "pytorch_lora_weights".to_string(),
             is_high_noise: false,
             multiplier: 1.0,
         }],
@@ -91,7 +91,7 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
     builder.1.lora_models(
         lora_path.parent().unwrap(),
         vec![LoraSpec {
-            file_name: "pytorch_lora_weights.safetensors".to_string(),
+            file_name: "pytorch_lora_weights".to_string(),
             is_high_noise: false,
             multiplier: 1.0,
         }],
@@ -175,7 +175,7 @@ pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
     builder.1.lora_models(
         lora_path.parent().unwrap(),
         vec![LoraSpec {
-            file_name: "pytorch_lora_weights.safetensors".to_string(),
+            file_name: "pytorch_lora_weights".to_string(),
             is_high_noise: false,
             multiplier: 1.0,
         }],
