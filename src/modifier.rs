@@ -1,7 +1,7 @@
 use hf_hub::api::sync::ApiError;
 
 use crate::{
-    api::{PreviewType, SampleMethod},
+    api::{LoraSpec, PreviewType, SampleMethod},
     preset::ConfigsBuilder,
     util::download_file_hf_hub,
 };
@@ -68,7 +68,14 @@ pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
         "latent-consistency/lcm-lora-sdv1-5",
         "pytorch_lora_weights.safetensors",
     )?;
-    builder.1.lora_model(&lora_path);
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "pytorch_lora_weights.safetensors".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
     builder.0.cfg_scale(1.).steps(8);
     Ok(builder)
 }
@@ -80,7 +87,15 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
         "latent-consistency/lcm-lora-sdxl",
         "pytorch_lora_weights.safetensors",
     )?;
-    builder.1.lora_model(&lora_path);
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "pytorch_lora_weights.safetensors".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
     builder
         .0
         .cfg_scale(2.)
@@ -157,7 +172,14 @@ pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
         "kylielee505/mylcmlorassd",
         "pytorch_lora_weights.safetensors",
     )?;
-    builder.1.lora_model(&lora_path);
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "pytorch_lora_weights.safetensors".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
     builder.0.cfg_scale(1.).steps(8);
     Ok(builder)
 }
