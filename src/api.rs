@@ -226,6 +226,10 @@ pub struct ModelConfig {
     #[builder(default = "Scheduler::SCHEDULER_COUNT")]
     scheduler: Scheduler,
 
+    /// Custom sigma values for the sampler
+    #[builder(default = "Default::default()")]
+    sigmas: Vec<f32>,
+
     /// Prediction type override (default: PREDICTION_COUNT)
     #[builder(default = "Prediction::PREDICTION_COUNT")]
     prediction: Prediction,
@@ -547,6 +551,7 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .rng(value.rng)
             .sampler_rng_type(value.rng)
             .scheduler(value.scheduler)
+            .sigmas(value.sigmas.clone())
             .prediction(value.prediction)
             .vae_on_cpu(value.vae_on_cpu)
             .clip_on_cpu(value.clip_on_cpu)
@@ -898,6 +903,8 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             eta: config.eta,
             scheduler,
             shifted_timestep: model_config.timestep_shift,
+            custom_sigmas: model_config.sigmas.as_mut_ptr(),
+            custom_sigmas_count: model_config.sigmas.len() as i32,
         };
         let control_image = sd_image_t {
             width: 0,
