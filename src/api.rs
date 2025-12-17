@@ -471,7 +471,6 @@ impl ModelConfig {
                     vae_path: self.vae.as_ptr(),
                     taesd_path: self.taesd.as_ptr(),
                     control_net_path: self.control_net.as_ptr(),
-                    lora_model_dir: self.lora_models.lora_model_dir.as_ptr(),
                     embeddings: self.embeddings.2.as_ptr(),
                     embedding_count: self.embeddings.1.len() as u32,
                     photo_maker_path: self.photo_maker.as_ptr(),
