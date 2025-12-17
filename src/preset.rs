@@ -217,7 +217,8 @@ pub enum Preset {
 
 impl Preset {
     fn try_configs_builder(self) -> Result<(ConfigBuilder, ModelConfigBuilder), ApiError> {
-        match self {
+        #[allow(unused_mut)]
+        let mut preset = match self {
             Preset::StableDiffusion1_4 => stable_diffusion_1_4(),
             Preset::StableDiffusion1_5 => stable_diffusion_1_5(),
             Preset::StableDiffusion2_1 => stable_diffusion_2_1(),
@@ -242,7 +243,17 @@ impl Preset {
             Preset::ZImageTurbo(sd_type_t) => z_image_turbo(sd_type_t),
             Preset::QwenImage(sd_type_t) => qwen_image(sd_type_t),
             Preset::OvisImage(sd_type_t) => ovis_image(sd_type_t),
+        };
+
+        // Metal workaround.
+        // See https://github.com/leejet/stable-diffusion.cpp/issues/1040#issuecomment-3623644576
+        #[cfg(feature = "metal")]
+        {
+            if let Ok((_, model_config)) = &mut preset {
+                model_config.clip_on_cpu(true);
+            };
         }
+        preset
     }
 }
 
@@ -473,7 +484,7 @@ mod tests {
 
     #[ignore]
     #[test]
-    fn qwen_image() {
+    fn test_qwen_image() {
         run(Preset::QwenImage(QwenImageWeight::Q2_K));
     }
 
