@@ -64,6 +64,10 @@ jobs:
           cache: true
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+      - name: setup Env Var Vulkan (windows only)
+        run: |
+          echo "VULKAN_SDK=D:/a/diffusion-rs/diffusion-rs/VULKAN_SDK" >> $GITHUB_ENV
+          echo "VK_SDK_PATH=D:/a/diffusion-rs/diffusion-rs/VULKAN_SDK" >> $GITHUB_ENV
       - name: Build
         run: cargo build --features vulkan
       - name: Test
