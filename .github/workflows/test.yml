@@ -81,7 +81,7 @@ jobs:
       - name: Build (windows only )
         if: matrix.platform == 'windows-2022'
         run: | 
-          Move-Item -Path D:\a\diffusion-rs\diffusion-rs -Destination D:\a\diffusion-rs
+          Move-Item -Path D:\a\diffusion-rs\diffusion-rs\* -Destination D:\a\diffusion-rs
           & cd ..
           & cargo build --features vulkan
       - name: Test
