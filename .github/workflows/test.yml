@@ -83,7 +83,6 @@ jobs:
         run: | 
           cd .. 
           & Move-Item -Path D:\a\diffusion-rs\diffusion-rs\* -Destination D:\a\diffusion-rs
-          & cd ..
           & cargo build --features vulkan
       - name: Test
         if: matrix.platform == 'ubuntu-latest'
