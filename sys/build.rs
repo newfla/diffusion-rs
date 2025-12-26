@@ -57,6 +57,21 @@ fn main() {
     // Configure cmake for building
     let mut config = Config::new(&diffusion_root);
 
+    if target.contains("msvc") {
+        config.generator("Ninja");
+        config.define("CMAKE_C_COMPILER", "cl.exe");
+        config.define("CMAKE_CXX_COMPILER", "cl.exe");
+        config.define("CMAKE_CXX_FLAGS", "'/bigobj'");
+    }
+    config
+        .profile("Release")
+        .define("SD_BUILD_SHARED_LIBS", "OFF")
+        .define("SD_BUILD_EXAMPLES", "OFF")
+        .define("SD_BUILD_SERVER", "OFF")
+        .define("GGML_OPENMP", "OFF")
+        .very_verbose(true)
+        .pic(true);
+
     //Enable cmake feature flags
     #[cfg(feature = "cuda")]
     {
@@ -126,6 +141,14 @@ fn main() {
     {
         let vulkan_path = env::var("VULKAN_SDK").map(|path| PathBuf::from(path));
         if target.contains("msvc") {
+            // unsafe { env::set_var("TrackFileAccess", "false") };
+            // config
+            //  .cflag("/FS")
+            //  .cxxflag("/FS")
+            //    .define("CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS", "1")
+            //    .define("CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES", "1")
+            //    .define("CMAKE_CXX_RESPONSE_FILE_LINK_FLAG", "@")
+            //    .define("CMAKE_NINJA_FORCE_RESPONSE_FILE", "1");
             println!("cargo:rerun-if-env-changed=VULKAN_SDK");
             println!("cargo:rustc-link-lib=vulkan-1");
 
@@ -187,14 +210,6 @@ fn main() {
     }
 
     // Build stable-diffusion
-    config
-        .profile("Release")
-        .define("SD_BUILD_SHARED_LIBS", "OFF")
-        .define("SD_BUILD_EXAMPLES", "OFF")
-        .define("GGML_OPENMP", "OFF")
-        .very_verbose(true)
-        .pic(true);
-
     let destination = config.build();
 
     add_link_search_path(&out.join("lib")).unwrap();
