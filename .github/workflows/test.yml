@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
+        platform:  [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:  [ubuntu-latest, macos-latest] #windows-latest, ]
+        platform:  [ubuntu-latest, macos-latest, windows-2022]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -57,15 +57,33 @@ jobs:
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
         run: sudo apt update && sudo apt install -y clang cmake
-      - name: Install Vulkan SDK
+      - name: Install Vulkan SDK (no windows)
+        if: matrix.platform != 'windows-2022'
         uses: humbletim/install-vulkan-sdk@0ef43dbc8af56d77bcb1e8b1ebbbaa8718ead524
         with:
           version: 1.4.328.1
           cache: true
+      - name: Install Vulkan SDK (windows only)
+        if: matrix.platform == 'windows-2022'
+        run: |
+          curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/1.4.328.1/windows/vulkansdk-windows-X64-1.4.328.1.exe"
+          & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
+          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\1.4.328.1"
+          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\1.4.328.1\bin"
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Build
+      - name: Install Windows dependencies
+        if: matrix.platform == 'windows-2022'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build (no windows)
+        if: matrix.platform != 'windows-2022'
         run: cargo build --features vulkan
+      - name: Build (windows only )
+        if: matrix.platform == 'windows-2022'
+        run: | 
+          cd .. 
+          & Move-Item -Path D:\a\diffusion-rs\diffusion-rs\* -Destination D:\a\diffusion-rs
+          & cargo build --features vulkan
       - name: Test
         if: matrix.platform == 'ubuntu-latest'
         run: cargo test --features vulkan
