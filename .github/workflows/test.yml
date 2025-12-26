@@ -57,21 +57,24 @@ jobs:
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
         run: sudo apt update && sudo apt install -y clang cmake
-      - name: Install Vulkan SDK
+      - name: Install Vulkan SDK (no windows)
+        if: matrix.platform != 'windows-2022'
         uses: humbletim/install-vulkan-sdk@0ef43dbc8af56d77bcb1e8b1ebbbaa8718ead524
         with:
           version: 1.4.328.1
           cache: true
+      - name: Install Vulkan SDK
+        if: matrix.platform == 'windows-2022'
+        run: |
+          curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/1.4.328.1/windows/vulkansdk-windows-X64-1.4.328.1.exe"
+          & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
+          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\1.4.328.1"
+          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\1.4.328.1\bin"
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Windows dependencies
         if: matrix.platform == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
-      - name: setup Env Var Vulkan (windows only)
-        if: matrix.platform == 'windows-2022'
-        run: |
-          echo "VULKAN_SDK=D:/a/diffusion-rs/diffusion-rs/VULKAN_SDK" >> $GITHUB_ENV
-          echo "VK_SDK_PATH=D:/a/diffusion-rs/diffusion-rs/VULKAN_SDK" >> $GITHUB_ENV
       - name: Build
         run: cargo build --features vulkan
       - name: Test
