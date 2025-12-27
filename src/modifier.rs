@@ -160,6 +160,7 @@ pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
     Ok(builder)
 }
 
+/// Offload model parameters to CPU (for low VRAM GPUs)
 pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     builder.1.offload_params_to_cpu(true);
     Ok(builder)
@@ -208,12 +209,6 @@ pub fn preview_vae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiErr
     Ok(builder)
 }
 
-/// Enable easycache support with default values
-pub fn enable_easycache(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
-    builder.1.easy_cache(true);
-    Ok(builder)
-}
-
 /// Enable flash attention
 pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     builder.1.flash_attention(true);
@@ -225,8 +220,8 @@ mod tests {
     use crate::{
         api::gen_img,
         modifier::{
-            enable_easycache, enable_flash_attention, lcm_lora_ssd_1b, offload_params_to_cpu,
-            preview_proj, preview_tae, preview_vae, vae_tiling,
+            enable_flash_attention, lcm_lora_ssd_1b, offload_params_to_cpu, preview_proj,
+            preview_tae, preview_vae, vae_tiling,
         },
         preset::{Flux1Weight, Modifier, Preset, PresetBuilder},
         util::set_hf_token,
@@ -236,7 +231,7 @@ mod tests {
         hybrid_taesd, hybrid_taesd_xl, lcm_lora_sd_1_5, lcm_lora_sdxl_base_1_0, taesd, taesd_xl,
     };
 
-    static PROMPT: &str = "a lovely dynosaur made by crochet";
+    static PROMPT: &str = "a lovely dinosaur made by crochet";
 
     fn run(preset: Preset, m: Modifier) {
         let (mut config, mut model_config) = PresetBuilder::default()
@@ -328,16 +323,6 @@ mod tests {
     #[test]
     fn test_preview_vae() {
         run(Preset::SDXLTurbo1_0Fp16, preview_vae);
-    }
-
-    #[ignore]
-    #[test]
-    fn test_easy_cache() {
-        set_hf_token(include_str!("../token.txt"));
-        run(
-            Preset::Flux1Mini(crate::preset::Flux1MiniWeight::Q2_K),
-            enable_easycache,
-        );
     }
 
     #[ignore]

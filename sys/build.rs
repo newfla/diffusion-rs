@@ -141,14 +141,6 @@ fn main() {
     {
         let vulkan_path = env::var("VULKAN_SDK").map(|path| PathBuf::from(path));
         if target.contains("msvc") {
-            // unsafe { env::set_var("TrackFileAccess", "false") };
-            // config
-            //  .cflag("/FS")
-            //  .cxxflag("/FS")
-            //    .define("CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS", "1")
-            //    .define("CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES", "1")
-            //    .define("CMAKE_CXX_RESPONSE_FILE_LINK_FLAG", "@")
-            //    .define("CMAKE_NINJA_FORCE_RESPONSE_FILE", "1");
             println!("cargo:rerun-if-env-changed=VULKAN_SDK");
             println!("cargo:rustc-link-lib=vulkan-1");
 
@@ -202,11 +194,6 @@ fn main() {
             config.define("CMAKE_CXX_COMPILER", "icpx");
         }
         config.define("SD_SYCL", "ON");
-    }
-
-    #[cfg(feature = "flashattn")]
-    {
-        config.define("SD_FLASH_ATTN", "ON");
     }
 
     // Build stable-diffusion

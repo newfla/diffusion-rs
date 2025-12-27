@@ -328,7 +328,7 @@ mod tests {
     };
 
     use super::{Preset, PresetBuilder};
-    static PROMPT: &str = "a lovely dynosaur made by crochet";
+    static PROMPT: &str = "a lovely dinosaur made by crochet";
 
     fn run(preset: Preset) {
         let (config, mut model_config) = PresetBuilder::default()
