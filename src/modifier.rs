@@ -231,7 +231,7 @@ mod tests {
         hybrid_taesd, hybrid_taesd_xl, lcm_lora_sd_1_5, lcm_lora_sdxl_base_1_0, taesd, taesd_xl,
     };
 
-    static PROMPT: &str = "a lovely dynosaur made by crochet";
+    static PROMPT: &str = "a lovely dinosaur made by crochet";
 
     fn run(preset: Preset, m: Modifier) {
         let (mut config, mut model_config) = PresetBuilder::default()
