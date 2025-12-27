@@ -37,9 +37,3 @@ gen_img(&config, &mut model_config).unwrap();
 * Something other than Windows/Linux isn't working!
     * I don't have a way to test these platforms, so I can't really help you.
     * If you can fix the issue, please open a PR!
-
-## Roadmap
-1. ~~Ensure that the underline cpp library compiles on supported platforms~~
-2. ~~Build an easy to use library with model presets~~
-3. ~~Automatic library publishing on crates.io by gh actions~~
-4. _Maybe_ prebuilt CLI app binaries

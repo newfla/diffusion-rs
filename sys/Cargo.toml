@@ -36,7 +36,6 @@ hipblas = []
 metal = []
 vulkan = []
 sycl = []
-flashattn = []
 
 [build-dependencies]
 cmake = "0.1.51"
