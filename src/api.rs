@@ -1,7 +1,9 @@
+use std::cmp::max;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::ffi::c_char;
 use std::ffi::c_void;
+use std::fmt::Display;
 use std::path::Path;
 use std::path::PathBuf;
 use std::ptr::null;
@@ -103,6 +105,7 @@ pub struct LoraSpec {
     pub multiplier: f32,
 }
 
+/// Parameters for UCache
 #[derive(Builder, Debug, Clone)]
 pub struct UCacheParams {
     /// Error threshold for reuse decision
@@ -132,6 +135,7 @@ pub struct UCacheParams {
     reset: bool,
 }
 
+/// Parameters for Easy Cache
 #[derive(Builder, Debug, Clone)]
 pub struct EasyCacheParams {
     /// Error threshold for reuse decision
@@ -147,6 +151,7 @@ pub struct EasyCacheParams {
     end: f32,
 }
 
+/// Parameters for Db Cache
 #[derive(Builder, Debug, Clone)]
 pub struct DbCacheParams {
     /// Front blocks to always compute
@@ -173,6 +178,7 @@ pub struct DbCacheParams {
     scm_policy_dynamic: ScmPolicy,
 }
 
+/// Steps Computation Mask Policy controls when to cache steps
 #[derive(Debug, Default, Clone)]
 pub enum ScmPolicy {
     /// Always cache on cacheable steps
@@ -182,14 +188,134 @@ pub enum ScmPolicy {
     Dynamic,
 }
 
-#[derive(Debug, Clone, strum_macros::Display)]
+/// Steps Computation Mask Preset controls which steps can be cached
+#[derive(Debug, Default, Clone)]
 pub enum ScmPreset {
+    Slow,
+    #[default]
+    Medium,
+    Fast,
+    Ultra,
     /// E.g.: "1,1,1,1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1"
     /// where 1 means compute, 0 means cache
-    #[strum(to_string = "{0}")]
     Custom(String),
 }
 
+impl ScmPreset {
+    fn to_vec_string(&self, steps: i32) -> String {
+        match self {
+            ScmPreset::Slow => ScmPresetBins {
+                compute_bins: vec![8, 3, 3, 2, 1, 1],
+                cache_bins: vec![1, 2, 2, 2, 3],
+                steps,
+            }
+            .to_string(),
+            ScmPreset::Medium => ScmPresetBins {
+                compute_bins: vec![6, 2, 2, 2, 2, 1],
+                cache_bins: vec![1, 3, 3, 3, 3],
+                steps,
+            }
+            .to_string(),
+            ScmPreset::Fast => ScmPresetBins {
+                compute_bins: vec![6, 1, 1, 1, 1, 1],
+                cache_bins: vec![1, 3, 4, 5, 4],
+                steps,
+            }
+            .to_string(),
+            ScmPreset::Ultra => ScmPresetBins {
+                compute_bins: vec![4, 1, 1, 1, 1],
+                cache_bins: vec![2, 5, 6, 7],
+                steps,
+            }
+            .to_string(),
+            ScmPreset::Custom(s) => s.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ScmPresetBins {
+    compute_bins: Vec<i32>,
+    cache_bins: Vec<i32>,
+    steps: i32,
+}
+
+impl ScmPresetBins {
+    fn maybe_scale(&self) -> ScmPresetBins {
+        if self.steps == 28 || self.steps <= 0 {
+            return self.clone();
+        }
+        self.scale()
+    }
+
+    fn scale(&self) -> ScmPresetBins {
+        let scale = self.steps as f32 / 28.0;
+        let scaled_compute_bins = self
+            .compute_bins
+            .iter()
+            .map(|b| max(1, (*b as f32 * scale * 0.5) as i32))
+            .collect();
+        let scaled_cached_bins = self
+            .cache_bins
+            .iter()
+            .map(|b| max(1, (*b as f32 * scale * 0.5) as i32))
+            .collect();
+        ScmPresetBins {
+            compute_bins: scaled_compute_bins,
+            cache_bins: scaled_cached_bins,
+            steps: self.steps,
+        }
+    }
+
+    fn generate_vec_mask(&self) -> Vec<i32> {
+        let mut mask = Vec::new();
+        let mut c_idx = 0;
+        let mut cache_idx = 0;
+
+        while mask.len() < self.steps as usize {
+            if c_idx < self.compute_bins.len() {
+                let compute_count = self.compute_bins[c_idx];
+                for _ in 0..compute_count {
+                    if mask.len() < self.steps as usize {
+                        mask.push(1);
+                    }
+                }
+                c_idx += 1;
+            }
+            if cache_idx < self.cache_bins.len() {
+                let cache_count = self.cache_bins[c_idx];
+                for _ in 0..cache_count {
+                    if mask.len() < self.steps as usize {
+                        mask.push(0);
+                    }
+                }
+                cache_idx += 1;
+            }
+            if c_idx >= self.compute_bins.len() && cache_idx >= self.cache_bins.len() {
+                break;
+            }
+        }
+        if let Some(last) = mask.last_mut() {
+            *last = 1;
+        }
+        mask
+    }
+}
+
+impl Display for ScmPresetBins {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mask: String = self
+            .maybe_scale()
+            .generate_vec_mask()
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        write!(f, "{mask}")
+    }
+}
+
+/// Config struct for a specific diffusion model
 #[derive(Builder, Debug, Clone)]
 #[builder(
     setter(into, strip_option),
@@ -398,12 +524,6 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     circular_y: bool,
 
-    #[builder(default = "Self::cache_init()", private)]
-    cache: sd_cache_params_t,
-
-    #[builder(default = "CLibString::default()", private)]
-    scm_mask: CLibString,
-
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -527,90 +647,6 @@ impl ModelConfigBuilder {
         };
         self
     }
-
-    fn cache_init() -> sd_cache_params_t {
-        sd_cache_params_t {
-            mode: sd_cache_mode_t::SD_CACHE_DISABLED,
-            reuse_threshold: 1.0,
-            start_percent: 0.15,
-            end_percent: 0.95,
-            error_decay_rate: 1.0,
-            use_relative_threshold: true,
-            reset_error_on_compute: true,
-            Fn_compute_blocks: 8,
-            Bn_compute_blocks: 0,
-            residual_diff_threshold: 0.08,
-            max_warmup_steps: 8,
-            max_cached_steps: -1,
-            max_continuous_cached_steps: -1,
-            taylorseer_n_derivatives: 1,
-            taylorseer_skip_interval: 1,
-            scm_mask: null(),
-            scm_policy_dynamic: true,
-        }
-    }
-
-    pub fn no_caching(&mut self) -> &mut Self {
-        let mut cache = Self::cache_init();
-        cache.mode = sd_cache_mode_t::SD_CACHE_DISABLED;
-        self.cache = Some(cache);
-        self
-    }
-
-    pub fn ucache_caching(&mut self, params: UCacheParams) -> &mut Self {
-        let mut cache = Self::cache_init();
-        cache.mode = sd_cache_mode_t::SD_CACHE_UCACHE;
-        cache.reuse_threshold = params.threshold;
-        cache.start_percent = params.start;
-        cache.end_percent = params.end;
-        cache.error_decay_rate = params.decay;
-        cache.use_relative_threshold = params.relative;
-        cache.reset_error_on_compute = params.reset;
-        self.cache = Some(cache);
-        self
-    }
-
-    pub fn easy_cache_caching(&mut self, params: EasyCacheParams) -> &mut Self {
-        let mut cache = Self::cache_init();
-        cache.mode = sd_cache_mode_t::SD_CACHE_EASYCACHE;
-        cache.reuse_threshold = params.threshold;
-        cache.start_percent = params.start;
-        cache.end_percent = params.end;
-        self.cache = Some(cache);
-        self
-    }
-
-    pub fn db_cache_caching(&mut self, params: DbCacheParams) -> &mut Self {
-        let mut cache = Self::cache_init();
-        cache.mode = sd_cache_mode_t::SD_CACHE_DBCACHE;
-        cache.Fn_compute_blocks = params.fn_blocks;
-        cache.Bn_compute_blocks = params.bn_blocks;
-        cache.residual_diff_threshold = params.threshold;
-        cache.max_warmup_steps = params.warmup;
-        cache.scm_policy_dynamic = match params.scm_policy_dynamic {
-            ScmPolicy::Static => false,
-            ScmPolicy::Dynamic => true,
-        };
-        self.scm_mask = match params.scm_mask {
-            ScmPreset::Custom(s) => Some(CLibString::from(s)),
-        };
-        cache.scm_mask = self.scm_mask.as_ref().unwrap().as_ptr();
-
-        self.cache = Some(cache);
-        self
-    }
-
-    pub fn taylor_seer_caching(&mut self) -> &mut Self {
-        let mut cache = Self::cache_init();
-        cache.mode = sd_cache_mode_t::SD_CACHE_TAYLORSEER;
-        self.cache = Some(cache);
-        self
-    }
-
-    pub fn cache_dit_caching(&mut self, params: DbCacheParams) -> &mut Self {
-        self.db_cache_caching(params).cache.unwrap().mode = sd_cache_mode_t::SD_CACHE_CACHE_DIT;
-        self
-    }
 }
 
 impl ModelConfig {
@@ -705,9 +741,6 @@ impl Drop for ModelConfig {
 impl From<ModelConfig> for ModelConfigBuilder {
     fn from(value: ModelConfig) -> Self {
         let mut builder = ModelConfigBuilder::default();
-        let mut cache = value.cache;
-        let scm_mask = value.scm_mask.clone();
-        cache.scm_mask = scm_mask.as_ptr();
         builder
             .n_threads(value.n_threads)
             .offload_params_to_cpu(value.offload_params_to_cpu)
@@ -755,8 +788,6 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .circular(value.circular)
             .circular_x(value.circular_x)
             .circular_y(value.circular_y)
-            .cache(cache)
-            .scm_mask(scm_mask)
             .use_qwen_image_zero_cond_true(value.use_qwen_image_zero_cond_true);
 
         let lora_model_dir = Into::<PathBuf>::into(&value.lora_models.lora_model_dir);
@@ -903,6 +934,12 @@ pub struct Config {
     /// Disable auto resize of ref images
     #[builder(default = "false")]
     disable_auto_resize_ref_image: bool,
+
+    #[builder(default = "Self::cache_init()", private)]
+    cache: sd_cache_params_t,
+
+    #[builder(default = "CLibString::default()", private)]
+    scm_mask: CLibString,
 }
 
 impl ConfigBuilder {
@@ -921,11 +958,100 @@ impl ConfigBuilder {
             ))
         }
     }
+
+    fn cache_init() -> sd_cache_params_t {
+        sd_cache_params_t {
+            mode: sd_cache_mode_t::SD_CACHE_DISABLED,
+            reuse_threshold: 1.0,
+            start_percent: 0.15,
+            end_percent: 0.95,
+            error_decay_rate: 1.0,
+            use_relative_threshold: true,
+            reset_error_on_compute: true,
+            Fn_compute_blocks: 8,
+            Bn_compute_blocks: 0,
+            residual_diff_threshold: 0.08,
+            max_warmup_steps: 8,
+            max_cached_steps: -1,
+            max_continuous_cached_steps: -1,
+            taylorseer_n_derivatives: 1,
+            taylorseer_skip_interval: 1,
+            scm_mask: null(),
+            scm_policy_dynamic: true,
+        }
+    }
+
+    pub fn no_caching(&mut self) -> &mut Self {
+        let mut cache = Self::cache_init();
+        cache.mode = sd_cache_mode_t::SD_CACHE_DISABLED;
+        self.cache = Some(cache);
+        self
+    }
+
+    pub fn ucache_caching(&mut self, params: UCacheParams) -> &mut Self {
+        let mut cache = Self::cache_init();
+        cache.mode = sd_cache_mode_t::SD_CACHE_UCACHE;
+        cache.reuse_threshold = params.threshold;
+        cache.start_percent = params.start;
+        cache.end_percent = params.end;
+        cache.error_decay_rate = params.decay;
+        cache.use_relative_threshold = params.relative;
+        cache.reset_error_on_compute = params.reset;
+        self.cache = Some(cache);
+        self
+    }
+
+    pub fn easy_cache_caching(&mut self, params: EasyCacheParams) -> &mut Self {
+        let mut cache = Self::cache_init();
+        cache.mode = sd_cache_mode_t::SD_CACHE_EASYCACHE;
+        cache.reuse_threshold = params.threshold;
+        cache.start_percent = params.start;
+        cache.end_percent = params.end;
+        self.cache = Some(cache);
+        self
+    }
+
+    pub fn db_cache_caching(&mut self, params: DbCacheParams) -> &mut Self {
+        let mut cache = Self::cache_init();
+        cache.mode = sd_cache_mode_t::SD_CACHE_DBCACHE;
+        cache.Fn_compute_blocks = params.fn_blocks;
+        cache.Bn_compute_blocks = params.bn_blocks;
+        cache.residual_diff_threshold = params.threshold;
+        cache.max_warmup_steps = params.warmup;
+        cache.scm_policy_dynamic = match params.scm_policy_dynamic {
+            ScmPolicy::Static => false,
+            ScmPolicy::Dynamic => true,
+        };
+        self.scm_mask = Some(CLibString::from(
+            params
+                .scm_mask
+                .to_vec_string(self.steps.unwrap_or_default()),
+        ));
+        cache.scm_mask = self.scm_mask.as_ref().unwrap().as_ptr();
+
+        self.cache = Some(cache);
+        self
+    }
+
+    pub fn taylor_seer_caching(&mut self) -> &mut Self {
+        let mut cache = Self::cache_init();
+        cache.mode = sd_cache_mode_t::SD_CACHE_TAYLORSEER;
+        self.cache = Some(cache);
+        self
+    }
+
+    pub fn cache_dit_caching(&mut self, params: DbCacheParams) -> &mut Self {
+        self.db_cache_caching(params).cache.unwrap().mode = sd_cache_mode_t::SD_CACHE_CACHE_DIT;
+        self
+    }
 }
 
 impl From<Config> for ConfigBuilder {
     fn from(value: Config) -> Self {
         let mut builder = ConfigBuilder::default();
+        let mut cache = value.cache;
+        let scm_mask = value.scm_mask.clone();
+        cache.scm_mask = scm_mask.as_ptr();
         builder
             .pm_id_images_dir(value.pm_id_images_dir)
             .init_img(value.init_img)
@@ -953,7 +1079,9 @@ impl From<Config> for ConfigBuilder {
             .preview_output(value.preview_output)
             .preview_mode(value.preview_mode)
             .preview_noisy(value.preview_noisy)
-            .preview_interval(value.preview_interval);
+            .preview_interval(value.preview_interval)
+            .cache(cache)
+            .scm_mask(scm_mask);
         builder
     }
 }
@@ -1163,7 +1291,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             pm_params,
             vae_tiling_params,
             auto_resize_ref_image: config.disable_auto_resize_ref_image,
-            cache: model_config.cache,
+            cache: config.cache,
             loras: model_config.lora_models.loras_t.as_ptr(),
             lora_count: model_config.lora_models.loras_t.len() as u32,
         };

@@ -160,6 +160,7 @@ pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
     Ok(builder)
 }
 
+/// Offload model parameters to CPU (for low VRAM GPUs)
 pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     builder.1.offload_params_to_cpu(true);
     Ok(builder)
