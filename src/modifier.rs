@@ -217,13 +217,15 @@ pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
 
 #[cfg(test)]
 mod tests {
+    use hf_hub::api::sync::ApiError;
+
     use crate::{
         api::gen_img,
         modifier::{
             enable_flash_attention, lcm_lora_ssd_1b, offload_params_to_cpu, preview_proj,
             preview_tae, preview_vae, vae_tiling,
         },
-        preset::{Flux1Weight, Modifier, Preset, PresetBuilder},
+        preset::{ConfigsBuilder, Flux1Weight, Preset, PresetBuilder},
         util::set_hf_token,
     };
 
@@ -233,7 +235,10 @@ mod tests {
 
     static PROMPT: &str = "a lovely dinosaur made by crochet";
 
-    fn run(preset: Preset, m: Modifier) {
+    fn run<F>(preset: Preset, m: F)
+    where
+        F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> + 'static,
+    {
         let (mut config, mut model_config) = PresetBuilder::default()
             .preset(preset)
             .prompt(PROMPT)

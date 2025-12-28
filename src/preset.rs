@@ -1,5 +1,6 @@
 use derive_builder::Builder;
 use hf_hub::api::sync::ApiError;
+use strum::{EnumDiscriminants, EnumString, VariantNames};
 use subenum::subenum;
 
 use crate::{
@@ -30,7 +31,8 @@ use crate::{
     QwenImageWeight,
     OvisImageWeight
 )]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, EnumString, VariantNames)]
+#[strum(ascii_case_insensitive)]
 /// Model weight types
 pub enum WeightType {
     #[subenum(Flux1MiniWeight)]
@@ -151,7 +153,8 @@ pub enum WeightType {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, EnumDiscriminants)]
+#[strum_discriminants(derive(EnumString, VariantNames), strum(ascii_case_insensitive))]
 /// Models ready to use
 pub enum Preset {
     StableDiffusion1_4,
@@ -264,11 +267,12 @@ pub type ConfigsBuilder = (ConfigBuilder, ModelConfigBuilder);
 pub type Configs = (Config, ModelConfig);
 
 /// Helper functions that modifies the [ConfigBuilder] See [crate::modifier]
-pub type Modifier = fn(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>;
+type Modifier = dyn FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>;
 
-#[derive(Debug, Clone, Builder)]
+#[derive(Builder)]
 #[builder(
     name = "PresetBuilder",
+    pattern = "owned",
     setter(into),
     build_fn(name = "internal_build", private, error = "ConfigBuilderError")
 )]
@@ -277,20 +281,23 @@ pub struct PresetConfig {
     prompt: String,
     preset: Preset,
     #[builder(private, default = "Vec::new()")]
-    modifiers: Vec<Modifier>,
+    modifiers: Vec<Box<Modifier>>,
 }
 
 impl PresetBuilder {
     /// Add modifier that will apply in sequence
-    pub fn with_modifier(&mut self, f: Modifier) -> &mut Self {
+    pub fn with_modifier<F>(mut self, f: F) -> Self
+    where
+        F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> + 'static,
+    {
         if self.modifiers.is_none() {
             self.modifiers = Some(Vec::new());
         }
-        self.modifiers.as_mut().unwrap().push(f);
+        self.modifiers.as_mut().unwrap().push(Box::new(f));
         self
     }
 
-    pub fn build(&mut self) -> Result<Configs, ConfigBuilderError> {
+    pub fn build(self) -> Result<Configs, ConfigBuilderError> {
         let preset = self.internal_build()?;
         let configs: ConfigsBuilder = preset
             .try_into()
