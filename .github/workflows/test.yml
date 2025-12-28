@@ -39,7 +39,7 @@ jobs:
         run: sudo apt update && sudo apt install -y clang cmake
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
-        run: cargo build
+        run: cargo build --examples
       - name: Test
         run: cargo test
 

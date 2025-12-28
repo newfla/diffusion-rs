@@ -1,0 +1,195 @@
+use std::path::PathBuf;
+
+use chrono::Local;
+use clap::{Parser, ValueEnum};
+
+use diffusion_rs::{
+    api::{PreviewType, gen_img},
+    preset::{Preset, PresetBuilder, PresetDiscriminants, WeightType},
+    util::set_hf_token,
+};
+use execution_time::ExecutionTime;
+use strum::VariantNames;
+
+macro_rules! clap_enum_variants {
+    ($e: ty) => {{
+        use clap::builder::TypedValueParser;
+        clap::builder::PossibleValuesParser::new(<$e>::VARIANTS).map(|s| s.parse::<$e>().unwrap())
+    }};
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+enum PreviewMode {
+    Fast,
+    Accurate,
+}
+
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The prompt to render
+    prompt: String,
+
+    /// The preset to use
+    #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(PresetDiscriminants))]
+    preset: PresetDiscriminants,
+
+    /// Optionally which type of quantiziation to use
+    #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(WeightType))]
+    weights: Option<WeightType>,
+
+    /// Numer of inference steps
+    #[arg(short, long)]
+    steps: Option<i32>,
+
+    /// Width
+    #[arg(short, long)]
+    width: Option<i32>,
+
+    /// Height
+    #[arg(short, long)]
+    height: Option<i32>,
+
+    /// Enable optimization for gpu with lower GB
+    #[arg(short, long, default_value_t = false)]
+    low_vram: bool,
+
+    /// Enable Random Seed: differents runs will produce differents results
+    #[arg(short, long, default_value_t = false)]
+    random_seed: bool,
+
+    /// Enable preview
+    #[arg(short, long, ignore_case = true)]
+    preview: Option<PreviewMode>,
+
+    /// Set Huggingface Hub token
+    #[arg(short, long)]
+    token: Option<String>,
+}
+
+fn main() {
+    let timer = ExecutionTime::start();
+    let args = Args::parse();
+
+    if let Some(token) = &args.token {
+        set_hf_token(token);
+    }
+
+    let preset = get_preset(&args);
+    let file_name = get_output_file_name();
+    let preview_filename = get_preview_file_name(&file_name);
+
+    println!("\nImage will be saved as {file_name}");
+    if args.preview.is_some() {
+        println!("Image preview between inference steps will be saved as {preview_filename}");
+    }
+    println!("");
+
+    let (config, mut model_config) = PresetBuilder::default()
+        .preset(preset)
+        .prompt(&args.prompt)
+        .with_modifier(move |(mut config, mut model_config)| {
+            config.output(file_name);
+            if let Some(steps) = &args.steps {
+                config.steps(*steps);
+            }
+
+            if args.low_vram {
+                model_config
+                    .clip_on_cpu(true)
+                    .vae_tiling(true)
+                    .offload_params_to_cpu(true);
+            }
+
+            if args.random_seed {
+                config.seed(-1);
+            }
+
+            if let Some(width) = args.width {
+                config.width(width);
+            }
+
+            if let Some(height) = args.height {
+                config.height(height);
+            }
+
+            match args.preview {
+                Some(PreviewMode::Fast) => config.preview_mode(PreviewType::PREVIEW_PROJ),
+                Some(PreviewMode::Accurate) => config.preview_mode(PreviewType::PREVIEW_VAE),
+                None => config.preview_mode(PreviewType::PREVIEW_NONE),
+            };
+            config.preview_output(preview_filename);
+
+            Ok((config, model_config))
+        })
+        .build()
+        .unwrap();
+    gen_img(&config, &mut model_config).unwrap();
+
+    println!("");
+    timer.print_elapsed_time();
+}
+
+fn get_output_file_name() -> String {
+    format!("./output_{}.png", Local::now().format("%Y.%m.%d-%H.%M.%S"))
+}
+
+fn get_preview_file_name(file: &str) -> String {
+    let path = PathBuf::from(file);
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+    format!("./preview_{file_name}")
+}
+
+fn get_preset(args: &Args) -> Preset {
+    let preset = match args.preset {
+        PresetDiscriminants::StableDiffusion1_4 => Preset::StableDiffusion1_4,
+        PresetDiscriminants::StableDiffusion1_5 => Preset::StableDiffusion1_5,
+        PresetDiscriminants::StableDiffusion2_1 => Preset::StableDiffusion2_1,
+        PresetDiscriminants::StableDiffusion3MediumFp16 => Preset::StableDiffusion3MediumFp16,
+        PresetDiscriminants::StableDiffusion3_5MediumFp16 => Preset::StableDiffusion3_5MediumFp16,
+        PresetDiscriminants::StableDiffusion3_5LargeFp16 => Preset::StableDiffusion3_5LargeFp16,
+        PresetDiscriminants::StableDiffusion3_5LargeTurboFp16 => {
+            Preset::StableDiffusion3_5LargeTurboFp16
+        }
+        PresetDiscriminants::SDXLBase1_0 => Preset::SDXLBase1_0,
+        PresetDiscriminants::SDTurbo => Preset::SDTurbo,
+        PresetDiscriminants::SDXLTurbo1_0Fp16 => Preset::SDXLTurbo1_0Fp16,
+        PresetDiscriminants::Flux1Dev => {
+            Preset::Flux1Dev(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::Flux1Schnell => {
+            Preset::Flux1Schnell(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::Flux1Mini => {
+            Preset::Flux1Mini(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::JuggernautXL11 => Preset::JuggernautXL11,
+        PresetDiscriminants::Chroma => Preset::Chroma(args.weights.unwrap().try_into().unwrap()),
+        PresetDiscriminants::NitroSDRealism => {
+            Preset::NitroSDRealism(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::NitroSDVibrant => {
+            Preset::NitroSDVibrant(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::DiffInstructStar => {
+            Preset::DiffInstructStar(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::ChromaRadiance => {
+            Preset::ChromaRadiance(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::SSD1B => Preset::SSD1B(args.weights.unwrap().try_into().unwrap()),
+        PresetDiscriminants::Flux2Dev => {
+            Preset::Flux2Dev(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::ZImageTurbo => {
+            Preset::ZImageTurbo(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::QwenImage => {
+            Preset::QwenImage(args.weights.unwrap().try_into().unwrap())
+        }
+        PresetDiscriminants::OvisImage => {
+            Preset::OvisImage(args.weights.unwrap().try_into().unwrap())
+        }
+    };
+    preset
+}
