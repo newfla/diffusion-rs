@@ -18,18 +18,18 @@ use crate::{
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
 #[subenum(
-    Flux1Weight,
-    Flux1MiniWeight,
-    ChromaWeight,
-    NitroSDRealismWeight,
-    NitroSDVibrantWeight,
-    DiffInstructStarWeight,
-    ChromaRadianceWeight,
-    SSD1BWeight,
-    Flux2Weight,
-    ZImageTurboWeight,
-    QwenImageWeight,
-    OvisImageWeight
+    Flux1Weight(derive(Default)),
+    Flux1MiniWeight(derive(Default)),
+    ChromaWeight(derive(Default)),
+    NitroSDRealismWeight(derive(Default)),
+    NitroSDVibrantWeight(derive(Default)),
+    DiffInstructStarWeight(derive(Default)),
+    ChromaRadianceWeight(derive(Default)),
+    SSD1BWeight(derive(Default)),
+    Flux2Weight(derive(Default)),
+    ZImageTurboWeight(derive(Default)),
+    QwenImageWeight(derive(Default)),
+    OvisImageWeight(derive(Default))
 )]
 #[derive(Debug, Clone, Copy, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
@@ -46,14 +46,14 @@ pub enum WeightType {
     F16,
     #[subenum(
         Flux1Weight,
-        ChromaWeight,
+        ChromaWeight(default),
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
         Flux2Weight,
         ZImageTurboWeight,
         QwenImageWeight,
-        OvisImageWeight
+        OvisImageWeight(default)
     )]
     Q4_0,
     #[subenum(Flux2Weight, QwenImageWeight)]
@@ -71,12 +71,12 @@ pub enum WeightType {
     Q5_1,
     #[subenum(
         Flux1Weight,
-        Flux1MiniWeight,
+        Flux1MiniWeight(default),
         ChromaWeight,
-        NitroSDRealismWeight,
-        NitroSDVibrantWeight,
-        DiffInstructStarWeight,
-        ChromaRadianceWeight,
+        NitroSDRealismWeight(default),
+        NitroSDVibrantWeight(default),
+        DiffInstructStarWeight(default),
+        ChromaRadianceWeight(default),
         Flux2Weight,
         ZImageTurboWeight,
         QwenImageWeight,
@@ -85,14 +85,14 @@ pub enum WeightType {
     Q8_0,
     Q8_1,
     #[subenum(
-        Flux1Weight,
+        Flux1Weight(default),
         Flux1MiniWeight,
         NitroSDRealismWeight,
         NitroSDVibrantWeight,
         DiffInstructStarWeight,
-        Flux2Weight,
+        Flux2Weight(default),
         ZImageTurboWeight,
-        QwenImageWeight
+        QwenImageWeight(default)
     )]
     Q2_K,
     #[subenum(
@@ -106,7 +106,7 @@ pub enum WeightType {
         QwenImageWeight
     )]
     Q3_K,
-    #[subenum(Flux1Weight, ZImageTurboWeight, Flux2Weight, QwenImageWeight)]
+    #[subenum(Flux1Weight, ZImageTurboWeight(default), Flux2Weight, QwenImageWeight)]
     Q4_K,
     #[subenum(Flux1MiniWeight, Flux2Weight, QwenImageWeight)]
     Q5_K,
@@ -148,7 +148,7 @@ pub enum WeightType {
     TQ1_0,
     TQ2_0,
     MXFP4,
-    #[subenum(SSD1BWeight, QwenImageWeight)]
+    #[subenum(SSD1BWeight(default), QwenImageWeight)]
     F8_E4M3,
 }
 

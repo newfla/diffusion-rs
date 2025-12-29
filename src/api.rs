@@ -10,6 +10,7 @@ use std::ptr::null;
 use std::ptr::null_mut;
 use std::slice;
 
+use chrono::Local;
 use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::new_upscaler_ctx;
@@ -1134,12 +1135,13 @@ impl From<&CLibPath> for PathBuf {
     }
 }
 
-fn output_files(path: &Path, prompt: &str, batch_size: i32) -> Vec<PathBuf> {
+fn output_files(path: &Path, batch_size: i32) -> Vec<PathBuf> {
+    let date = Local::now().format("%Y.%m.%d-%H.%M.%S");
     if batch_size == 1 {
         vec![path.into()]
     } else {
         (1..=batch_size)
-            .map(|id| path.join(format!("{prompt}_{id}.png")))
+            .map(|id| path.join(format!("output_{date}_{id}.png")))
             .collect()
     }
 }
@@ -1175,7 +1177,7 @@ unsafe fn upscale(
 /// Generate an image with a prompt
 pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
     let prompt: CLibString = CLibString::from(config.prompt.as_str());
-    let files = output_files(&config.output, &config.prompt, config.batch_count);
+    let files = output_files(&config.output, config.batch_count);
     unsafe {
         let sd_ctx = model_config.diffusion_ctx(true);
         let upscaler_ctx = model_config.upscaler_ctx();
