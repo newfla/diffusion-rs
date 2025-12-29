@@ -2,7 +2,7 @@
 members = ["sys"]
 
 [workspace.package]
-version = "0.1.14"
+version = "0.1.15"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/newfla/diffusion-rs"
@@ -22,7 +22,7 @@ documentation = "https://docs.rs/diffusion-rs"
 [dependencies]
 chrono = "0.4.42"
 derive_builder = "0.20.2"
-diffusion-rs-sys = { path = "sys", version = "0.1.14" }
+diffusion-rs-sys = { path = "sys", version = "0.1.15" }
 hf-hub = {version = "0.4.2", default-features = false, features = ["ureq"]}
 image = "0.25.5"
 libc = "0.2.161"
