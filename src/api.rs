@@ -63,7 +63,7 @@ pub use diffusion_rs_sys::preview_t as PreviewType;
 /// Lora mode
 pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
 
-static VALID_EXT: [&str; 3] = ["pt", "safetensors", "gguf"];
+static VALID_EXT: [&str; 3] = ["gguf", "safetensors", "pt"];
 
 #[non_exhaustive]
 #[derive(Error, Debug)]
@@ -327,6 +327,10 @@ pub struct ModelConfig {
     /// If n_ threads <= 0, then threads will be set to the number of CPU physical cores.
     #[builder(default = "num_cpus::get_physical() as i32", setter(custom))]
     n_threads: i32,
+
+    /// Whether to memory-map model (default: false)
+    #[builder(default = "false")]
+    enable_mmap: bool,
 
     /// Place the weights in RAM to save VRAM, and automatically load them into VRAM when needed
     #[builder(default = "false")]
@@ -715,6 +719,7 @@ impl ModelConfig {
                     circular_x: self.circular || self.circular_x,
                     circular_y: self.circular || self.circular_y,
                     qwen_image_zero_cond_t: self.use_qwen_image_zero_cond_true,
+                    enable_mmap: self.enable_mmap,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))

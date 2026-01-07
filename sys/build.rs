@@ -59,6 +59,7 @@ fn main() {
 
     if target.contains("msvc") {
         config.generator("Ninja");
+        config.define("CMAKE_BUILD_TYPE", "Release");
         config.define("CMAKE_C_COMPILER", "cl.exe");
         config.define("CMAKE_CXX_COMPILER", "cl.exe");
         config.define("CMAKE_CXX_FLAGS", "'/bigobj'");
