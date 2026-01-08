@@ -8,10 +8,10 @@ use crate::{
     preset_builder::{
         chroma, chroma_radiance, diff_instruct_star, flux_1_dev, flux_1_mini, flux_1_schnell,
         flux_2_dev, juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image,
-        sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0_fp16, ssd_1b, stable_diffusion_1_4,
-        stable_diffusion_1_5, stable_diffusion_2_1, stable_diffusion_3_5_large_fp16,
-        stable_diffusion_3_5_large_turbo_fp16, stable_diffusion_3_5_medium_fp16,
-        stable_diffusion_3_medium_fp16, z_image_turbo,
+        sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0, ssd_1b, stable_diffusion_1_4,
+        stable_diffusion_1_5, stable_diffusion_2_1, stable_diffusion_3_5_large,
+        stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium, stable_diffusion_3_medium,
+        z_image_turbo,
     },
 };
 
@@ -164,21 +164,21 @@ pub enum Preset {
     StableDiffusion2_1,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3-medium> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. 30 steps.
-    StableDiffusion3MediumFp16,
+    StableDiffusion3Medium,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-medium> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 4.5. 40 steps.
-    StableDiffusion3_5MediumFp16,
+    StableDiffusion3_5Medium,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 4.5. 28 steps.
-    StableDiffusion3_5LargeFp16,
+    StableDiffusion3_5Large,
     /// Requires access rights to <https://huggingface.co/stabilityai/stable-diffusion-3.5-large-turbo> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 0. 4 steps.
-    StableDiffusion3_5LargeTurboFp16,
+    StableDiffusion3_5LargeTurbo,
     SDXLBase1_0,
     /// cfg_scale 1. guidance 0. 4 steps
     SDTurbo,
     /// cfg_scale 1. guidance 0. 4 steps
-    SDXLTurbo1_0Fp16,
+    SDXLTurbo1_0,
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// Vae-tiling enabled. 1024x1024. Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. 28 steps.
     Flux1Dev(Flux1Weight),
@@ -225,15 +225,15 @@ impl Preset {
             Preset::StableDiffusion1_4 => stable_diffusion_1_4(),
             Preset::StableDiffusion1_5 => stable_diffusion_1_5(),
             Preset::StableDiffusion2_1 => stable_diffusion_2_1(),
-            Preset::StableDiffusion3MediumFp16 => stable_diffusion_3_medium_fp16(),
+            Preset::StableDiffusion3Medium => stable_diffusion_3_medium(),
             Preset::SDXLBase1_0 => sdxl_base_1_0(),
             Preset::Flux1Dev(sd_type_t) => flux_1_dev(sd_type_t),
             Preset::Flux1Schnell(sd_type_t) => flux_1_schnell(sd_type_t),
             Preset::SDTurbo => sd_turbo(),
-            Preset::SDXLTurbo1_0Fp16 => sdxl_turbo_1_0_fp16(),
-            Preset::StableDiffusion3_5LargeFp16 => stable_diffusion_3_5_large_fp16(),
-            Preset::StableDiffusion3_5MediumFp16 => stable_diffusion_3_5_medium_fp16(),
-            Preset::StableDiffusion3_5LargeTurboFp16 => stable_diffusion_3_5_large_turbo_fp16(),
+            Preset::SDXLTurbo1_0 => sdxl_turbo_1_0(),
+            Preset::StableDiffusion3_5Large => stable_diffusion_3_5_large(),
+            Preset::StableDiffusion3_5Medium => stable_diffusion_3_5_medium(),
+            Preset::StableDiffusion3_5LargeTurbo => stable_diffusion_3_5_large_turbo(),
             Preset::JuggernautXL11 => juggernaut_xl_11(),
             Preset::Flux1Mini(sd_type_t) => flux_1_mini(sd_type_t),
             Preset::Chroma(sd_type_t) => chroma(sd_type_t),
@@ -267,7 +267,7 @@ pub type ConfigsBuilder = (ConfigBuilder, ModelConfigBuilder);
 pub type Configs = (Config, ModelConfig);
 
 /// Helper functions that modifies the [ConfigBuilder] See [crate::modifier]
-type Modifier = dyn FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>;
+type ModifierFunction = dyn FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>;
 
 #[derive(Builder)]
 #[builder(
@@ -281,7 +281,7 @@ pub struct PresetConfig {
     prompt: String,
     preset: Preset,
     #[builder(private, default = "Vec::new()")]
-    modifiers: Vec<Box<Modifier>>,
+    modifiers: Vec<Box<ModifierFunction>>,
 }
 
 impl PresetBuilder {
@@ -368,7 +368,7 @@ mod tests {
     #[test]
     fn test_stable_diffusion_3_medium_fp16() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::StableDiffusion3MediumFp16);
+        run(Preset::StableDiffusion3Medium);
     }
 
     #[ignore]
@@ -400,28 +400,28 @@ mod tests {
     #[ignore]
     #[test]
     fn test_sdxl_turbo_1_0_fp16() {
-        run(Preset::SDXLTurbo1_0Fp16);
+        run(Preset::SDXLTurbo1_0);
     }
 
     #[ignore]
     #[test]
     fn test_stable_diffusion_3_5_medium_fp16() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::StableDiffusion3_5MediumFp16);
+        run(Preset::StableDiffusion3_5Medium);
     }
 
     #[ignore]
     #[test]
     fn test_stable_diffusion_3_5_large_fp16() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::StableDiffusion3_5LargeFp16);
+        run(Preset::StableDiffusion3_5Large);
     }
 
     #[ignore]
     #[test]
     fn test_stable_diffusion_3_5_large_turbo_fp16() {
         set_hf_token(include_str!("../token.txt"));
-        run(Preset::StableDiffusion3_5LargeTurboFp16);
+        run(Preset::StableDiffusion3_5LargeTurbo);
     }
 
     #[ignore]

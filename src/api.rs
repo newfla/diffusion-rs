@@ -23,6 +23,7 @@ use diffusion_rs_sys::sd_get_default_scheduler;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
+use diffusion_rs_sys::sd_img_gen_params_to_str;
 use diffusion_rs_sys::sd_lora_t;
 use diffusion_rs_sys::sd_pm_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
@@ -34,6 +35,8 @@ use image::ImageBuffer;
 use image::ImageError;
 use image::RgbImage;
 use libc::free;
+use little_exif::exif_tag::ExifTag;
+use little_exif::metadata::Metadata;
 use thiserror::Error;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
@@ -73,6 +76,8 @@ pub enum DiffusionError {
     Forward,
     #[error(transparent)]
     StoreImages(#[from] ImageError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
     #[error("The underling upscaler model returned a NULL image")]
     Upscaler,
 }
@@ -1261,7 +1266,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
         ) {
             unsafe {
                 let path = &*data.cast::<PathBuf>();
-                let _ = save_img(*frames, path);
+                let _ = save_img(*frames, path, None);
             }
         }
 
@@ -1302,6 +1307,11 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             loras: model_config.lora_models.loras_t.as_ptr(),
             lora_count: model_config.lora_models.loras_t.len() as u32,
         };
+
+        let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
+            .into_string()
+            .unwrap();
+
         let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
         let ret = {
             if slice.is_null() {
@@ -1312,7 +1322,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
                 .zip(files)
             {
                 match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
-                    Ok(img) => save_img(img, &path)?,
+                    Ok(img) => save_img(img, &path, Some(&params_str))?,
                     Err(err) => {
                         return Err(err);
                     }
@@ -1325,14 +1335,22 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
     }
 }
 
-fn save_img(img: sd_image_t, path: &Path) -> Result<(), DiffusionError> {
+fn save_img(img: sd_image_t, path: &Path, params: Option<&str>) -> Result<(), DiffusionError> {
     // Thx @wandbrandon
     let len = (img.width * img.height * img.channel) as usize;
     let buffer = unsafe { slice::from_raw_parts(img.data, len).to_vec() };
-    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer)
-        .map(|img| RgbImage::from(img).save(path));
+    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer).map(|img| {
+        RgbImage::from(img)
+            .save(path)
+            .map_err(DiffusionError::StoreImages)
+    });
     if let Some(Err(err)) = save_state {
-        return Err(DiffusionError::StoreImages(err));
+        return Err(err);
+    }
+    if let Some(params) = params {
+        let mut metadata = Metadata::new();
+        metadata.set_tag(ExifTag::ImageDescription(params.to_string()));
+        metadata.write_to_file(path)?;
     }
     Ok(())
 }
