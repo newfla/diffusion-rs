@@ -9,10 +9,12 @@ use std::path::PathBuf;
 use std::ptr::null;
 use std::ptr::null_mut;
 use std::slice;
+use std::sync::mpsc::Sender;
 
 use chrono::Local;
 use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
+use diffusion_rs_sys::generate_image;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_cache_mode_t;
 use diffusion_rs_sys::sd_cache_params_t;
@@ -28,6 +30,7 @@ use diffusion_rs_sys::sd_lora_t;
 use diffusion_rs_sys::sd_pm_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_set_preview_callback;
+use diffusion_rs_sys::sd_set_progress_callback;
 use diffusion_rs_sys::sd_slg_params_t;
 use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
@@ -67,6 +70,15 @@ pub use diffusion_rs_sys::preview_t as PreviewType;
 pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
 
 static VALID_EXT: [&str; 3] = ["gguf", "safetensors", "pt"];
+
+#[allow(unused)]
+#[derive(Debug)]
+/// Progress message returned fron [gen_img_with_progress]
+pub struct Progress {
+    step: i32,
+    steps: i32,
+    time: f32,
+}
 
 #[non_exhaustive]
 #[derive(Error, Debug)]
@@ -1184,8 +1196,25 @@ unsafe fn upscale(
     }
 }
 
-/// Generate an image with a prompt
+/// Generate an image and receive update via queue
+pub fn gen_img_with_progress(
+    config: &Config,
+    model_config: &mut ModelConfig,
+    sender: Sender<Progress>,
+) -> Result<(), DiffusionError> {
+    gen_img_maybe_progress(config, model_config, Some(sender))
+}
+
+/// Generate an image
 pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
+    gen_img_maybe_progress(config, model_config, None)
+}
+
+fn gen_img_maybe_progress(
+    config: &Config,
+    model_config: &mut ModelConfig,
+    mut sender: Option<Sender<Progress>>,
+) -> Result<(), DiffusionError> {
     let prompt: CLibString = CLibString::from(config.prompt.as_str());
     let files = output_files(&config.output, config.batch_count);
     unsafe {
@@ -1283,6 +1312,25 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             );
         }
 
+        if sender.is_some() {
+            unsafe extern "C" fn progress_callback(
+                step: ::std::os::raw::c_int,
+                steps: ::std::os::raw::c_int,
+                time: f32,
+                data: *mut ::std::os::raw::c_void,
+            ) {
+                unsafe {
+                    let sender = &*data.cast::<Option<Sender<Progress>>>();
+
+                    if let Some(sender) = sender {
+                        let _ = sender.send(Progress { step, steps, time });
+                    }
+                }
+            }
+            let sender_ptr: *mut c_void = &mut sender as *mut _ as *mut c_void;
+            sd_set_progress_callback(Some(progress_callback), sender_ptr);
+        }
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -1312,7 +1360,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             .into_string()
             .unwrap();
 
-        let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
+        let slice = generate_image(sd_ctx, &sd_img_gen_params);
         let ret = {
             if slice.is_null() {
                 return Err(DiffusionError::Forward);
