@@ -64,16 +64,8 @@ struct Args {
     batch: i32,
 
     /// Output Folder
-    #[arg(short, long, default_value = ".")]
+    #[arg(short, long, default_value = "./")]
     output: PathBuf,
-
-    /// Enable optimization for gpu with lower GB
-    #[arg(short, long, default_value_t = false)]
-    low_vram: bool,
-
-    /// Enable Random Seed: different runs will produce different results
-    #[arg(short, long, default_value_t = false)]
-    random_seed: bool,
 
     /// Enable preview
     #[arg(short, long, ignore_case = true)]
@@ -82,6 +74,14 @@ struct Args {
     /// Set Huggingface Hub token
     #[arg(short, long)]
     token: Option<String>,
+
+    /// Enable optimization for gpu with lower GB
+    #[arg(short, long, default_value_t = false)]
+    low_vram: bool,
+
+    /// Enable Random Seed: different runs will produce different results
+    #[arg(short, long, default_value_t = false)]
+    random_seed: bool,
 }
 
 fn main() {
