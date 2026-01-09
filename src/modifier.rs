@@ -257,7 +257,7 @@ mod tests {
     #[ignore]
     #[test]
     fn test_taesd_xl() {
-        run(Preset::SDXLTurbo1_0Fp16, taesd_xl);
+        run(Preset::SDXLTurbo1_0, taesd_xl);
     }
 
     #[ignore]
@@ -269,7 +269,7 @@ mod tests {
     #[ignore]
     #[test]
     fn test_hybrid_taesd_xl() {
-        run(Preset::SDXLTurbo1_0Fp16, hybrid_taesd_xl);
+        run(Preset::SDXLTurbo1_0, hybrid_taesd_xl);
     }
 
     #[ignore]
@@ -315,19 +315,19 @@ mod tests {
     #[ignore]
     #[test]
     fn test_preview_proj() {
-        run(Preset::SDXLTurbo1_0Fp16, preview_proj);
+        run(Preset::SDXLTurbo1_0, preview_proj);
     }
 
     #[ignore]
     #[test]
     fn test_preview_tae() {
-        run(Preset::SDXLTurbo1_0Fp16, preview_tae);
+        run(Preset::SDXLTurbo1_0, preview_tae);
     }
 
     #[ignore]
     #[test]
     fn test_preview_vae() {
-        run(Preset::SDXLTurbo1_0Fp16, preview_vae);
+        run(Preset::SDXLTurbo1_0, preview_vae);
     }
 
     #[ignore]

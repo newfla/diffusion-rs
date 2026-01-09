@@ -9,10 +9,12 @@ use std::path::PathBuf;
 use std::ptr::null;
 use std::ptr::null_mut;
 use std::slice;
+use std::sync::mpsc::Sender;
 
 use chrono::Local;
 use derive_builder::Builder;
 use diffusion_rs_sys::free_upscaler_ctx;
+use diffusion_rs_sys::generate_image;
 use diffusion_rs_sys::new_upscaler_ctx;
 use diffusion_rs_sys::sd_cache_mode_t;
 use diffusion_rs_sys::sd_cache_params_t;
@@ -23,10 +25,12 @@ use diffusion_rs_sys::sd_get_default_scheduler;
 use diffusion_rs_sys::sd_guidance_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
+use diffusion_rs_sys::sd_img_gen_params_to_str;
 use diffusion_rs_sys::sd_lora_t;
 use diffusion_rs_sys::sd_pm_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_set_preview_callback;
+use diffusion_rs_sys::sd_set_progress_callback;
 use diffusion_rs_sys::sd_slg_params_t;
 use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
@@ -34,6 +38,8 @@ use image::ImageBuffer;
 use image::ImageError;
 use image::RgbImage;
 use libc::free;
+use little_exif::exif_tag::ExifTag;
+use little_exif::metadata::Metadata;
 use thiserror::Error;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
@@ -65,6 +71,15 @@ pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
 
 static VALID_EXT: [&str; 3] = ["gguf", "safetensors", "pt"];
 
+#[allow(unused)]
+#[derive(Debug)]
+/// Progress message returned fron [gen_img_with_progress]
+pub struct Progress {
+    step: i32,
+    steps: i32,
+    time: f32,
+}
+
 #[non_exhaustive]
 #[derive(Error, Debug)]
 /// Error that can occurs while forwarding models
@@ -73,6 +88,8 @@ pub enum DiffusionError {
     Forward,
     #[error(transparent)]
     StoreImages(#[from] ImageError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
     #[error("The underling upscaler model returned a NULL image")]
     Upscaler,
 }
@@ -1179,8 +1196,25 @@ unsafe fn upscale(
     }
 }
 
-/// Generate an image with a prompt
+/// Generate an image and receive update via queue
+pub fn gen_img_with_progress(
+    config: &Config,
+    model_config: &mut ModelConfig,
+    sender: Sender<Progress>,
+) -> Result<(), DiffusionError> {
+    gen_img_maybe_progress(config, model_config, Some(sender))
+}
+
+/// Generate an image
 pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), DiffusionError> {
+    gen_img_maybe_progress(config, model_config, None)
+}
+
+fn gen_img_maybe_progress(
+    config: &Config,
+    model_config: &mut ModelConfig,
+    mut sender: Option<Sender<Progress>>,
+) -> Result<(), DiffusionError> {
     let prompt: CLibString = CLibString::from(config.prompt.as_str());
     let files = output_files(&config.output, config.batch_count);
     unsafe {
@@ -1261,7 +1295,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
         ) {
             unsafe {
                 let path = &*data.cast::<PathBuf>();
-                let _ = save_img(*frames, path);
+                let _ = save_img(*frames, path, None);
             }
         }
 
@@ -1276,6 +1310,25 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
                 config.preview_noisy,
                 data as *mut c_void,
             );
+        }
+
+        if sender.is_some() {
+            unsafe extern "C" fn progress_callback(
+                step: ::std::os::raw::c_int,
+                steps: ::std::os::raw::c_int,
+                time: f32,
+                data: *mut ::std::os::raw::c_void,
+            ) {
+                unsafe {
+                    let sender = &*data.cast::<Option<Sender<Progress>>>();
+
+                    if let Some(sender) = sender {
+                        let _ = sender.send(Progress { step, steps, time });
+                    }
+                }
+            }
+            let sender_ptr: *mut c_void = &mut sender as *mut _ as *mut c_void;
+            sd_set_progress_callback(Some(progress_callback), sender_ptr);
         }
 
         let sd_img_gen_params = sd_img_gen_params_t {
@@ -1302,7 +1355,12 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
             loras: model_config.lora_models.loras_t.as_ptr(),
             lora_count: model_config.lora_models.loras_t.len() as u32,
         };
-        let slice = diffusion_rs_sys::generate_image(sd_ctx, &sd_img_gen_params);
+
+        let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
+            .into_string()
+            .unwrap();
+
+        let slice = generate_image(sd_ctx, &sd_img_gen_params);
         let ret = {
             if slice.is_null() {
                 return Err(DiffusionError::Forward);
@@ -1312,7 +1370,7 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
                 .zip(files)
             {
                 match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
-                    Ok(img) => save_img(img, &path)?,
+                    Ok(img) => save_img(img, &path, Some(&params_str))?,
                     Err(err) => {
                         return Err(err);
                     }
@@ -1325,14 +1383,22 @@ pub fn gen_img(config: &Config, model_config: &mut ModelConfig) -> Result<(), Di
     }
 }
 
-fn save_img(img: sd_image_t, path: &Path) -> Result<(), DiffusionError> {
+fn save_img(img: sd_image_t, path: &Path, params: Option<&str>) -> Result<(), DiffusionError> {
     // Thx @wandbrandon
     let len = (img.width * img.height * img.channel) as usize;
     let buffer = unsafe { slice::from_raw_parts(img.data, len).to_vec() };
-    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer)
-        .map(|img| RgbImage::from(img).save(path));
+    let save_state = ImageBuffer::from_raw(img.width, img.height, buffer).map(|img| {
+        RgbImage::from(img)
+            .save(path)
+            .map_err(DiffusionError::StoreImages)
+    });
     if let Some(Err(err)) = save_state {
-        return Err(DiffusionError::StoreImages(err));
+        return Err(err);
+    }
+    if let Some(params) = params {
+        let mut metadata = Metadata::new();
+        metadata.set_tag(ExifTag::ImageDescription(params.to_string()));
+        metadata.write_to_file(path)?;
     }
     Ok(())
 }

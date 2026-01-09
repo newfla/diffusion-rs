@@ -22,4 +22,6 @@ Cargo.lock
 bin/act
 
 *.png
+*.jpg
+*.jpeg
 .idea/

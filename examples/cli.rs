@@ -43,7 +43,7 @@ struct Args {
     #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(PresetDiscriminants))]
     preset: PresetDiscriminants,
 
-    /// Optionally which type of quantiziation to use
+    /// Optionally which type of quantization to use
     #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(WeightType))]
     weights: Option<WeightType>,
 
@@ -59,21 +59,13 @@ struct Args {
     #[arg(short, long)]
     height: Option<i32>,
 
-    /// Numebr of images to generate
+    /// Number of images to generate
     #[arg(short, long, default_value_t = 1)]
     batch: i32,
 
     /// Output Folder
-    #[arg(short, long, default_value = ".")]
+    #[arg(short, long, default_value = "./")]
     output: PathBuf,
-
-    /// Enable optimization for gpu with lower GB
-    #[arg(short, long, default_value_t = false)]
-    low_vram: bool,
-
-    /// Enable Random Seed: differents runs will produce differents results
-    #[arg(short, long, default_value_t = false)]
-    random_seed: bool,
 
     /// Enable preview
     #[arg(short, long, ignore_case = true)]
@@ -82,6 +74,14 @@ struct Args {
     /// Set Huggingface Hub token
     #[arg(short, long)]
     token: Option<String>,
+
+    /// Enable optimization for gpu with lower GB
+    #[arg(short, long, default_value_t = false)]
+    low_vram: bool,
+
+    /// Enable Random Seed: different runs will produce different results
+    #[arg(short, long, default_value_t = false)]
+    random_seed: bool,
 }
 
 fn main() {
@@ -95,7 +95,7 @@ fn main() {
     let preset = get_preset(&args);
     let (file_name, preview_filename) = get_output_file_name(&args);
 
-    println!("");
+    println!();
     if args.batch > 1 {
         println!("Images will be saved to {:#?}", args.output)
     } else {
@@ -104,7 +104,7 @@ fn main() {
     if args.preview.is_some() {
         println!("Image preview between inference steps will be saved as {preview_filename:#?}");
     }
-    println!("");
+    println!();
 
     let (config, mut model_config) = PresetBuilder::default()
         .preset(preset)
@@ -158,9 +158,9 @@ fn main() {
         .unwrap();
     gen_img(&config, &mut model_config).unwrap();
 
-    println!("");
+    println!();
     timer.print_elapsed_time();
-    println!("");
+    println!();
 }
 
 fn get_output_file_name(args: &Args) -> (PathBuf, PathBuf) {
@@ -175,15 +175,13 @@ fn get_preset(args: &Args) -> Preset {
         PresetDiscriminants::StableDiffusion1_4 => Preset::StableDiffusion1_4,
         PresetDiscriminants::StableDiffusion1_5 => Preset::StableDiffusion1_5,
         PresetDiscriminants::StableDiffusion2_1 => Preset::StableDiffusion2_1,
-        PresetDiscriminants::StableDiffusion3MediumFp16 => Preset::StableDiffusion3MediumFp16,
-        PresetDiscriminants::StableDiffusion3_5MediumFp16 => Preset::StableDiffusion3_5MediumFp16,
-        PresetDiscriminants::StableDiffusion3_5LargeFp16 => Preset::StableDiffusion3_5LargeFp16,
-        PresetDiscriminants::StableDiffusion3_5LargeTurboFp16 => {
-            Preset::StableDiffusion3_5LargeTurboFp16
-        }
+        PresetDiscriminants::StableDiffusion3Medium => Preset::StableDiffusion3Medium,
+        PresetDiscriminants::StableDiffusion3_5Medium => Preset::StableDiffusion3_5Medium,
+        PresetDiscriminants::StableDiffusion3_5Large => Preset::StableDiffusion3_5Large,
+        PresetDiscriminants::StableDiffusion3_5LargeTurbo => Preset::StableDiffusion3_5LargeTurbo,
         PresetDiscriminants::SDXLBase1_0 => Preset::SDXLBase1_0,
         PresetDiscriminants::SDTurbo => Preset::SDTurbo,
-        PresetDiscriminants::SDXLTurbo1_0Fp16 => Preset::SDXLTurbo1_0Fp16,
+        PresetDiscriminants::SDXLTurbo1_0 => Preset::SDXLTurbo1_0,
         PresetDiscriminants::Flux1Dev => Preset::Flux1Dev(
             args.weights
                 .unwrap_or_else(|| Flux1Weight::default().into())

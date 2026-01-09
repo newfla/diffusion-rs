@@ -25,7 +25,7 @@ Rust bindings to <https://github.com/leejet/stable-diffusion.cpp>
 ``` rust no_run
 use diffusion_rs::{api::gen_img, preset::{Preset,PresetBuilder}};
 let (config, mut model_config) = PresetBuilder::default()
-            .preset(Preset::SDXLTurbo1_0Fp16)
+            .preset(Preset::SDXLTurbo1_0)
             .prompt("a lovely duck drinking water from a bottle")
             .build()
             .unwrap();

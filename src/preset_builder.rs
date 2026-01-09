@@ -58,7 +58,7 @@ pub fn stable_diffusion_2_1() -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-pub fn stable_diffusion_3_medium_fp16() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_medium() -> Result<ConfigsBuilder, ApiError> {
     let model_path = download_file_hf_hub(
         "stabilityai/stable-diffusion-3-medium",
         "sd3_medium_incl_clips_t5xxlfp16.safetensors",
@@ -172,7 +172,7 @@ pub fn sd_turbo() -> Result<ConfigsBuilder, ApiError> {
     Ok(config)
 }
 
-pub fn sdxl_turbo_1_0_fp16() -> Result<ConfigsBuilder, ApiError> {
+pub fn sdxl_turbo_1_0() -> Result<ConfigsBuilder, ApiError> {
     let model_path =
         download_file_hf_hub("stabilityai/sdxl-turbo", "sd_xl_turbo_1.0_fp16.safetensors")?;
 
@@ -183,15 +183,15 @@ pub fn sdxl_turbo_1_0_fp16() -> Result<ConfigsBuilder, ApiError> {
     sdxl_vae_fp16_fix(config)
 }
 
-pub fn stable_diffusion_3_5_large_fp16() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_5_large() -> Result<ConfigsBuilder, ApiError> {
     stable_diffusion_3_5("large", "large", 28, 4.5)
 }
 
-pub fn stable_diffusion_3_5_large_turbo_fp16() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_5_large_turbo() -> Result<ConfigsBuilder, ApiError> {
     stable_diffusion_3_5("large-turbo", "large_turbo", 4, 0.)
 }
 
-pub fn stable_diffusion_3_5_medium_fp16() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_5_medium() -> Result<ConfigsBuilder, ApiError> {
     stable_diffusion_3_5("medium", "medium", 40, 4.5)
 }
 

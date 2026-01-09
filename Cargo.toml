@@ -26,6 +26,7 @@ diffusion-rs-sys = { path = "sys", version = "0.1.15" }
 hf-hub = {version = "0.4.2", default-features = false, features = ["ureq"]}
 image = "0.25.5"
 libc = "0.2.161"
+little_exif = "0.6.21"
 num_cpus = "1.16.0"
 strum = { version = "0.27", features = ["derive"] }
 subenum = "1.1.3"
