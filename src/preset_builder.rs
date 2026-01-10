@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    api::{ModelConfigBuilder, SampleMethod},
+    api::{ModelConfigBuilder, SampleMethod, Scheduler},
     modifier::{
         sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q2_k_flux_1, t5xxl_q3_k_flux_1,
         t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1,
@@ -9,7 +9,8 @@ use crate::{
     preset::{
         ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
         Flux1MiniWeight, Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-        OvisImageWeight, QwenImageWeight, SSD1BWeight, ZImageTurboWeight,
+        OvisImageWeight, QwenImageWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
+        ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -488,14 +489,16 @@ pub fn flux_2_dev(sd_type: Flux2Weight) -> Result<ConfigsBuilder, ApiError> {
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
-    model_config.diffusion_model(model);
-    model_config.llm(llm);
-    model_config.offload_params_to_cpu(true);
-    model_config.flash_attention(true);
-    model_config.vae(vae);
-    model_config.vae_tiling(true);
-    config.cfg_scale(1.);
-    config.sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae(vae)
+        .vae_tiling(true);
+    config
+        .cfg_scale(1.)
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
 
     Ok((config, model_config))
 }
@@ -594,15 +597,13 @@ pub fn z_image_turbo(sd_type: ZImageTurboWeight) -> Result<ConfigsBuilder, ApiEr
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
-    model_config.diffusion_model(model);
-    model_config.llm(llm);
-    model_config.flash_attention(true);
-    model_config.vae(vae);
-    model_config.vae_tiling(true);
-    config.steps(9);
-    config.cfg_scale(1.);
-    config.height(1024);
-    config.width(512);
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .flash_attention(true)
+        .vae(vae)
+        .vae_tiling(true);
+    config.steps(9).cfg_scale(1.).height(1024).width(512);
 
     Ok((config, model_config))
 }
@@ -683,17 +684,19 @@ pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, ApiError> 
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
-    model_config.diffusion_model(model);
-    model_config.llm(llm);
-    model_config.vae(vae);
-    model_config.offload_params_to_cpu(true);
-    model_config.flash_attention(true);
-    model_config.vae_tiling(true);
-    model_config.flow_shift(3.0);
-    config.sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
-    config.cfg_scale(2.5);
-    config.height(1024);
-    config.width(1024);
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae_tiling(true)
+        .flow_shift(3.0);
+    config
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
+        .cfg_scale(2.5)
+        .height(1024)
+        .width(1024);
 
     Ok((config, model_config))
 }
@@ -805,16 +808,14 @@ pub fn ovis_image(sd_type: OvisImageWeight) -> Result<ConfigsBuilder, ApiError> 
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
-    model_config.diffusion_model(model);
-    model_config.llm(llm);
-    model_config.vae(vae);
-    model_config.offload_params_to_cpu(true);
-    model_config.flash_attention(true);
-    model_config.vae_tiling(true);
-    config.steps(20);
-    config.cfg_scale(5.);
-    config.height(512);
-    config.width(512);
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae_tiling(true);
+    config.steps(20).cfg_scale(5.).height(512).width(512);
 
     Ok((config, model_config))
 }
@@ -833,5 +834,123 @@ fn ovis_image_weight(sd_type: OvisImageWeight) -> Result<(PathBuf, PathBuf), Api
         "Comfy-Org/Ovis-Image",
         "split_files/text_encoders/ovis_2.5.safetensors",
     )?;
+    Ok((model_path, llm_path))
+}
+
+pub fn dream_shaper_xl_2_1_turbo() -> Result<ConfigsBuilder, ApiError> {
+    let model_path = download_file_hf_hub(
+        "Lykon/dreamshaper-xl-v2-turbo",
+        "DreamShaperXL_Turbo_v2_1.safetensors",
+    )?;
+
+    let mut config = ConfigsBuilder::default();
+
+    config.1.model(model_path).vae_tiling(true);
+    config
+        .0
+        .sampling_method(SampleMethod::DPM2_SAMPLE_METHOD)
+        .steps(6)
+        .guidance(2.)
+        .height(1024)
+        .width(1024);
+
+    Ok(config)
+}
+
+pub fn twinflow_z_image_turbo(
+    sd_type: TwinFlowZImageTurboExpWeight,
+) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = twinflow_z_image_turbo_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.1-schnell",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .flash_attention(true)
+        .vae(vae)
+        .vae_tiling(true)
+        .scheduler(Scheduler::SMOOTHSTEP_SCHEDULER);
+    config
+        .steps(3)
+        .cfg_scale(1.)
+        .height(1024)
+        .width(512)
+        .sampling_method(SampleMethod::DPM2_SAMPLE_METHOD);
+
+    Ok((config, model_config))
+}
+
+fn twinflow_z_image_turbo_weight(
+    sd_type: TwinFlowZImageTurboExpWeight,
+) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        TwinFlowZImageTurboExpWeight::Q4_0 => (
+            (
+                "wbruna/TwinFlow-Z-Image-Turbo-sdcpp-GGUF",
+                "TwinFlow_Z_Image_Turbo_exp-Q4_0.gguf",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q4_0.gguf",
+            ),
+        ),
+        TwinFlowZImageTurboExpWeight::Q5_0 => (
+            (
+                "wbruna/TwinFlow-Z-Image-Turbo-sdcpp-GGUF",
+                "TwinFlow_Z_Image_Turbo_exp-Q5_0.gguf",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q4_0.gguf",
+            ),
+        ),
+        TwinFlowZImageTurboExpWeight::Q8_0 => (
+            (
+                "wbruna/TwinFlow-Z-Image-Turbo-sdcpp-GGUF",
+                "TwinFlow_Z_Image_Turbo_exp-Q8_0.gguf",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q8_0.gguf",
+            ),
+        ),
+        TwinFlowZImageTurboExpWeight::Q3_K => (
+            (
+                "wbruna/TwinFlow-Z-Image-Turbo-sdcpp-GGUF",
+                "TwinFlow_Z_Image_Turbo_exp-Q3_K.gguf",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q3_K_M.gguf",
+            ),
+        ),
+        TwinFlowZImageTurboExpWeight::Q6_K => (
+            (
+                "wbruna/TwinFlow-Z-Image-Turbo-sdcpp-GGUF",
+                "TwinFlow_Z_Image_Turbo_exp-Q3_K.gguf",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-Q6_K.gguf",
+            ),
+        ),
+        TwinFlowZImageTurboExpWeight::BF16 => (
+            (
+                "azazeal2/TwinFlow-Z-Image-Turbo-repacked",
+                "TwinFlow_Z_Image_Turbo_exp_bf16.safetensors",
+            ),
+            (
+                "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+                "Qwen3-4B-Instruct-2507-F16.gguf",
+            ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
     Ok((model_path, llm_path))
 }
