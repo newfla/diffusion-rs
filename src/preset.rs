@@ -6,12 +6,12 @@ use subenum::subenum;
 use crate::{
     api::{Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
-        chroma, chroma_radiance, diff_instruct_star, flux_1_dev, flux_1_mini, flux_1_schnell,
-        flux_2_dev, juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image,
-        sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0, ssd_1b, stable_diffusion_1_4,
-        stable_diffusion_1_5, stable_diffusion_2_1, stable_diffusion_3_5_large,
-        stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium, stable_diffusion_3_medium,
-        z_image_turbo,
+        chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo, flux_1_dev,
+        flux_1_mini, flux_1_schnell, flux_2_dev, juggernaut_xl_11, nitro_sd_realism,
+        nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0, ssd_1b,
+        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
+        stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium,
+        stable_diffusion_3_medium, twinflow_z_image_turbo, z_image_turbo,
     },
 };
 
@@ -29,7 +29,8 @@ use crate::{
     Flux2Weight(derive(Default)),
     ZImageTurboWeight(derive(Default)),
     QwenImageWeight(derive(Default)),
-    OvisImageWeight(derive(Default))
+    OvisImageWeight(derive(Default)),
+    TwinFlowZImageTurboExpWeight(derive(Default))
 )]
 #[derive(Debug, Clone, Copy, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
@@ -53,7 +54,8 @@ pub enum WeightType {
         Flux2Weight,
         ZImageTurboWeight,
         QwenImageWeight,
-        OvisImageWeight(default)
+        OvisImageWeight(default),
+        TwinFlowZImageTurboExpWeight(default)
     )]
     Q4_0,
     #[subenum(Flux2Weight, QwenImageWeight)]
@@ -64,7 +66,8 @@ pub enum WeightType {
         DiffInstructStarWeight,
         Flux2Weight,
         ZImageTurboWeight,
-        QwenImageWeight
+        QwenImageWeight,
+        TwinFlowZImageTurboExpWeight
     )]
     Q5_0,
     #[subenum(Flux2Weight, QwenImageWeight)]
@@ -80,7 +83,8 @@ pub enum WeightType {
         Flux2Weight,
         ZImageTurboWeight,
         QwenImageWeight,
-        OvisImageWeight
+        OvisImageWeight,
+        TwinFlowZImageTurboExpWeight
     )]
     Q8_0,
     Q8_1,
@@ -103,7 +107,8 @@ pub enum WeightType {
         DiffInstructStarWeight,
         ZImageTurboWeight,
         Flux2Weight,
-        QwenImageWeight
+        QwenImageWeight,
+        TwinFlowZImageTurboExpWeight
     )]
     Q3_K,
     #[subenum(Flux1Weight, ZImageTurboWeight(default), Flux2Weight, QwenImageWeight)]
@@ -117,7 +122,8 @@ pub enum WeightType {
         DiffInstructStarWeight,
         Flux2Weight,
         ZImageTurboWeight,
-        QwenImageWeight
+        QwenImageWeight,
+        TwinFlowZImageTurboExpWeight
     )]
     Q6_K,
     Q8_K,
@@ -142,7 +148,8 @@ pub enum WeightType {
         Flux2Weight,
         ZImageTurboWeight,
         QwenImageWeight,
-        OvisImageWeight
+        OvisImageWeight,
+        TwinFlowZImageTurboExpWeight
     )]
     BF16,
     TQ1_0,
@@ -209,13 +216,19 @@ pub enum Preset {
     /// Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 1.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. 512x512. Vae-tiling enabled.
     Flux2Dev(Flux2Weight),
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
-    /// cfg_scale 1.0. 9 steps. Flash attention enabled. 1024x1024. Vae-tiling enabled.
+    /// cfg_scale 1.0. 9 steps. Flash attention enabled. 1024x412. Vae-tiling enabled.
     ZImageTurbo(ZImageTurboWeight),
     /// Enabled [crate::api::SampleMethod::EULER_SAMPLE_METHOD]. cfg_scale 2.5. flow_shift 3.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. 1024x1024. Vae-tiling enabled.
     QwenImage(QwenImageWeight),
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnel> providing a token via [crate::util::set_hf_token]
     /// cfg_scale 5.0. Flash attention enabled. Offload params to CPU enabled. 20 steps. Vae-tiling enabled. 512x512.
     OvisImage(OvisImageWeight),
+    /// lykon/dreamshaper-xl-v2-turbo is a Stable Diffusion model that has been fine-tuned on stabilityai/stable-diffusion-xl-base-1.0.
+    /// guidance_scale 2.0. 6 steps. 1024x1024. Vae-tiling enabled. Enabled [crate::api::SampleMethod::DPM2_SAMPLE_METHOD]
+    DreamShaperXL2_1Turbo,
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
+    /// Enabled [crate::api::SampleMethod::DPM2_SAMPLE_METHOD] and [crate::api::Scheduler::SMOOTHSTEP_SCHEDULER]. cfg_scale 1.0. 3 steps. Flash attention enabled. 1024x512. Vae-tiling enabled.
+    TwinFlowZImageTurboExp(TwinFlowZImageTurboExpWeight),
 }
 
 impl Preset {
@@ -246,6 +259,8 @@ impl Preset {
             Preset::ZImageTurbo(sd_type_t) => z_image_turbo(sd_type_t),
             Preset::QwenImage(sd_type_t) => qwen_image(sd_type_t),
             Preset::OvisImage(sd_type_t) => ovis_image(sd_type_t),
+            Preset::DreamShaperXL2_1Turbo => dream_shaper_xl_2_1_turbo(),
+            Preset::TwinFlowZImageTurboExp(sd_type_t) => twinflow_z_image_turbo(sd_type_t),
         };
 
         // Metal workaround.
@@ -329,7 +344,7 @@ mod tests {
         preset::{
             ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
             Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight,
-            QwenImageWeight, SSD1BWeight, ZImageTurboWeight,
+            QwenImageWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
         },
         util::set_hf_token,
     };
@@ -500,5 +515,20 @@ mod tests {
     fn test_ovis_image() {
         set_hf_token(include_str!("../token.txt"));
         run(Preset::OvisImage(OvisImageWeight::Q4_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_dreamshaper_xl_2_1_turbo() {
+        run(Preset::DreamShaperXL2_1Turbo);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_twinflow_z_image_turbo_exp() {
+        set_hf_token(include_str!("../token.txt"));
+        run(Preset::TwinFlowZImageTurboExp(
+            TwinFlowZImageTurboExpWeight::Q3_K,
+        ));
     }
 }

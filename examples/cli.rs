@@ -8,8 +8,8 @@ use diffusion_rs::{
     preset::{
         ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight, Flux1Weight,
         Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset,
-        PresetBuilder, PresetDiscriminants, QwenImageWeight, SSD1BWeight, WeightType,
-        ZImageTurboWeight,
+        PresetBuilder, PresetDiscriminants, QwenImageWeight, SSD1BWeight,
+        TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
     },
     util::set_hf_token,
 };
@@ -258,6 +258,13 @@ fn get_preset(args: &Args) -> Preset {
         PresetDiscriminants::OvisImage => Preset::OvisImage(
             args.weights
                 .unwrap_or_else(|| OvisImageWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::DreamShaperXL2_1Turbo => Preset::DreamShaperXL2_1Turbo,
+        PresetDiscriminants::TwinFlowZImageTurboExp => Preset::TwinFlowZImageTurboExp(
+            args.weights
+                .unwrap_or_else(|| TwinFlowZImageTurboExpWeight::default().into())
                 .try_into()
                 .unwrap(),
         ),
