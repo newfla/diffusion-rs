@@ -159,11 +159,11 @@ jobs:
       - name: Enable vulkan (ubuntu only)
         if: matrix.runner == 'ubuntu-22.04'
         run: |
-          echo 'features = ["vulkan"]' >> dist-workspace.toml && cat dist-workspace.toml
+          echo -e '\nfeatures = ["vulkan"]' >> dist-workspace.toml && cat dist-workspace.toml
       - name: Enable metal (macos only)
         if: contains(matrix.runner, 'macos')
         run: |
-          echo 'features = ["metal"]' >> dist-workspace.toml && cat dist-workspace.toml
+          echo -e '\nfeatures = ["metal"]' >> dist-workspace.toml && cat dist-workspace.toml
       - name: Build artifacts
         run: |
           # Actually do builds and make zips and whatnot
