@@ -139,6 +139,23 @@ jobs:
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
+
+      - name: install system dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: sudo apt update && sudo apt install -y clang cmake
+      - name: Install Vulkan SDK (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: humbletim/install-vulkan-sdk@0ef43dbc8af56d77bcb1e8b1ebbbaa8718ead524
+        with:
+          version: 1.4.328.1
+          cache: true
+      - name: Install Vulkan SDK (windows only)
+        if: matrix.platform == 'windows-2022'
+        run: |
+          curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/1.4.328.1/windows/vulkansdk-windows-X64-1.4.328.1.exe"
+          & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
+          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\1.4.328.1"
+          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\1.4.328.1\bin"
       - name: Build artifacts
         run: |
           # Actually do builds and make zips and whatnot
