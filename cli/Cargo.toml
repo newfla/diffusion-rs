@@ -1,0 +1,27 @@
+[package]
+name = "diffusion-rs-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+keywords.workspace = true
+publish = false
+
+[package.metadata.dist]
+dist = true
+
+[dependencies]
+chrono.workspace = true
+clap.workspace = true
+diffusion-rs = { path = "../"}
+execution-time.workspace = true
+strum.workspace = true
+
+[features]
+cuda = ["diffusion-rs/cuda"]
+hipblas = ["diffusion-rs/hipblas"]
+metal = ["diffusion-rs/metal"]
+vulkan = ["diffusion-rs/vulkan"]
+sycl = ["diffusion-rs/sycl"]
