@@ -156,6 +156,14 @@ jobs:
           & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
           Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\1.4.328.1"
           Add-Content $env:GITHUB_PATH "C:\VulkanSDK\1.4.328.1\bin"
+      - name: Enable vulkan (ubuntu only)
+        if: matrix.runner == 'ubuntu-22.04'
+        run: |
+          echo 'features = ["vulkan"]' >> dist-workspace.toml && cat dist-workspace.toml
+      - name: Enable metal (macos only)
+        if: contains(matrix.runner, 'macos')
+        run: |
+          echo 'features = ["metal"]' >> dist-workspace.toml && cat dist-workspace.toml
       - name: Build artifacts
         run: |
           # Actually do builds and make zips and whatnot
