@@ -11,6 +11,8 @@ dependencies_update = true
 # create tags for the releases
 git_tag_enable = true
 
+git_tag_name = "v{{ version }}"
+
 # disable GitHub releases
 git_release_enable = false
 
