@@ -47,19 +47,19 @@ struct Args {
     #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(WeightType))]
     weights: Option<WeightType>,
 
-    /// Numer of inference steps
+    /// Override the preset default number of inference steps
     #[arg(short, long)]
     steps: Option<i32>,
 
-    /// Width
+    /// Override the preset default width
     #[arg(short, long)]
     width: Option<i32>,
 
-    /// Height
+    /// Override the preset default height
     #[arg(short, long)]
     height: Option<i32>,
 
-    /// Number of images to generate
+    /// Number of images to generate (default 1)
     #[arg(short, long, default_value_t = 1)]
     batch: i32,
 
