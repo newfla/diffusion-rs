@@ -7,6 +7,7 @@ use diffusion_rs::{
     api::{PreviewType, gen_img},
     preset::{
         ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight, Flux1Weight,
+        Flux2Klein4BWeight, Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight,
         Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset,
         PresetBuilder, PresetDiscriminants, QwenImageWeight, SSD1BWeight,
         TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
@@ -32,6 +33,10 @@ enum PreviewMode {
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
+    /// The preset to use
+    #[arg(ignore_case = true, value_parser = clap_enum_variants!(PresetDiscriminants))]
+    preset: PresetDiscriminants,
+
     /// The prompt to render
     prompt: String,
 
@@ -39,12 +44,8 @@ struct Args {
     #[arg(short, long)]
     negative: Option<String>,
 
-    /// The preset to use
-    #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(PresetDiscriminants))]
-    preset: PresetDiscriminants,
-
     /// Optionally which type of quantization to use
-    #[arg(short, long, ignore_case = true, value_parser = clap_enum_variants!(WeightType))]
+    #[arg(long, ignore_case = true, value_parser = clap_enum_variants!(WeightType))]
     weights: Option<WeightType>,
 
     /// Override the preset default number of inference steps
@@ -52,11 +53,11 @@ struct Args {
     steps: Option<i32>,
 
     /// Override the preset default width
-    #[arg(short, long)]
+    #[arg(long)]
     width: Option<i32>,
 
     /// Override the preset default height
-    #[arg(short, long)]
+    #[arg(long)]
     height: Option<i32>,
 
     /// Number of images to generate (default 1)
@@ -71,7 +72,7 @@ struct Args {
     #[arg(short, long, ignore_case = true)]
     preview: Option<PreviewMode>,
 
-    /// Set Huggingface Hub token
+    /// Set Huggingface Hub token. Only used when downloading models that have not been cached before
     #[arg(short, long)]
     token: Option<String>,
 
@@ -269,6 +270,30 @@ fn get_preset(args: &Args) -> Preset {
                 .unwrap(),
         ),
         PresetDiscriminants::SDXS512DreamShaper => Preset::SDXS512DreamShaper,
+        PresetDiscriminants::Flux2Klein4B => Preset::Flux2Klein4B(
+            args.weights
+                .unwrap_or_else(|| Flux2Klein4BWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::Flux2KleinBase4B => Preset::Flux2KleinBase4B(
+            args.weights
+                .unwrap_or_else(|| Flux2KleinBase4BWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::Flux2Klein9B => Preset::Flux2Klein9B(
+            args.weights
+                .unwrap_or_else(|| Flux2Klein9BWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::Flux2KleinBase9B => Preset::Flux2KleinBase9B(
+            args.weights
+                .unwrap_or_else(|| Flux2KleinBase9BWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
     };
     preset
 }
