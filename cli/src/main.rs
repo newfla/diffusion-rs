@@ -268,6 +268,7 @@ fn get_preset(args: &Args) -> Preset {
                 .try_into()
                 .unwrap(),
         ),
+        PresetDiscriminants::SDXS512DreamShaper => Preset::SDXS512DreamShaper,
     };
     preset
 }

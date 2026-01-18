@@ -8,10 +8,11 @@ use crate::{
     preset_builder::{
         chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo, flux_1_dev,
         flux_1_mini, flux_1_schnell, flux_2_dev, juggernaut_xl_11, nitro_sd_realism,
-        nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0, ssd_1b,
-        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
-        stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium,
-        stable_diffusion_3_medium, twinflow_z_image_turbo, z_image_turbo,
+        nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0,
+        sdxs512_dream_shaper, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
+        stable_diffusion_2_1, stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo,
+        stable_diffusion_3_5_medium, stable_diffusion_3_medium, twinflow_z_image_turbo,
+        z_image_turbo,
     },
 };
 
@@ -229,6 +230,8 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-schnell> providing a token via [crate::util::set_hf_token]
     /// Enabled [crate::api::SampleMethod::DPM2_SAMPLE_METHOD] and [crate::api::Scheduler::SMOOTHSTEP_SCHEDULER]. cfg_scale 1.0. 3 steps. Flash attention enabled. 1024x512. Vae-tiling enabled.
     TwinFlowZImageTurboExp(TwinFlowZImageTurboExpWeight),
+    /// cfg_scale 1.0. 1 steps 512x512
+    SDXS512DreamShaper,
 }
 
 impl Preset {
@@ -261,6 +264,7 @@ impl Preset {
             Preset::OvisImage(sd_type_t) => ovis_image(sd_type_t),
             Preset::DreamShaperXL2_1Turbo => dream_shaper_xl_2_1_turbo(),
             Preset::TwinFlowZImageTurboExp(sd_type_t) => twinflow_z_image_turbo(sd_type_t),
+            Preset::SDXS512DreamShaper => sdxs512_dream_shaper(),
         };
 
         // Metal workaround.
@@ -530,5 +534,11 @@ mod tests {
         run(Preset::TwinFlowZImageTurboExp(
             TwinFlowZImageTurboExpWeight::Q3_K,
         ));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_sdxs512_dream_shaper() {
+        run(Preset::SDXS512DreamShaper);
     }
 }

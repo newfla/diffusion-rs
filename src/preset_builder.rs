@@ -954,3 +954,14 @@ fn twinflow_z_image_turbo_weight(
     let llm_path = download_file_hf_hub(llm.0, llm.1)?;
     Ok((model_path, llm_path))
 }
+
+pub fn sdxs512_dream_shaper() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub("akleine/sdxs-512", "sdxs.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.model(model);
+    config.steps(1).cfg_scale(1.).height(512).width(512);
+
+    Ok((config, model_config))
+}
