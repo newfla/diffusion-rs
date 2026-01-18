@@ -8,9 +8,10 @@ use crate::{
     },
     preset::{
         ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
-        Flux1MiniWeight, Flux1Weight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-        OvisImageWeight, QwenImageWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
-        ZImageTurboWeight,
+        Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
+        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
+        NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight, SSD1BWeight,
+        TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -948,6 +949,202 @@ fn twinflow_z_image_turbo_weight(
                 "unsloth/Qwen3-4B-Instruct-2507-GGUF",
                 "Qwen3-4B-Instruct-2507-F16.gguf",
             ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn sdxs512_dream_shaper() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub("akleine/sdxs-512", "sdxs.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.model(model);
+    config.steps(1).cfg_scale(1.).height(512).width(512);
+
+    Ok((config, model_config))
+}
+
+pub fn flux_2_klein_4b(sd_type: Flux2Klein4BWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = flux_2_klein_4b_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.2-dev",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae_tiling(true);
+    config.cfg_scale(1.).steps(4).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn flux_2_klein_4b_weight(sd_type: Flux2Klein4BWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        Flux2Klein4BWeight::Q4_0 => (
+            ("leejet/FLUX.2-klein-4B-GGUF", "flux-2-klein-4b-Q4_0.gguf"),
+            ("unsloth/Qwen3-4B-GGUF", "Qwen3-4B-Q4_0.gguf"),
+        ),
+        Flux2Klein4BWeight::Q8_0 => (
+            ("leejet/FLUX.2-klein-4B-GGUF", "flux-2-klein-4b-Q8_0.gguf"),
+            ("unsloth/Qwen3-4B-GGUF", "Qwen3-4B-Q8_0.gguf"),
+        ),
+        Flux2Klein4BWeight::BF16 => (
+            (
+                "black-forest-labs/FLUX.2-klein-4B",
+                "flux-2-klein-4b.safetensors",
+            ),
+            ("unsloth/Qwen3-4B-GGUF", "Qwen3-4B-BF16.gguf"),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn flux_2_klein_base_4b(sd_type: Flux2KleinBase4BWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = flux_2_klein_base_4b_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.2-dev",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae_tiling(true);
+    config.cfg_scale(4.).steps(20).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn flux_2_klein_base_4b_weight(
+    sd_type: Flux2KleinBase4BWeight,
+) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        Flux2KleinBase4BWeight::Q4_0 => (
+            (
+                "leejet/FLUX.2-klein-base-4B-GGUF",
+                "flux-2-klein-base-4b-Q4_0.gguf",
+            ),
+            ("unsloth/Qwen3-4B-GGUF", "Qwen3-4B-Q4_0.gguf"),
+        ),
+        Flux2KleinBase4BWeight::Q8_0 => (
+            (
+                "leejet/FLUX.2-klein-base-4B-GGUF",
+                "flux-2-klein-base-4b-Q8_0.gguf",
+            ),
+            ("unsloth/Qwen3-4B-GGUF", "Qwen3-4B-Q8_0.gguf"),
+        ),
+        Flux2KleinBase4BWeight::BF16 => (
+            (
+                "black-forest-labs/FLUX.2-klein-base-4B",
+                "flux-2-klein-base-4b.safetensors",
+            ),
+            ("unsloth/Qwen3-4B-GGUF", "Qwen3-4B-BF16.gguf"),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn flux_2_klein_9b(sd_type: Flux2Klein9BWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = flux_2_klein_9b_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.2-dev",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae_tiling(true);
+    config.cfg_scale(1.).steps(4).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn flux_2_klein_9b_weight(sd_type: Flux2Klein9BWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        Flux2Klein9BWeight::Q4_0 => (
+            ("leejet/FLUX.2-klein-9B-GGUF", "flux-2-klein-9b-Q4_0.gguf"),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q4_K_M.gguf"),
+        ),
+        Flux2Klein9BWeight::Q8_0 => (
+            ("leejet/FLUX.2-klein-9B-GGUF", "flux-2-klein-9b-Q8_0.gguf"),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q8_0.gguf"),
+        ),
+        Flux2Klein9BWeight::BF16 => (
+            (
+                "black-forest-labs/FLUX.2-klein-9B",
+                "flux-2-klein-9b.safetensors",
+            ),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-BF16.gguf"),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn flux_2_klein_base_9b(sd_type: Flux2KleinBase9BWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = flux_2_klein_base_9b_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "black-forest-labs/FLUX.2-dev",
+        "vae/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .offload_params_to_cpu(true)
+        .flash_attention(true)
+        .vae_tiling(true);
+    config.cfg_scale(4.).steps(20).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn flux_2_klein_base_9b_weight(
+    sd_type: Flux2KleinBase9BWeight,
+) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        Flux2KleinBase9BWeight::Q4_0 => (
+            (
+                "leejet/FLUX.2-klein-base-9B-GGUF",
+                "flux-2-klein-base-9b-Q4_0.gguf",
+            ),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q4_K_M.gguf"),
+        ),
+        Flux2KleinBase9BWeight::BF16 => (
+            (
+                "black-forest-labs/FLUX.2-klein-base-9B",
+                "flux-2-klein-base-9b.safetensors",
+            ),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-BF16.gguf"),
         ),
     };
     let model_path = download_file_hf_hub(model.0, model.1)?;
