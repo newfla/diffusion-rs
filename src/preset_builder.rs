@@ -1088,7 +1088,7 @@ fn flux_2_klein_9b_weight(sd_type: Flux2Klein9BWeight) -> Result<(PathBuf, PathB
     let (model, llm) = match sd_type {
         Flux2Klein9BWeight::Q4_0 => (
             ("leejet/FLUX.2-klein-9B-GGUF", "flux-2-klein-9b-Q4_0.gguf"),
-            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q4_0.gguf"),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q4_K_M.gguf"),
         ),
         Flux2Klein9BWeight::Q8_0 => (
             ("leejet/FLUX.2-klein-9B-GGUF", "flux-2-klein-9b-Q8_0.gguf"),
@@ -1137,7 +1137,7 @@ fn flux_2_klein_base_9b_weight(
                 "leejet/FLUX.2-klein-base-9B-GGUF",
                 "flux-2-klein-base-9b-Q4_0.gguf",
             ),
-            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q4_0.gguf"),
+            ("unsloth/Qwen3-8B-GGUF", "Qwen3-8B-Q4_K_M.gguf"),
         ),
         Flux2KleinBase9BWeight::BF16 => (
             (
