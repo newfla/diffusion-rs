@@ -76,7 +76,7 @@ struct Args {
     #[arg(short, long)]
     token: Option<String>,
 
-    /// Enable optimization for gpu with lower GB
+    /// Enable optimization to use less VRAM: clip_on_cpu, vae tiling, flash_attention, offload_params_to_cpu
     #[arg(short, long, default_value_t = false)]
     low_vram: bool,
 
@@ -143,6 +143,7 @@ fn main() {
                 model_config
                     .clip_on_cpu(true)
                     .vae_tiling(true)
+                    .flash_attention(true)
                     .offload_params_to_cpu(true);
             }
 

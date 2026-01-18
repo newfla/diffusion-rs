@@ -22,7 +22,7 @@ Options:
   -o, --output <OUTPUT>      Output Folder [default: ./]
   -p, --preview <PREVIEW>    Enable preview [possible values: fast, accurate]
   -t, --token <TOKEN>        Set Huggingface Hub token. Only used when downloading models that have not been cached before
-  -l, --low-vram             Enable optimization for gpu with lower GB
+  -l, --low-vram             Enable optimization to use less VRAM: clip_on_cpu, vae tiling, flash_attention, offload_params_to_cpu
   -r, --random-seed          Enable Random Seed: different runs will produce different results      
   -h, --help                 Print help
   -V, --version              Print version
