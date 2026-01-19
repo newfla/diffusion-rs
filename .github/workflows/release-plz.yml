@@ -1,6 +1,7 @@
 name: Release Plz
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
