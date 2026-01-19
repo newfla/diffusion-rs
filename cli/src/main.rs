@@ -295,6 +295,7 @@ fn get_preset(args: &Args) -> Preset {
                 .try_into()
                 .unwrap(),
         ),
+        PresetDiscriminants::SegmindVega => Preset::SegmindVega,
     };
     preset
 }

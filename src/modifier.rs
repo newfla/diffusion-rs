@@ -215,6 +215,22 @@ pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/segmind/Segmind-VegaRT> to [crate::preset::Preset::SegmindVega]
+pub fn segmind_vega_rt_lcm_lora(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path =
+        download_file_hf_hub("segmind/Segmind-VegaRT", "pytorch_lora_weights.safetensors")?;
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "pytorch_lora_weights".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
+    builder.0.guidance(0.).steps(4);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use hf_hub::api::sync::ApiError;
@@ -223,7 +239,7 @@ mod tests {
         api::gen_img,
         modifier::{
             enable_flash_attention, lcm_lora_ssd_1b, offload_params_to_cpu, preview_proj,
-            preview_tae, preview_vae, vae_tiling,
+            preview_tae, preview_vae, segmind_vega_rt_lcm_lora, vae_tiling,
         },
         preset::{ConfigsBuilder, Flux1Weight, Preset, PresetBuilder},
         util::set_hf_token,
@@ -338,5 +354,11 @@ mod tests {
             Preset::Flux1Mini(crate::preset::Flux1MiniWeight::Q2_K),
             enable_flash_attention,
         );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_segmind_vega_rt_lcm_lora() {
+        run(Preset::SegmindVega, segmind_vega_rt_lcm_lora);
     }
 }
