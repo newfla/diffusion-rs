@@ -9,7 +9,7 @@ cli.exe flux1schnell  "a lovely duck holding a sign says 'drink your water'" --r
 Usage: cli.exe [OPTIONS] --preset <PRESET> <PROMPT>
 
 Arguments:
-  <PRESET>  The preset to use [possible values: StableDiffusion1_4, StableDiffusion1_5, StableDiffusion2_1, StableDiffusion3Medium, StableDiffusion3_5Medium, StableDiffusion3_5Large, StableDiffusion3_5LargeTurbo, SDXLBase1_0, SDTurbo, SDXLTurbo1_0, Flux1Dev, Flux1Schnell, Flux1Mini, JuggernautXL11, Chroma, NitroSDRealism, NitroSDVibrant, DiffInstructStar, ChromaRadiance, SSD1B, Flux2Dev, ZImageTurbo, QwenImage, OvisImage, DreamShaperXL2_1Turbo, TwinFlowZImageTurboExp, SDXS512DreamShaper, Flux2Klein4B, Flux2KleinBase4B, Flux2Klein9B, Flux2KleinBase9B]
+  <PRESET>  The preset to use [possible values: StableDiffusion1_4, StableDiffusion1_5, StableDiffusion2_1, StableDiffusion3Medium, StableDiffusion3_5Medium, StableDiffusion3_5Large, StableDiffusion3_5LargeTurbo, SDXLBase1_0, SDTurbo, SDXLTurbo1_0, Flux1Dev, Flux1Schnell, Flux1Mini, JuggernautXL11, Chroma, NitroSDRealism, NitroSDVibrant, DiffInstructStar, ChromaRadiance, SSD1B, Flux2Dev, ZImageTurbo, QwenImage, OvisImage, DreamShaperXL2_1Turbo, TwinFlowZImageTurboExp, SDXS512DreamShaper, Flux2Klein4B, Flux2KleinBase4B, Flux2Klein9B, Flux2KleinBase9B, SegmindVega]
   <PROMPT>  The prompt to render
 
 Options:

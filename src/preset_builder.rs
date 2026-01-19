@@ -1151,3 +1151,14 @@ fn flux_2_klein_base_9b_weight(
     let llm_path = download_file_hf_hub(llm.0, llm.1)?;
     Ok((model_path, llm_path))
 }
+
+pub fn segmind_vega() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub("segmind/Segmind-Vega", "segmind-vega.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config.model(model).vae_tiling(true);
+    config.guidance(9.).steps(25).height(1024).width(1024);
+
+    Ok((config, model_config))
+}

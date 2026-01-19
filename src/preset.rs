@@ -10,7 +10,7 @@ use crate::{
         flux_1_mini, flux_1_schnell, flux_2_dev, flux_2_klein_4b, flux_2_klein_9b,
         flux_2_klein_base_4b, flux_2_klein_base_9b, juggernaut_xl_11, nitro_sd_realism,
         nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0,
-        sdxs512_dream_shaper, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
+        sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
         stable_diffusion_2_1, stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo,
         stable_diffusion_3_5_medium, stable_diffusion_3_medium, twinflow_z_image_turbo,
         z_image_turbo,
@@ -260,6 +260,8 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.2-dev> providing a token via [crate::util::set_hf_token]
     /// cfg scale 4.0. 20 steps. Flash attention enabled. Offload params to CPU enabled. 1024x1024. Vae-tiling enabled
     Flux2KleinBase9B(Flux2KleinBase9BWeight),
+    /// guidance_scale 9. 25 steps. 1024x1024
+    SegmindVega,
 }
 
 impl Preset {
@@ -297,6 +299,7 @@ impl Preset {
             Preset::Flux2KleinBase4B(sd_type_t) => flux_2_klein_base_4b(sd_type_t),
             Preset::Flux2Klein9B(sd_type_t) => flux_2_klein_9b(sd_type_t),
             Preset::Flux2KleinBase9B(sd_type_t) => flux_2_klein_base_9b(sd_type_t),
+            Preset::SegmindVega => segmind_vega(),
         };
 
         // Metal workaround.
@@ -602,5 +605,11 @@ mod tests {
     fn test_flux_2_klein_base_9b() {
         set_hf_token(include_str!("../token.txt"));
         run(Preset::Flux2KleinBase9B(Flux2KleinBase9BWeight::Q4_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_segmind_vega() {
+        run(Preset::SegmindVega);
     }
 }
