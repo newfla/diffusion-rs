@@ -266,8 +266,7 @@ pub enum Preset {
 
 impl Preset {
     fn try_configs_builder(self) -> Result<(ConfigBuilder, ModelConfigBuilder), ApiError> {
-        #[allow(unused_mut)]
-        let mut preset = match self {
+        match self {
             Preset::StableDiffusion1_4 => stable_diffusion_1_4(),
             Preset::StableDiffusion1_5 => stable_diffusion_1_5(),
             Preset::StableDiffusion2_1 => stable_diffusion_2_1(),
@@ -300,17 +299,7 @@ impl Preset {
             Preset::Flux2Klein9B(sd_type_t) => flux_2_klein_9b(sd_type_t),
             Preset::Flux2KleinBase9B(sd_type_t) => flux_2_klein_base_9b(sd_type_t),
             Preset::SegmindVega => segmind_vega(),
-        };
-
-        // Metal workaround.
-        // See https://github.com/leejet/stable-diffusion.cpp/issues/1040#issuecomment-3623644576
-        #[cfg(feature = "metal")]
-        {
-            if let Ok((_, model_config)) = &mut preset {
-                model_config.clip_on_cpu(true);
-            };
         }
-        preset
     }
 }
 
