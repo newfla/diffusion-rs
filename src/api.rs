@@ -483,8 +483,13 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     control_net_cpu: bool,
 
-    /// Use flash attention to reduce memory usage (for low vram).
-    // /For most backends, it slows things down, but for cuda it generally speeds it up too. At the moment, it is only supported for some models and some backends (like cpu, cuda/rocm, metal).
+    /// Use flash attention to reduce memory usage (model only).
+    /// For most backends, it slows things down, but for cuda it generally speeds it up too. At the moment, it is only supported for some models and some backends (like cpu, cuda/rocm, metal).
+    #[builder(default = "false")]
+    diffusion_flash_attention: bool,
+
+    /// Use flash attention to reduce memory usage.
+    /// For most backends, it slows things down, but for cuda it generally speeds it up too. At the moment, it is only supported for some models and some backends (like cpu, cuda/rocm, metal).
     #[builder(default = "false")]
     flash_attention: bool,
 
@@ -719,7 +724,8 @@ impl ModelConfig {
                     keep_clip_on_cpu: self.clip_on_cpu,
                     keep_control_net_on_cpu: self.control_net_cpu,
                     keep_vae_on_cpu: self.vae_on_cpu,
-                    diffusion_flash_attn: self.flash_attention,
+                    diffusion_flash_attn: self.diffusion_flash_attention,
+                    flash_attn: self.flash_attention,
                     diffusion_conv_direct: self.diffusion_conv_direct,
                     chroma_use_dit_mask: !self.chroma_disable_dit_mask,
                     chroma_use_t5_mask: self.chroma_enable_t5_mask,
@@ -912,7 +918,7 @@ pub struct Config {
     #[builder(default = "SampleMethod::SAMPLE_METHOD_COUNT")]
     sampling_method: SampleMethod,
 
-    /// eta in DDIM, only for DDIM and TCD: (default: 0)
+    /// eta in DDIM, only for DDIM/TCD/res_multistep/res_2s (default: 0)
     #[builder(default = "0.")]
     eta: f32,
 
