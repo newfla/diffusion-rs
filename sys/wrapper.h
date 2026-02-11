@@ -1,1 +1,1 @@
-#include <stable-diffusion.h>
+#include <include/stable-diffusion.h>
