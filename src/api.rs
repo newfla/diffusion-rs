@@ -34,7 +34,6 @@ use diffusion_rs_sys::sd_set_progress_callback;
 use diffusion_rs_sys::sd_slg_params_t;
 use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
-use image::DynamicImage;
 use image::ImageBuffer;
 use image::ImageError;
 use image::RgbImage;
@@ -862,11 +861,11 @@ pub struct Config {
 
     /// Path to the input image, required by img2img
     #[builder(default = "Default::default()")]
-    init_img: CLibPath,
+    init_img: PathBuf,
 
     /// Path to the image used as a mask for img2img
     #[builder(default = "Default::default()")]
-    mask_img: CLibPath,
+    mask_img: PathBuf,
 
     /// Path to image condition, control net
     #[builder(default = "Default::default()")]
@@ -874,7 +873,7 @@ pub struct Config {
 
     /// Paths to reference images for in-context conditioning (e.g. for Flux2)
     #[builder(default = "Default::default()")]
-    ref_images: CLibPathVec,
+    ref_images: Vec<PathBuf>,
 
     /// Path to write result image to (default: ./output.png)
     #[builder(default = "PathBuf::from(\"./output.png\")")]
@@ -1166,6 +1165,7 @@ impl CLibPath {
         self.0.as_ptr()
     }
 }
+
 #[derive(Debug, Clone, Default)]
 struct CLibPathVec(Vec<CLibPath>);
 
@@ -1273,16 +1273,11 @@ fn gen_img_maybe_progress(
     let prompt: CLibString = CLibString::from(config.prompt.as_str());
     let files = output_files(&config.output, config.batch_count);
     unsafe {
-        let init_img_path_str = config.init_img.0.to_string_lossy();
-        let mask_img_path_str = config.mask_img.0.to_string_lossy();
-        let init_img_ref = init_img_path_str.as_ref();
-        let mask_img_ref = mask_img_path_str.as_ref();
-        let init_img_path = Path::new(&init_img_ref);
-        let mask_img_path = Path::new(&mask_img_ref);
+        let init_img_path = Path::new(&config.init_img);
+        let mask_img_path = Path::new(&config.mask_img);
         
         let has_init_image = init_img_path.exists();
         let has_mask_image = mask_img_path.exists();
-        let has_ref_images = config.ref_images.0.len() > 0;
         
         let is_decode_only = !has_init_image;
         let sd_ctx = model_config.diffusion_ctx(is_decode_only);
@@ -1390,7 +1385,7 @@ fn gen_img_maybe_progress(
         // if a mask is not provided, we use a flat white mask meaning all of the image is in scope
         // otherwise generate_image throws a sigsegv when it tries to assign the mask
         if !image_buffer.is_empty() && mask_buffer.is_empty() {
-            let mut img: ImageBuffer<image::Luma<u8>, Vec<u8>> = 
+            let img: ImageBuffer<image::Luma<u8>, Vec<u8>> = 
                     ImageBuffer::from_pixel(init_image.width, init_image.height, image::Luma([255])); 
             mask_buffer = img.into_raw();
             mask_image = sd_image_t {
@@ -1403,10 +1398,8 @@ fn gen_img_maybe_progress(
 
         let mut ref_image_list = Vec::new();
         let mut ref_pixel_storage = Vec::new();
-        for ref_path in &config.ref_images.0 {
-            let ref_img_path_str = ref_path.0.to_string_lossy();
-            let ref_img_ref = ref_img_path_str.as_ref();
-            let ref_img_path = Path::new(&ref_img_ref);
+        for ref_path_str in &config.ref_images {
+            let ref_img_path = Path::new(&ref_path_str);
             
             if ref_img_path.exists() {
                 let img = image::open(&ref_img_path)?;
@@ -1614,7 +1607,7 @@ mod tests {
             .build()
             .unwrap();
         
-        gen_img(&config, &mut model_config);
+        gen_img(&config, &mut model_config).unwrap();
 
         // 2. Create conditioning image: Gradient square
         let mut cond = ImageBuffer::new(512, 512);
@@ -1637,7 +1630,10 @@ mod tests {
             .batch_count(1)
             .build()
             .unwrap();
-        gen_img(&img2img_config, &mut model_config);
+        gen_img(&img2img_config, &mut model_config).unwrap();
+        
+        // 4. Ensure decoder only mode works after img2img generation
+        gen_img(&config, &mut model_config).unwrap();
     }
 
     #[ignore]
