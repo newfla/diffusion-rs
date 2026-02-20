@@ -699,15 +699,14 @@ impl ModelConfig {
 
     unsafe fn diffusion_ctx(&mut self, vae_decode_only: bool) -> *mut sd_ctx_t {
         unsafe {
-            // This is required to support img2img after text2img generation 
-            // otherwise the context is cached and won't have a decode graph 
+            // This is required to support img2img after text2img generation
+            // otherwise the context is cached and won't have a decode graph
             // leading to an assertion error in sdcpp
-            if self.diffusion_ctx.is_some() {
-                let (sd_ctx, sd_ctx_params) = self.diffusion_ctx.unwrap();
-                if sd_ctx_params.vae_decode_only != vae_decode_only {
-                    sd_set_progress_callback(None, null_mut());
-                    free_sd_ctx(sd_ctx);
-                }
+            if let Some((sd_ctx, sd_ctx_params)) = self.diffusion_ctx.as_ref()
+                && sd_ctx_params.vae_decode_only != vae_decode_only
+            {
+                sd_set_progress_callback(None, null_mut());
+                free_sd_ctx(*sd_ctx);
                 self.diffusion_ctx = None;
             }
             if self.diffusion_ctx.is_none() {
@@ -1166,34 +1165,6 @@ impl CLibPath {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-struct CLibPathVec(Vec<CLibPath>);
-
-impl FromIterator<CLibPath> for CLibPathVec {
-    fn from_iter<T: IntoIterator<Item = CLibPath>>(iter: T) -> Self {
-        let inner_vec: Vec<CLibPath> = iter.into_iter().collect();
-        
-        CLibPathVec(inner_vec)
-    }
-}
-
-impl From<Vec<&Path>> for CLibPathVec {
-    fn from(value: Vec<&Path>) -> CLibPathVec {
-        value.iter()
-            .map(|&p| CLibPath::from(p)) 
-            .collect()
-    }
-}
-
-impl From<Vec<PathBuf>> for CLibPathVec {
-    fn from(value: Vec<PathBuf>) -> CLibPathVec {
-        value.iter()
-            .map(|p| CLibPath::from(p.as_path())) 
-            .collect()
-    }
-}
-
-
 impl From<PathBuf> for CLibPath {
     fn from(value: PathBuf) -> Self {
         Self(CString::new(value.to_str().unwrap_or_default()).unwrap())
@@ -1273,21 +1244,18 @@ fn gen_img_maybe_progress(
     let prompt: CLibString = CLibString::from(config.prompt.as_str());
     let files = output_files(&config.output, config.batch_count);
     unsafe {
-        let init_img_path = Path::new(&config.init_img);
-        let mask_img_path = Path::new(&config.mask_img);
-        
-        let has_init_image = init_img_path.exists();
-        let has_mask_image = mask_img_path.exists();
-        
+        let has_init_image = config.init_img.exists();
+        let has_mask_image = config.mask_img.exists();
+
         let is_decode_only = !has_init_image;
         let sd_ctx = model_config.diffusion_ctx(is_decode_only);
         let upscaler_ctx = model_config.upscaler_ctx();
-        
+
         let mut init_image = sd_image_t {
-                    width: 0,
-                    height: 0,
-                    channel: 3,
-                    data: std::ptr::null_mut(),
+            width: 0,
+            height: 0,
+            channel: 3,
+            data: std::ptr::null_mut(),
         };
         let mut mask_image = sd_image_t {
             width: config.width as u32,
@@ -1349,33 +1317,30 @@ fn gen_img_maybe_progress(
             style_strength: config.pm_style_strength,
         };
 
-
         // Declare the buffer in the function scope so it outlives the match block
         let mut image_buffer: Vec<u8> = Vec::new();
         let mut mask_buffer: Vec<u8> = Vec::new();
 
         if has_init_image {
-            let img = image::open(&init_img_path)?;
-            let (width, height) = (img.width(), img.height());
-            image_buffer = img.to_rgb8().into_raw(); 
-            
+            let img = image::open(&config.init_img)?;
+            image_buffer = img.to_rgb8().into_raw();
+
             init_image = sd_image_t {
-                width: width,
-                height: height,
+                width: img.width(),
+                height: img.height(),
                 channel: 3,
                 data: image_buffer.as_mut_ptr(),
             }
         }
 
         if has_mask_image {
-            let img = image::open(&mask_img_path)?;
-            let (width, height) = (img.width(), img.height());
+            let img = image::open(&config.mask_img)?;
             // Masks have to have single channel luminosity information only
-            mask_buffer = img.to_luma8().into_raw(); 
-            
+            mask_buffer = img.to_luma8().into_raw();
+
             mask_image = sd_image_t {
-                width: width,
-                height: height,
+                width: img.width(),
+                height: img.height(),
                 channel: 1,
                 data: mask_buffer.as_mut_ptr(),
             }
@@ -1385,32 +1350,29 @@ fn gen_img_maybe_progress(
         // if a mask is not provided, we use a flat white mask meaning all of the image is in scope
         // otherwise generate_image throws a sigsegv when it tries to assign the mask
         if !image_buffer.is_empty() && mask_buffer.is_empty() {
-            let img: ImageBuffer<image::Luma<u8>, Vec<u8>> = 
-                    ImageBuffer::from_pixel(init_image.width, init_image.height, image::Luma([255])); 
+            let img: ImageBuffer<image::Luma<u8>, Vec<u8>> =
+                ImageBuffer::from_pixel(init_image.width, init_image.height, image::Luma([255]));
             mask_buffer = img.into_raw();
             mask_image = sd_image_t {
                 width: init_image.width,
                 height: init_image.height,
                 channel: 1,
-                data: mask_buffer.as_mut_ptr()
+                data: mask_buffer.as_mut_ptr(),
             }
         }
 
         let mut ref_image_list = Vec::new();
         let mut ref_pixel_storage = Vec::new();
-        for ref_path_str in &config.ref_images {
-            let ref_img_path = Path::new(&ref_path_str);
-            
-            if ref_img_path.exists() {
-                let img = image::open(&ref_img_path)?;
-                let (width, height) = (img.width(), img.height());
-                let image_data = img.to_rgb8().into_raw(); 
-                
+        for ref_path in &config.ref_images {
+            if ref_path.exists() {
+                let img = image::open(ref_path)?;
+                let image_data = img.to_rgb8().into_raw();
+
                 ref_pixel_storage.push(image_data);
                 let storage_ref = ref_pixel_storage.last_mut().unwrap();
                 ref_image_list.push(sd_image_t {
-                    width: width,
-                    height: height,
+                    width: img.width(),
+                    height: img.height(),
                     channel: 3,
                     data: storage_ref.as_mut_ptr(),
                 });
@@ -1543,8 +1505,8 @@ fn save_img(img: sd_image_t, path: &Path, params: Option<&str>) -> Result<(), Di
 
 #[cfg(test)]
 mod tests {
+    use image::{DynamicImage, ImageBuffer, Rgba};
     use std::path::PathBuf;
-    use image::{Rgba, ImageBuffer, DynamicImage};
 
     use crate::{
         api::{ConfigBuilderError, ModelConfigBuilder},
@@ -1606,7 +1568,7 @@ mod tests {
             .model(model_path)
             .build()
             .unwrap();
-        
+
         gen_img(&config, &mut model_config).unwrap();
 
         // 2. Create conditioning image: Gradient square
@@ -1618,11 +1580,13 @@ mod tests {
             *pixel = Rgba([r, g, b, 255]);
         }
         let cond_path = "test_cond_image.png";
-        DynamicImage::ImageRgba8(cond).save(cond_path).expect("Failed to save reference image");
+        DynamicImage::ImageRgba8(cond)
+            .save(cond_path)
+            .expect("Failed to save reference image");
 
         // 3. Call refinement using the generated image as input
         let refine_prompt = "PBR texture map, matching the lighting and micro-detail density of the reference image.";
-        let img2img_config =  ConfigBuilder::default()
+        let img2img_config = ConfigBuilder::default()
             .prompt(refine_prompt)
             .output(PathBuf::from("./output_img_ref.png"))
             .ref_images(vec![PathBuf::from(cond_path)])
@@ -1631,7 +1595,7 @@ mod tests {
             .build()
             .unwrap();
         gen_img(&img2img_config, &mut model_config).unwrap();
-        
+
         // 4. Ensure decoder only mode works after img2img generation
         gen_img(&config, &mut model_config).unwrap();
     }
