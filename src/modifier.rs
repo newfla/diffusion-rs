@@ -104,6 +104,109 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/nerijs/pixel-art-xl>
+pub fn lora_pixel_art_sdxl_base_1_0(
+    mut builder: ConfigsBuilder,
+) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub("nerijs/pixel-art-xl", "pixel-art-xl.safetensors")?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "pixel-art-xl".to_string(),
+            is_high_noise: false,
+            multiplier: 1.2,
+        }],
+    );
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/nerijs/pastelcomic-flux>
+pub fn lora_pastelcomic_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub("nerijs/pastelcomic-flux", "pastelcomic_v2.safetensors")?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "pastelcomic_v2".to_string(),
+            is_high_noise: false,
+            multiplier: 1.2,
+        }],
+    );
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/strangerzonehf/Ghibli-Flux-Cartoon-LoRA>
+pub fn lora_ghibli_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "strangerzonehf/Ghibli-Flux-Cartoon-LoRA",
+        "Ghibili-Cartoon-Art.safetensors",
+    )?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "Ghibili-Cartoon-Art".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/strangerzonehf/Flux-Midjourney-Mix2-LoRA>
+pub fn lora_midjourney_mix_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "strangerzonehf/Flux-Midjourney-Mix2-LoRA",
+        "mjV6.safetensors",
+    )?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "mjV6".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/prithivMLmods/Retro-Pixel-Flux-LoRA>
+pub fn lora_retro_pixel_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "prithivMLmods/Retro-Pixel-Flux-LoRA",
+        "Retro-Pixel.safetensors",
+    )?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "Retro-Pixel".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
+    Ok(builder)
+}
+
+/// Apply <https://huggingface.co/prithivMLmods/Canopus-Pixar-3D-Flux-LoRA>
+pub fn lora_canopus_pixar_3d_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "prithivMLmods/Canopus-Pixar-3D-Flux-LoRA",
+        "Canopus-Pixar-3D-FluxDev-LoRA.safetensors",
+    )?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "Canopus-Pixar-3D-FluxDev-LoRA".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
+    Ok(builder)
+}
 /// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors> fp8_e4m3fn t5xxl text encoder to reduce memory usage
 pub fn t5xxl_fp8_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     let t5xxl_path = download_file_hf_hub(
@@ -216,7 +319,7 @@ pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
 }
 
 /// Apply <https://huggingface.co/segmind/Segmind-VegaRT> to [crate::preset::Preset::SegmindVega]
-pub fn segmind_vega_rt_lcm_lora(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lcm_lora_segmind_vega_rt(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     let lora_path =
         download_file_hf_hub("segmind/Segmind-VegaRT", "pytorch_lora_weights.safetensors")?;
     builder.1.lora_models(
@@ -238,8 +341,10 @@ mod tests {
     use crate::{
         api::gen_img,
         modifier::{
-            enable_flash_attention, lcm_lora_ssd_1b, offload_params_to_cpu, preview_proj,
-            preview_tae, preview_vae, segmind_vega_rt_lcm_lora, vae_tiling,
+            enable_flash_attention, lcm_lora_segmind_vega_rt, lcm_lora_ssd_1b,
+            lora_canopus_pixar_3d_flux, lora_ghibli_flux, lora_midjourney_mix_2_flux,
+            lora_pastelcomic_2_flux, lora_pixel_art_sdxl_base_1_0, lora_retro_pixel_flux,
+            offload_params_to_cpu, preview_proj, preview_tae, preview_vae, vae_tiling,
         },
         preset::{ConfigsBuilder, Flux1Weight, Preset, PresetBuilder},
         util::set_hf_token,
@@ -251,13 +356,13 @@ mod tests {
 
     static PROMPT: &str = "a lovely dinosaur made by crochet";
 
-    fn run<F>(preset: Preset, m: F)
+    fn run<F>(preset: Preset, prompt: &str, m: F)
     where
         F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> + 'static,
     {
         let (mut config, mut model_config) = PresetBuilder::default()
             .preset(preset)
-            .prompt(PROMPT)
+            .prompt(prompt)
             .with_modifier(m)
             .build()
             .unwrap();
@@ -267,37 +372,37 @@ mod tests {
     #[ignore]
     #[test]
     fn test_taesd() {
-        run(Preset::StableDiffusion1_5, taesd);
+        run(Preset::StableDiffusion1_5, PROMPT, taesd);
     }
 
     #[ignore]
     #[test]
     fn test_taesd_xl() {
-        run(Preset::SDXLTurbo1_0, taesd_xl);
+        run(Preset::SDXLTurbo1_0, PROMPT, taesd_xl);
     }
 
     #[ignore]
     #[test]
     fn test_hybrid_taesd() {
-        run(Preset::StableDiffusion1_5, hybrid_taesd);
+        run(Preset::StableDiffusion1_5, PROMPT, hybrid_taesd);
     }
 
     #[ignore]
     #[test]
     fn test_hybrid_taesd_xl() {
-        run(Preset::SDXLTurbo1_0, hybrid_taesd_xl);
+        run(Preset::SDXLTurbo1_0, PROMPT, hybrid_taesd_xl);
     }
 
     #[ignore]
     #[test]
     fn test_lcm_lora_sd_1_5() {
-        run(Preset::StableDiffusion1_5, lcm_lora_sd_1_5);
+        run(Preset::StableDiffusion1_5, PROMPT, lcm_lora_sd_1_5);
     }
 
     #[ignore]
     #[test]
     fn test_lcm_lora_sdxl_base_1_0() {
-        run(Preset::SDXLBase1_0, lcm_lora_sdxl_base_1_0);
+        run(Preset::SDXLBase1_0, PROMPT, lcm_lora_sdxl_base_1_0);
     }
 
     #[ignore]
@@ -306,6 +411,7 @@ mod tests {
         set_hf_token(include_str!("../token.txt"));
         run(
             Preset::Flux1Schnell(Flux1Weight::Q2_K),
+            PROMPT,
             offload_params_to_cpu,
         );
     }
@@ -315,6 +421,7 @@ mod tests {
     fn test_lcm_lora_ssd_1b() {
         run(
             Preset::SSD1B(crate::preset::SSD1BWeight::F8_E4M3),
+            PROMPT,
             lcm_lora_ssd_1b,
         );
     }
@@ -324,6 +431,7 @@ mod tests {
     fn test_vae_tiling() {
         run(
             Preset::SSD1B(crate::preset::SSD1BWeight::F8_E4M3),
+            PROMPT,
             vae_tiling,
         );
     }
@@ -331,19 +439,19 @@ mod tests {
     #[ignore]
     #[test]
     fn test_preview_proj() {
-        run(Preset::SDXLTurbo1_0, preview_proj);
+        run(Preset::SDXLTurbo1_0, PROMPT, preview_proj);
     }
 
     #[ignore]
     #[test]
     fn test_preview_tae() {
-        run(Preset::SDXLTurbo1_0, preview_tae);
+        run(Preset::SDXLTurbo1_0, PROMPT, preview_tae);
     }
 
     #[ignore]
     #[test]
     fn test_preview_vae() {
-        run(Preset::SDXLTurbo1_0, preview_vae);
+        run(Preset::SDXLTurbo1_0, PROMPT, preview_vae);
     }
 
     #[ignore]
@@ -352,6 +460,7 @@ mod tests {
         set_hf_token(include_str!("../token.txt"));
         run(
             Preset::Flux1Mini(crate::preset::Flux1MiniWeight::Q2_K),
+            PROMPT,
             enable_flash_attention,
         );
     }
@@ -359,6 +468,71 @@ mod tests {
     #[ignore]
     #[test]
     fn test_segmind_vega_rt_lcm_lora() {
-        run(Preset::SegmindVega, segmind_vega_rt_lcm_lora);
+        run(Preset::SegmindVega, PROMPT, lcm_lora_segmind_vega_rt);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_pixel_art_xl() {
+        run(
+            Preset::SDXLBase1_0,
+            "pixel, a cute corgi",
+            lora_pixel_art_sdxl_base_1_0,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_pastelcomic_2_flux() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Schnell(Flux1Weight::Q2_K),
+            PROMPT,
+            lora_pastelcomic_2_flux,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_ghibli_flux() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Schnell(Flux1Weight::Q2_K),
+            "Ghibli Art – A wise old fisherman sits on a wooden dock, gazing out at the vast, blue ocean. He wears a worn-out straw hat and a navy-blue coat, and he holds a fishing rod in his hands. A black cat with bright green eyes sits beside him, watching the waves. In the distance, a lighthouse stands tall against the horizon, with seagulls soaring in the sky. The water glistens under the golden sunset.",
+            lora_ghibli_flux,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_midjourney_mix_2_flux() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Schnell(Flux1Weight::Q2_K),
+            "MJ v6, delicious dipped chocolate pastry japo gallery, white background, in the style of dark brown, close-up intensity, duckcore, rounded, high resolution --ar 2:3 --v 5",
+            lora_midjourney_mix_2_flux,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_retro_pixel_flux() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Schnell(Flux1Weight::Q2_K),
+            "Retro Pixel, pixel art of a Hamburger in the style of an old video game, hero, pixelated 8bit, final boss ",
+            lora_retro_pixel_flux,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_canopus_pixar_3d_flux() {
+        set_hf_token(include_str!("../token.txt"));
+        run(
+            Preset::Flux1Schnell(Flux1Weight::Q2_K),
+            "A young man with light brown wavy hair and light brown eyes sitting in an armchair and looking directly at the camera, pixar style, disney pixar, office background, ultra detailed, 1 man",
+            lora_canopus_pixar_3d_flux,
+        );
     }
 }
