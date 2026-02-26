@@ -719,7 +719,6 @@ impl ModelConfig {
                     chroma_t5_mask_pad: self.chroma_t5_mask_pad,
                     vae_conv_direct: self.vae_conv_direct,
                     offload_params_to_cpu: self.offload_params_to_cpu,
-                    flow_shift: self.flow_shift,
                     prediction: self.prediction,
                     force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
                     tae_preview_only: self.taesd_preview_only,
@@ -1260,6 +1259,7 @@ fn gen_img_maybe_progress(
             shifted_timestep: model_config.timestep_shift,
             custom_sigmas: model_config.sigmas.as_mut_ptr(),
             custom_sigmas_count: model_config.sigmas.len() as i32,
+            flow_shift: model_config.flow_shift,
         };
         let control_image = sd_image_t {
             width: 0,
