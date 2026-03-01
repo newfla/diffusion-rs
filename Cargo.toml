@@ -3,7 +3,7 @@ members = ["sys", "cli"]
 
 [workspace.package]
 authors = ["Flavio Bizzarri <fl.bizzarri@gmail.com>"]
-version = "0.1.18"
+version = "0.1.19"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/newfla/diffusion-rs"
@@ -23,7 +23,7 @@ documentation = "https://docs.rs/diffusion-rs"
 [dependencies]
 chrono.workspace = true
 derive_builder = "0.20.2"
-diffusion-rs-sys = { path = "sys", version = "0.1.18" }
+diffusion-rs-sys = { path = "sys", version = "0.1.19" }
 hf-hub = {version = "0.4.2", default-features = false, features = ["ureq"]}
 image = "0.25.5"
 libc = "0.2.161"
