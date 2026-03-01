@@ -1185,21 +1185,21 @@ pub fn anima(sd_type: AnimaWeight) -> Result<ConfigsBuilder, ApiError> {
 fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), ApiError> {
     let (model, llm) = match sd_type {
         AnimaWeight::Q4_K => (
-            ("JusteLeo/Anima-GGUF", "anima-preview-Q4_K.gguf"),
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q4_K_M.gguf"),
             (
                 "mradermacher/Qwen3-0.6B-Base-GGUF",
                 "Qwen3-0.6B-Base.Q4_K_M.gguf",
             ),
         ),
         AnimaWeight::Q5_K => (
-            ("JusteLeo/Anima-GGUF", "anima-preview-Q5_K.gguf"),
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q5_K_M.gguf"),
             (
                 "mradermacher/Qwen3-0.6B-Base-GGUF",
                 "Qwen3-0.6B-Base.Q5_K_M.gguf",
             ),
         ),
         AnimaWeight::Q6_K => (
-            ("JusteLeo/Anima-GGUF", "anima-preview-Q6_K.gguf"),
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q6_K.gguf"),
             (
                 "mradermacher/Qwen3-0.6B-Base-GGUF",
                 "Qwen3-0.6B-Base.Q6_K.gguf",
@@ -1213,6 +1213,48 @@ fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), ApiError> {
             (
                 "circlestone-labs/Anima",
                 "split_files/text_encoders/qwen_3_06b_base.safetensors",
+            ),
+        ),
+        AnimaWeight::Q4_0 => (
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q4_0.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q4_K_M.gguf",
+            ),
+        ),
+        AnimaWeight::Q4_1 => (
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q4_1.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q4_K_M.gguf",
+            ),
+        ),
+        AnimaWeight::Q5_0 => (
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q5_0.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q5_K_M.gguf",
+            ),
+        ),
+        AnimaWeight::Q5_1 => (
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q5_1.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q5_K_M.gguf",
+            ),
+        ),
+        AnimaWeight::Q8_0 => (
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q8_0.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q8_0.gguf",
+            ),
+        ),
+        AnimaWeight::Q3_K => (
+            ("Bedovyy/Anima-GGUF", "anima-preview-Q3_K_L.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q3_K_L.gguf",
             ),
         ),
     };

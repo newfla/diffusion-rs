@@ -66,10 +66,11 @@ pub enum WeightType {
         Flux2Klein4BWeight,
         Flux2KleinBase4BWeight,
         Flux2Klein9BWeight(default),
-        Flux2KleinBase9BWeight(default)
+        Flux2KleinBase9BWeight(default),
+        AnimaWeight
     )]
     Q4_0,
-    #[subenum(Flux2Weight, QwenImageWeight)]
+    #[subenum(Flux2Weight, QwenImageWeight, AnimaWeight)]
     Q4_1,
     #[subenum(
         NitroSDRealismWeight,
@@ -78,10 +79,11 @@ pub enum WeightType {
         Flux2Weight,
         ZImageTurboWeight,
         QwenImageWeight,
-        TwinFlowZImageTurboExpWeight
+        TwinFlowZImageTurboExpWeight,
+        AnimaWeight
     )]
     Q5_0,
-    #[subenum(Flux2Weight, QwenImageWeight)]
+    #[subenum(Flux2Weight, QwenImageWeight, AnimaWeight)]
     Q5_1,
     #[subenum(
         Flux1Weight,
@@ -98,7 +100,8 @@ pub enum WeightType {
         TwinFlowZImageTurboExpWeight,
         Flux2Klein4BWeight(default),
         Flux2KleinBase4BWeight(default),
-        Flux2Klein9BWeight
+        Flux2Klein9BWeight,
+        AnimaWeight(default)
     )]
     Q8_0,
     Q8_1,
@@ -122,7 +125,8 @@ pub enum WeightType {
         ZImageTurboWeight,
         Flux2Weight,
         QwenImageWeight,
-        TwinFlowZImageTurboExpWeight
+        TwinFlowZImageTurboExpWeight,
+        AnimaWeight
     )]
     Q3_K,
     #[subenum(
@@ -144,7 +148,7 @@ pub enum WeightType {
         ZImageTurboWeight,
         QwenImageWeight,
         TwinFlowZImageTurboExpWeight,
-        AnimaWeight(default)
+        AnimaWeight
     )]
     Q6_K,
     Q8_K,
@@ -617,6 +621,6 @@ mod tests {
     #[ignore]
     #[test]
     fn test_anima() {
-        run(Preset::Anima(super::AnimaWeight::Q6_K));
+        run(Preset::Anima(super::AnimaWeight::Q8_0));
     }
 }
