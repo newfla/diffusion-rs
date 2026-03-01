@@ -207,6 +207,7 @@ pub fn lora_canopus_pixar_3d_flux(mut builder: ConfigsBuilder) -> Result<Configs
     );
     Ok(builder)
 }
+
 /// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors> fp8_e4m3fn t5xxl text encoder to reduce memory usage
 pub fn t5xxl_fp8_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
     let t5xxl_path = download_file_hf_hub(
@@ -334,6 +335,25 @@ pub fn lcm_lora_segmind_vega_rt(mut builder: ConfigsBuilder) -> Result<ConfigsBu
     Ok(builder)
 }
 
+/// Apply <https://huggingface.co/Einhorn/Anima-Preview_8_Step_Turbo_Lora>
+pub fn lora_anima_8_steps_turbo(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+    let lora_path = download_file_hf_hub(
+        "Einhorn/Anima-Preview_8_Step_Turbo_Lora",
+        "Anima-Preview_Turbo_8step.safetensors",
+    )?;
+
+    builder.1.lora_models(
+        lora_path.parent().unwrap(),
+        vec![LoraSpec {
+            file_name: "Anima-Preview_Turbo_8step".to_string(),
+            is_high_noise: false,
+            multiplier: 1.0,
+        }],
+    );
+    builder.0.cfg_scale(1.).steps(8);
+    Ok(builder)
+}
+
 #[cfg(test)]
 mod tests {
     use hf_hub::api::sync::ApiError;
@@ -342,11 +362,12 @@ mod tests {
         api::gen_img,
         modifier::{
             enable_flash_attention, lcm_lora_segmind_vega_rt, lcm_lora_ssd_1b,
-            lora_canopus_pixar_3d_flux, lora_ghibli_flux, lora_midjourney_mix_2_flux,
-            lora_pastelcomic_2_flux, lora_pixel_art_sdxl_base_1_0, lora_retro_pixel_flux,
-            offload_params_to_cpu, preview_proj, preview_tae, preview_vae, vae_tiling,
+            lora_anima_8_steps_turbo, lora_canopus_pixar_3d_flux, lora_ghibli_flux,
+            lora_midjourney_mix_2_flux, lora_pastelcomic_2_flux, lora_pixel_art_sdxl_base_1_0,
+            lora_retro_pixel_flux, offload_params_to_cpu, preview_proj, preview_tae, preview_vae,
+            vae_tiling,
         },
-        preset::{ConfigsBuilder, Flux1Weight, Preset, PresetBuilder},
+        preset::{AnimaWeight, ConfigsBuilder, Flux1Weight, Preset, PresetBuilder},
         util::set_hf_token,
     };
 
@@ -533,6 +554,16 @@ mod tests {
             Preset::Flux1Schnell(Flux1Weight::Q2_K),
             "A young man with light brown wavy hair and light brown eyes sitting in an armchair and looking directly at the camera, pixar style, disney pixar, office background, ultra detailed, 1 man",
             lora_canopus_pixar_3d_flux,
+        );
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lora_anima_8_steps_turbo() {
+        run(
+            Preset::Anima(AnimaWeight::Q6_K),
+            PROMPT,
+            lora_anima_8_steps_turbo,
         );
     }
 }
