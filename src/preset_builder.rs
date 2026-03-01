@@ -7,7 +7,7 @@ use crate::{
         t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1,
     },
     preset::{
-        ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
+        AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
         Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
         Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
         NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight, SSD1BWeight,
@@ -1161,4 +1161,62 @@ pub fn segmind_vega() -> Result<ConfigsBuilder, ApiError> {
     config.guidance(9.).steps(25).height(1024).width(1024);
 
     Ok((config, model_config))
+}
+
+pub fn anima(sd_type: AnimaWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = anima_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "circlestone-labs/Anima",
+        "split_files/vae/qwen_image_vae.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .vae_tiling(true);
+    config.cfg_scale(4.).steps(30).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        AnimaWeight::Q4_K => (
+            ("JusteLeo/Anima-GGUF", "anima-preview-Q4_K.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q4_K_M.gguf",
+            ),
+        ),
+        AnimaWeight::Q5_K => (
+            ("JusteLeo/Anima-GGUF", "anima-preview-Q5_K.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q5_K_M.gguf",
+            ),
+        ),
+        AnimaWeight::Q6_K => (
+            ("JusteLeo/Anima-GGUF", "anima-preview-Q6_K.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q6_K.gguf",
+            ),
+        ),
+        AnimaWeight::BF16 => (
+            (
+                "circlestone-labs/Anima",
+                "split_files/diffusion_models/anima-preview.safetensors",
+            ),
+            (
+                "circlestone-labs/Anima",
+                "split_files/text_encoders/qwen_3_06b_base.safetensors",
+            ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
 }

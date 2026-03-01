@@ -6,10 +6,10 @@ use clap::{Parser, ValueEnum};
 use diffusion_rs::{
     api::{PreviewType, gen_img},
     preset::{
-        ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight, Flux1Weight,
-        Flux2Klein4BWeight, Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight,
-        Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset,
-        PresetBuilder, PresetDiscriminants, QwenImageWeight, SSD1BWeight,
+        AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
+        Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight, Flux2KleinBase4BWeight,
+        Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
+        OvisImageWeight, Preset, PresetBuilder, PresetDiscriminants, QwenImageWeight, SSD1BWeight,
         TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
     },
     util::set_hf_token,
@@ -296,6 +296,12 @@ fn get_preset(args: &Args) -> Preset {
                 .unwrap(),
         ),
         PresetDiscriminants::SegmindVega => Preset::SegmindVega,
+        PresetDiscriminants::Anima => Preset::Anima(
+            args.weights
+                .unwrap_or_else(|| AnimaWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
     };
     preset
 }
