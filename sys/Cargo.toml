@@ -13,6 +13,7 @@ include = [
     "stable-diffusion.cpp/CMakeLists.txt",
     "stable-diffusion.cpp/gits_noise.inl",
     "stable-diffusion.cpp/include/*.h",
+    "stable-diffusion.cpp/src/*.h",
     "stable-diffusion.cpp/src/*.hpp",
     "stable-diffusion.cpp/src/*.cpp",
     "stable-diffusion.cpp/src/vocab/*.h",
