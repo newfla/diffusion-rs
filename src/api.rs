@@ -255,10 +255,10 @@ struct ScmPresetBins {
 
 impl ScmPresetBins {
     fn maybe_scale(&self) -> ScmPresetBins {
-        if self.steps == 28 || self.steps <= 0 {
-            return self.clone();
+        if self.steps != 28 && self.steps > 0 {
+            return self.scale()
         }
-        self.scale()
+        return self.clone();
     }
 
     fn scale(&self) -> ScmPresetBins {
@@ -284,7 +284,7 @@ impl ScmPresetBins {
         let mut mask = Vec::new();
         let mut c_idx = 0;
         let mut cache_idx = 0;
-
+        
         while mask.len() < self.steps as usize {
             if c_idx < self.compute_bins.len() {
                 let compute_count = self.compute_bins[c_idx];
@@ -296,7 +296,7 @@ impl ScmPresetBins {
                 c_idx += 1;
             }
             if cache_idx < self.cache_bins.len() {
-                let cache_count = self.cache_bins[c_idx];
+                let cache_count = self.cache_bins[cache_idx];
                 for _ in 0..cache_count {
                     if mask.len() < self.steps as usize {
                         mask.push(0);
