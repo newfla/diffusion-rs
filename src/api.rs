@@ -183,6 +183,7 @@ pub struct DbCacheParams {
     warmup: i32,
 
     /// Steps Computation Mask controls which steps can be cached
+    #[builder(default = "ScmPreset::default()")]
     scm_mask: ScmPreset,
 
     /// Scm Policy

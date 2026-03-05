@@ -4,7 +4,9 @@ use chrono::Local;
 use clap::{Parser, ValueEnum};
 
 use diffusion_rs::{
-    api::{PreviewType, gen_img},
+    api::{
+        DbCacheParamsBuilder, EasyCacheParamsBuilder, PreviewType, UCacheParamsBuilder, gen_img,
+    },
     preset::{
         AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
         Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight, Flux2KleinBase4BWeight,
@@ -22,6 +24,15 @@ macro_rules! clap_enum_variants {
         use clap::builder::TypedValueParser;
         clap::builder::PossibleValuesParser::new(<$e>::VARIANTS).map(|s| s.parse::<$e>().unwrap())
     }};
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+enum CacheMode {
+    UCACHE,
+    EASYCACHE,
+    DBCACHE,
+    TAYLORSEER,
+    CACHEDIT,
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -68,6 +79,10 @@ struct Args {
     #[arg(short, long, default_value = "./")]
     output: PathBuf,
 
+    /// Caching methods accelerate diffusion inference
+    #[arg(long)]
+    cache: Option<CacheMode>,
+
     /// Enable preview
     #[arg(short, long, ignore_case = true)]
     preview: Option<PreviewMode>,
@@ -107,57 +122,73 @@ fn main() {
     }
     println!();
 
-    let (config, mut model_config) = PresetBuilder::default()
-        .preset(preset)
-        .prompt(&args.prompt)
-        .with_modifier(move |(mut config, mut model_config)| {
-            // atch request?
-            if args.batch > 1 {
-                config.batch_count(args.batch);
-                config.output(args.output);
-            } else {
-                config.output(file_name);
-            }
+    let (config, mut model_config) =
+        PresetBuilder::default()
+            .preset(preset)
+            .prompt(&args.prompt)
+            .with_modifier(move |(mut config, mut model_config)| {
+                // atch request?
+                if args.batch > 1 {
+                    config.batch_count(args.batch);
+                    config.output(args.output);
+                } else {
+                    config.output(file_name);
+                }
 
-            if let Some(steps) = &args.steps {
-                config.steps(*steps);
-            }
+                if let Some(steps) = &args.steps {
+                    config.steps(*steps);
+                }
 
-            if args.random_seed {
-                config.seed(-1);
-            }
+                if args.random_seed {
+                    config.seed(-1);
+                }
 
-            if let Some(width) = args.width {
-                config.width(width);
-            }
+                if let Some(width) = args.width {
+                    config.width(width);
+                }
 
-            if let Some(height) = args.height {
-                config.height(height);
-            }
+                if let Some(height) = args.height {
+                    config.height(height);
+                }
 
-            if let Some(negative) = args.negative {
-                config.negative_prompt(negative);
-            }
+                if let Some(negative) = args.negative {
+                    config.negative_prompt(negative);
+                }
 
-            if args.low_vram {
-                model_config
-                    .clip_on_cpu(true)
-                    .vae_tiling(true)
-                    .flash_attention(true)
-                    .offload_params_to_cpu(true);
-            }
+                if args.low_vram {
+                    model_config
+                        .clip_on_cpu(true)
+                        .vae_tiling(true)
+                        .flash_attention(true)
+                        .offload_params_to_cpu(true);
+                }
 
-            match args.preview {
-                Some(PreviewMode::Fast) => config.preview_mode(PreviewType::PREVIEW_PROJ),
-                Some(PreviewMode::Accurate) => config.preview_mode(PreviewType::PREVIEW_VAE),
-                None => config.preview_mode(PreviewType::PREVIEW_NONE),
-            };
-            config.preview_output(preview_filename);
+                match args.preview {
+                    Some(PreviewMode::Fast) => config.preview_mode(PreviewType::PREVIEW_PROJ),
+                    Some(PreviewMode::Accurate) => config.preview_mode(PreviewType::PREVIEW_VAE),
+                    None => config.preview_mode(PreviewType::PREVIEW_NONE),
+                };
 
-            Ok((config, model_config))
-        })
-        .build()
-        .unwrap();
+                if let Some(cache) = args.cache {
+                    match cache {
+                        CacheMode::UCACHE => {
+                            config.ucache_caching(UCacheParamsBuilder::default().build().unwrap())
+                        }
+                        CacheMode::EASYCACHE => config
+                            .easy_cache_caching(EasyCacheParamsBuilder::default().build().unwrap()),
+                        CacheMode::DBCACHE => config
+                            .db_cache_caching(DbCacheParamsBuilder::default().build().unwrap()),
+                        CacheMode::TAYLORSEER => config.taylor_seer_caching(),
+                        CacheMode::CACHEDIT => config
+                            .cache_dit_caching(DbCacheParamsBuilder::default().build().unwrap()),
+                    };
+                }
+                config.preview_output(preview_filename);
+
+                Ok((config, model_config))
+            })
+            .build()
+            .unwrap();
     gen_img(&config, &mut model_config).unwrap();
 
     println!();
