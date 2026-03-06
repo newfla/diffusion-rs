@@ -20,8 +20,10 @@ Cargo.lock
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 bin/act
+build/
 
 *.png
 *.jpg
 *.jpeg
 .idea/
+.vscode/

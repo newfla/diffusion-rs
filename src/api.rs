@@ -183,6 +183,7 @@ pub struct DbCacheParams {
     warmup: i32,
 
     /// Steps Computation Mask controls which steps can be cached
+    #[builder(default = "ScmPreset::default()")]
     scm_mask: ScmPreset,
 
     /// Scm Policy
@@ -254,10 +255,10 @@ struct ScmPresetBins {
 
 impl ScmPresetBins {
     fn maybe_scale(&self) -> ScmPresetBins {
-        if self.steps == 28 || self.steps <= 0 {
-            return self.clone();
+        if self.steps != 28 && self.steps > 0 {
+            return self.scale();
         }
-        self.scale()
+        self.clone()
     }
 
     fn scale(&self) -> ScmPresetBins {
@@ -295,7 +296,7 @@ impl ScmPresetBins {
                 c_idx += 1;
             }
             if cache_idx < self.cache_bins.len() {
-                let cache_count = self.cache_bins[c_idx];
+                let cache_count = self.cache_bins[cache_idx];
                 for _ in 0..cache_count {
                     if mask.len() < self.steps as usize {
                         mask.push(0);
@@ -949,8 +950,8 @@ pub struct Config {
     #[builder(default = "Self::cache_init()", private)]
     cache: sd_cache_params_t,
 
-    #[builder(default = "CLibString::default()", private)]
-    scm_mask: CLibString,
+    #[builder(default = "None", private)]
+    scm_mask: Option<CLibString>,
 }
 
 impl ConfigBuilder {
@@ -1033,12 +1034,11 @@ impl ConfigBuilder {
             ScmPolicy::Static => false,
             ScmPolicy::Dynamic => true,
         };
-        self.scm_mask = Some(CLibString::from(
+        self.scm_mask = Some(Some(CLibString::from(
             params
                 .scm_mask
                 .to_vec_string(self.steps.unwrap_or_default()),
-        ));
-        cache.scm_mask = self.scm_mask.as_ref().unwrap().as_ptr();
+        )));
 
         self.cache = Some(cache);
         self
@@ -1060,9 +1060,6 @@ impl ConfigBuilder {
 impl From<Config> for ConfigBuilder {
     fn from(value: Config) -> Self {
         let mut builder = ConfigBuilder::default();
-        let mut cache = value.cache;
-        let scm_mask = value.scm_mask.clone();
-        cache.scm_mask = scm_mask.as_ptr();
         builder
             .pm_id_images_dir(value.pm_id_images_dir)
             .init_img(value.init_img)
@@ -1093,8 +1090,10 @@ impl From<Config> for ConfigBuilder {
             .preview_mode(value.preview_mode)
             .preview_noisy(value.preview_noisy)
             .preview_interval(value.preview_interval)
-            .cache(cache)
-            .scm_mask(scm_mask);
+            .cache(value.cache);
+        if let Some(scm_mask) = value.scm_mask {
+            builder.scm_mask(scm_mask.clone());
+        }
         builder
     }
 }
@@ -1406,6 +1405,11 @@ fn gen_img_maybe_progress(
             })
             .collect();
 
+        let mut cache = config.cache;
+        if let Some(scm_mask) = &config.scm_mask {
+            cache.scm_mask = scm_mask.as_ptr();
+        }
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -1426,7 +1430,7 @@ fn gen_img_maybe_progress(
             pm_params,
             vae_tiling_params,
             auto_resize_ref_image: config.disable_auto_resize_ref_image,
-            cache: config.cache,
+            cache,
             loras: loras.as_ptr(),
             lora_count: loras.len() as u32,
         };
