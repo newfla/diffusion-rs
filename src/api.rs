@@ -117,6 +117,38 @@ pub struct LoraSpec {
     pub multiplier: f32,
 }
 
+/// Parameters for Spectrum Caching
+#[derive(Builder, Debug, Clone)]
+pub struct SpectrumCacheParams {
+    /// Chebyshev vs Taylor blend weight (0=Taylor, 1=Chebyshev)
+    #[builder(default = "0.40")]
+    w: f32,
+
+    /// Chebyshev polynomial degree
+    #[builder(default = "3")]
+    m: i32,
+
+    /// Ridge regression regularization
+    #[builder(default = "1.0")]
+    lam: f32,
+
+    /// Initial window size (compute every N steps)
+    #[builder(default = "2")]
+    window: i32,
+
+    /// Window growth per computed step after warmup
+    #[builder(default = "0.50")]
+    flex: f32,
+
+    /// Steps to always compute before caching starts
+    #[builder(default = "4")]
+    warmup: i32,
+
+    /// Stop caching at this fraction of total steps
+    #[builder(default = "0.9")]
+    stop: f32,
+}
+
 /// Parameters for UCache
 #[derive(Builder, Debug, Clone)]
 pub struct UCacheParams {
@@ -990,12 +1022,33 @@ impl ConfigBuilder {
             taylorseer_skip_interval: 1,
             scm_mask: null(),
             scm_policy_dynamic: true,
+            spectrum_w: 0.4,
+            spectrum_m: 3,
+            spectrum_lam: 1.0,
+            spectrum_window_size: 2,
+            spectrum_flex_window: 0.5,
+            spectrum_warmup_steps: 4,
+            spectrum_stop_percent: 0.9,
         }
     }
 
     pub fn no_caching(&mut self) -> &mut Self {
         let mut cache = Self::cache_init();
         cache.mode = sd_cache_mode_t::SD_CACHE_DISABLED;
+        self.cache = Some(cache);
+        self
+    }
+
+    pub fn spectrum_caching(&mut self, params: SpectrumCacheParams) -> &mut Self {
+        let mut cache = Self::cache_init();
+        cache.mode = sd_cache_mode_t::SD_CACHE_SPECTRUM;
+        cache.spectrum_w = params.w;
+        cache.spectrum_m = params.m;
+        cache.spectrum_lam = params.lam;
+        cache.spectrum_window_size = params.window;
+        cache.spectrum_flex_window = params.flex;
+        cache.spectrum_warmup_steps = params.warmup;
+        cache.spectrum_stop_percent = params.stop;
         self.cache = Some(cache);
         self
     }
