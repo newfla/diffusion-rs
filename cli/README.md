@@ -6,10 +6,10 @@ cli.exe flux1schnell  "a lovely duck holding a sign says 'drink your water'" --r
 ```
 ## Help
 ```
-Usage: cli.exe [OPTIONS] --preset <PRESET> <PROMPT>
+Usage: diffusion-rs-cli.exe [OPTIONS] <PRESET> <PROMPT>
 
 Arguments:
-  <PRESET>  The preset to use [possible values: StableDiffusion1_4, StableDiffusion1_5, StableDiffusion2_1, StableDiffusion3Medium, StableDiffusion3_5Medium, StableDiffusion3_5Large, StableDiffusion3_5LargeTurbo, SDXLBase1_0, SDTurbo, SDXLTurbo1_0, Flux1Dev, Flux1Schnell, Flux1Mini, JuggernautXL11, Chroma, NitroSDRealism, NitroSDVibrant, DiffInstructStar, ChromaRadiance, SSD1B, Flux2Dev, ZImageTurbo, QwenImage, OvisImage, DreamShaperXL2_1Turbo, TwinFlowZImageTurboExp, SDXS512DreamShaper, Flux2Klein4B, Flux2KleinBase4B, Flux2Klein9B, Flux2KleinBase9B, SegmindVega]
+  <PRESET>  The preset to use [possible values: StableDiffusion1_4, StableDiffusion1_5, StableDiffusion2_1, StableDiffusion3Medium, StableDiffusion3_5Medium, StableDiffusion3_5Large, StableDiffusion3_5LargeTurbo, SDXLBase1_0, SDTurbo, SDXLTurbo1_0, Flux1Dev, Flux1Schnell, Flux1Mini, JuggernautXL11, Chroma, NitroSDRealism, NitroSDVibrant, DiffInstructStar, ChromaRadiance, SSD1B, Flux2Dev, ZImageTurbo, QwenImage, OvisImage, DreamShaperXL2_1Turbo, TwinFlowZImageTurboExp, SDXS512DreamShaper, Flux2Klein4B, Flux2KleinBase4B, Flux2Klein9B, Flux2KleinBase9B, SegmindVega, Anima]
   <PROMPT>  The prompt to render
 
 Options:
@@ -20,10 +20,11 @@ Options:
       --height <HEIGHT>      Override the preset default height
   -b, --batch <BATCH>        Number of images to generate (default 1) [default: 1]
   -o, --output <OUTPUT>      Output Folder [default: ./]
+  -c, --cache <CACHE>        Caching methods accelerate diffusion inference [possible values: ucache, easycache, dbcache, taylorseer, cachedit, spectrum]    
   -p, --preview <PREVIEW>    Enable preview [possible values: fast, accurate]
   -t, --token <TOKEN>        Set Huggingface Hub token. Only used when downloading models that have not been cached before
   -l, --low-vram             Enable optimization to use less VRAM: clip_on_cpu, vae tiling, flash_attention, offload_params_to_cpu
-  -r, --random-seed          Enable Random Seed: different runs will produce different results      
+  -r, --random-seed          Enable Random Seed: different runs will produce different results
   -h, --help                 Print help
   -V, --version              Print version
   ```
