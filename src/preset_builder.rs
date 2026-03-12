@@ -7,10 +7,10 @@ use crate::{
         t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1,
     },
     preset::{
-        AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder, DiffInstructStarWeight,
-        Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
-        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
-        NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight, SSD1BWeight,
+        Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder,
+        DiffInstructStarWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight,
+        Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight,
+        NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight, SSD1BWeight,
         TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
     },
 };
@@ -1255,6 +1255,71 @@ fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), ApiError> {
             (
                 "mradermacher/Qwen3-0.6B-Base-GGUF",
                 "Qwen3-0.6B-Base.Q3_K_L.gguf",
+            ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
+}
+
+pub fn anima2(sd_type: Anima2Weight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = anima2_weight(sd_type)?;
+    let vae = download_file_hf_hub(
+        "circlestone-labs/Anima",
+        "split_files/vae/qwen_image_vae.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .vae_tiling(true);
+    config.cfg_scale(4.).steps(30).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn anima2_weight(sd_type: Anima2Weight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        Anima2Weight::Q4_K => (
+            ("Bedovyy/Anima-GGUF", "anima-preview2-Q4_K_M.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q4_K_M.gguf",
+            ),
+        ),
+        Anima2Weight::Q5_K => (
+            ("Bedovyy/Anima-GGUF", "anima-preview2-Q5_K_M.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q5_K_M.gguf",
+            ),
+        ),
+        Anima2Weight::Q6_K => (
+            ("Bedovyy/Anima-GGUF", "anima-preview2-Q6_K.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q6_K.gguf",
+            ),
+        ),
+        Anima2Weight::BF16 => (
+            (
+                "circlestone-labs/Anima",
+                "split_files/diffusion_models/anima-preview2.safetensors",
+            ),
+            (
+                "circlestone-labs/Anima",
+                "split_files/text_encoders/qwen_3_06b_base.safetensors",
+            ),
+        ),
+        Anima2Weight::Q8_0 => (
+            ("Bedovyy/Anima-GGUF", "anima-preview2-Q8_0.gguf"),
+            (
+                "mradermacher/Qwen3-0.6B-Base-GGUF",
+                "Qwen3-0.6B-Base.Q8_0.gguf",
             ),
         ),
     };

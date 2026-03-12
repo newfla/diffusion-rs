@@ -6,8 +6,8 @@ use subenum::subenum;
 use crate::{
     api::{Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
-        anima, chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo, flux_1_dev,
-        flux_1_mini, flux_1_schnell, flux_2_dev, flux_2_klein_4b, flux_2_klein_9b,
+        anima, anima2, chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo,
+        flux_1_dev, flux_1_mini, flux_1_schnell, flux_2_dev, flux_2_klein_4b, flux_2_klein_9b,
         flux_2_klein_base_4b, flux_2_klein_base_9b, juggernaut_xl_11, nitro_sd_realism,
         nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0,
         sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
@@ -37,7 +37,8 @@ use crate::{
     Flux2KleinBase4BWeight(derive(Default)),
     Flux2Klein9BWeight(derive(Default)),
     Flux2KleinBase9BWeight(derive(Default)),
-    AnimaWeight(derive(Default))
+    AnimaWeight(derive(Default)),
+    Anima2Weight(derive(Default))
 )]
 #[derive(Debug, Clone, Copy, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
@@ -101,7 +102,8 @@ pub enum WeightType {
         Flux2Klein4BWeight(default),
         Flux2KleinBase4BWeight(default),
         Flux2Klein9BWeight,
-        AnimaWeight(default)
+        AnimaWeight(default),
+        Anima2Weight(default)
     )]
     Q8_0,
     Q8_1,
@@ -134,10 +136,17 @@ pub enum WeightType {
         ZImageTurboWeight(default),
         Flux2Weight,
         QwenImageWeight,
-        AnimaWeight
+        AnimaWeight,
+        Anima2Weight
     )]
     Q4_K,
-    #[subenum(Flux1MiniWeight, Flux2Weight, QwenImageWeight, AnimaWeight)]
+    #[subenum(
+        Flux1MiniWeight,
+        Flux2Weight,
+        QwenImageWeight,
+        AnimaWeight,
+        Anima2Weight
+    )]
     Q5_K,
     #[subenum(
         Flux1MiniWeight,
@@ -148,7 +157,8 @@ pub enum WeightType {
         ZImageTurboWeight,
         QwenImageWeight,
         TwinFlowZImageTurboExpWeight,
-        AnimaWeight
+        AnimaWeight,
+        Anima2Weight
     )]
     Q6_K,
     Q8_K,
@@ -179,7 +189,8 @@ pub enum WeightType {
         Flux2KleinBase4BWeight,
         Flux2Klein9BWeight,
         Flux2KleinBase9BWeight,
-        AnimaWeight
+        AnimaWeight,
+        Anima2Weight
     )]
     BF16,
     TQ1_0,
@@ -277,6 +288,8 @@ pub enum Preset {
     SegmindVega,
     /// cfg__scale 4.0. 30 steps 1024x1024. Vae tiling enabled
     Anima(AnimaWeight),
+    /// cfg__scale 4.0. 30 steps 1024x1024. Vae tiling enabled
+    Anima2(Anima2Weight),
 }
 
 impl Preset {
@@ -315,6 +328,7 @@ impl Preset {
             Preset::Flux2KleinBase9B(sd_type_t) => flux_2_klein_base_9b(sd_type_t),
             Preset::SegmindVega => segmind_vega(),
             Preset::Anima(sd_type_t) => anima(sd_type_t),
+            Preset::Anima2(sd_type_t) => anima2(sd_type_t),
         }
     }
 }
@@ -622,5 +636,11 @@ mod tests {
     #[test]
     fn test_anima() {
         run(Preset::Anima(super::AnimaWeight::Q8_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_anima2() {
+        run(Preset::Anima2(super::Anima2Weight::Q8_0));
     }
 }
