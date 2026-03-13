@@ -9,11 +9,11 @@ use diffusion_rs::{
         UCacheParamsBuilder, gen_img,
     },
     preset::{
-        AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
-        Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight, Flux2KleinBase4BWeight,
-        Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-        OvisImageWeight, Preset, PresetBuilder, PresetDiscriminants, QwenImageWeight, SSD1BWeight,
-        TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
+        Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
+        Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
+        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
+        NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder, PresetDiscriminants,
+        QwenImageWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
     },
     util::set_hf_token,
 };
@@ -335,6 +335,12 @@ fn get_preset(args: &Args) -> Preset {
         PresetDiscriminants::Anima => Preset::Anima(
             args.weights
                 .unwrap_or_else(|| AnimaWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::Anima2 => Preset::Anima2(
+            args.weights
+                .unwrap_or_else(|| Anima2Weight::default().into())
                 .try_into()
                 .unwrap(),
         ),
