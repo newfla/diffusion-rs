@@ -10,8 +10,8 @@ use crate::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder,
         DiffInstructStarWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight,
         Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight,
-        NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight, SSD1BWeight,
-        TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
+        NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight,
+        SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -956,8 +956,17 @@ fn twinflow_z_image_turbo_weight(
     Ok((model_path, llm_path))
 }
 
-pub fn sdxs512_dream_shaper() -> Result<ConfigsBuilder, ApiError> {
-    let model = download_file_hf_hub("akleine/sdxs-512", "sdxs.safetensors")?;
+pub fn sdxs512_dream_shaper(sd_type: SDXS512DreamShaperWeight) -> Result<ConfigsBuilder, ApiError> {
+    let model = match sd_type {
+        SDXS512DreamShaperWeight::F16 => {
+            download_file_hf_hub("akleine/sdxs-512", "sdxs.safetensors")?
+        }
+        SDXS512DreamShaperWeight::Q8_0 => download_file_hf_hub(
+            "concedo/sdxs-512-tinySDdistilled-GGUF",
+            "sdxs-512-tinySDdistilled_Q8_0.gguf",
+        )?,
+    };
+
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 

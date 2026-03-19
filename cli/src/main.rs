@@ -13,7 +13,8 @@ use diffusion_rs::{
         Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
         Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
         NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder, PresetDiscriminants,
-        QwenImageWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
+        QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
+        WeightType, ZImageTurboWeight,
     },
     util::set_hf_token,
 };
@@ -306,7 +307,12 @@ fn get_preset(args: &Args) -> Preset {
                 .try_into()
                 .unwrap(),
         ),
-        PresetDiscriminants::SDXS512DreamShaper => Preset::SDXS512DreamShaper,
+        PresetDiscriminants::SDXS512DreamShaper => Preset::SDXS512DreamShaper(
+            args.weights
+                .unwrap_or_else(|| SDXS512DreamShaperWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
         PresetDiscriminants::Flux2Klein4B => Preset::Flux2Klein4B(
             args.weights
                 .unwrap_or_else(|| Flux2Klein4BWeight::default().into())
