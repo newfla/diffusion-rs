@@ -1366,6 +1366,11 @@ fn gen_img_maybe_progress(
                 .iter()
                 .zip(files)
             {
+                // img.data will be null on OOM or other generation errors,
+                // in which case we skip saving and just return an error
+                if img.data.is_null() {
+                    return Err(DiffusionError::Forward);
+                }
                 match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
                     Ok(img) => save_img(img, &path, Some(&params_str))?,
                     Err(err) => {
