@@ -356,7 +356,10 @@ pub fn lora_anima_8_steps_turbo(mut builder: ConfigsBuilder) -> Result<ConfigsBu
 
 /// Apply <https://huggingface.co/black-forest-labs/FLUX.2-small-decoder> small decoder for faster decoding with a minor quality reduction
 pub fn flux_2_small_decoder(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
-    let vae_path = download_file_hf_hub("black-forest-labs/FLUX.2-small-decoder", "full_encoder_small_decoder.safetensors")?;
+    let vae_path = download_file_hf_hub(
+        "black-forest-labs/FLUX.2-small-decoder",
+        "full_encoder_small_decoder.safetensors",
+    )?;
     builder.1.vae(vae_path);
     Ok(builder)
 }
@@ -368,9 +371,15 @@ mod tests {
     use crate::{
         api::gen_img,
         modifier::{
-            enable_flash_attention, flux_2_small_decoder, lcm_lora_segmind_vega_rt, lcm_lora_ssd_1b, lora_anima_8_steps_turbo, lora_canopus_pixar_3d_flux, lora_ghibli_flux, lora_midjourney_mix_2_flux, lora_pastelcomic_2_flux, lora_pixel_art_sdxl_base_1_0, lora_retro_pixel_flux, offload_params_to_cpu, preview_proj, preview_tae, preview_vae, vae_tiling
+            enable_flash_attention, flux_2_small_decoder, lcm_lora_segmind_vega_rt,
+            lcm_lora_ssd_1b, lora_anima_8_steps_turbo, lora_canopus_pixar_3d_flux,
+            lora_ghibli_flux, lora_midjourney_mix_2_flux, lora_pastelcomic_2_flux,
+            lora_pixel_art_sdxl_base_1_0, lora_retro_pixel_flux, offload_params_to_cpu,
+            preview_proj, preview_tae, preview_vae, vae_tiling,
         },
-        preset::{AnimaWeight, ConfigsBuilder, Flux1Weight, Flux2Klein4BWeight, Preset, PresetBuilder},
+        preset::{
+            AnimaWeight, ConfigsBuilder, Flux1Weight, Flux2Klein4BWeight, Preset, PresetBuilder,
+        },
         util::set_hf_token,
     };
 
