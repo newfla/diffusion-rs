@@ -71,6 +71,7 @@ fn main() {
         .define("SD_BUILD_SERVER", "OFF")
         .define("GGML_OPENMP", "OFF")
         .define("SD_WEBP", "OFF")
+        .define("SD_WEBM", "OFF")
         .very_verbose(true)
         .pic(true);
 
