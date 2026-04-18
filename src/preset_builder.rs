@@ -8,7 +8,7 @@ use crate::{
     },
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder,
-        DiffInstructStarWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight,
+        DiffInstructStarWeight, ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight,
         Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight,
         NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight,
         SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
@@ -1335,4 +1335,189 @@ fn anima2_weight(sd_type: Anima2Weight) -> Result<(PathBuf, PathBuf), ApiError> 
     let model_path = download_file_hf_hub(model.0, model.1)?;
     let llm_path = download_file_hf_hub(llm.0, llm.1)?;
     Ok((model_path, llm_path))
+}
+
+pub fn ernie_image(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, ApiError> {
+    let vae = ernie_image_vae()?;
+    let llm = ernie_image_llm(sd_type)?;
+    let model = ernie_image_weight(sd_type)?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .diffusion_flash_attention(true)
+        .vae_tiling(true);
+    config.cfg_scale(5.).steps(20).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+pub fn ernie_image_turbo(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, ApiError> {
+    let vae = ernie_image_vae()?;
+    let llm = ernie_image_llm(sd_type)?;
+    let model = ernie_image_turbo_weight(sd_type)?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .diffusion_flash_attention(true)
+        .vae_tiling(true);
+    config.cfg_scale(1.).steps(8).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+fn ernie_image_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
+    match sd_type {
+        ErnieImageWeight::F16 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-F16.gguf")
+        }
+        ErnieImageWeight::Q4_0 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q4_0.gguf")
+        }
+        ErnieImageWeight::Q4_1 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q4_1.gguf")
+        }
+        ErnieImageWeight::Q5_0 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q5_0.gguf")
+        }
+        ErnieImageWeight::Q5_1 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q5_1.gguf")
+        }
+        ErnieImageWeight::Q8_0 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q8_0.gguf")
+        }
+        ErnieImageWeight::Q2_K => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q2_K.gguf")
+        }
+        ErnieImageWeight::Q3_K => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q3_K_M.gguf")
+        }
+        ErnieImageWeight::Q4_K => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q4_K_M.gguf")
+        }
+        ErnieImageWeight::Q5_K => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q5_K_M.gguf")
+        }
+        ErnieImageWeight::Q6_K => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-Q6_K.gguf")
+        }
+        ErnieImageWeight::BF16 => {
+            download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-BF16.gguf")
+        }
+    }
+}
+
+fn ernie_image_turbo_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
+    match sd_type {
+        ErnieImageWeight::F16 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-F16.gguf",
+        ),
+        ErnieImageWeight::Q4_0 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q4_0.gguf",
+        ),
+        ErnieImageWeight::Q4_1 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q4_1.gguf",
+        ),
+        ErnieImageWeight::Q5_0 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q5_0.gguf",
+        ),
+        ErnieImageWeight::Q5_1 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q5_1.gguf",
+        ),
+        ErnieImageWeight::Q8_0 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q8_0.gguf",
+        ),
+        ErnieImageWeight::Q2_K => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q2_K.gguf",
+        ),
+        ErnieImageWeight::Q3_K => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q3_K_M.gguf",
+        ),
+        ErnieImageWeight::Q4_K => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q4_K_M.gguf",
+        ),
+        ErnieImageWeight::Q5_K => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q5_K_M.gguf",
+        ),
+        ErnieImageWeight::Q6_K => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-Q6_K.gguf",
+        ),
+        ErnieImageWeight::BF16 => download_file_hf_hub(
+            "unsloth/ERNIE-Image-Turbo-GGUF",
+            "ernie-image-turbo-BF16.gguf",
+        ),
+    }
+}
+
+fn ernie_image_vae() -> Result<PathBuf, ApiError> {
+    download_file_hf_hub("Comfy-Org/ERNIE-Image", "vae/flux2-vae.safetensors")
+}
+
+fn ernie_image_llm(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
+    match sd_type {
+        ErnieImageWeight::F16 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-BF16.gguf",
+        ),
+        ErnieImageWeight::Q4_0 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q4_0.gguf",
+        ),
+        ErnieImageWeight::Q4_1 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q4_1.gguf",
+        ),
+        ErnieImageWeight::Q5_0 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q5_K_M.gguf",
+        ),
+        ErnieImageWeight::Q5_1 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q5_K_M.gguf",
+        ),
+        ErnieImageWeight::Q8_0 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q8_0.gguf",
+        ),
+        ErnieImageWeight::Q2_K => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q2_K.gguf",
+        ),
+        ErnieImageWeight::Q3_K => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q3_K_M.gguf",
+        ),
+        ErnieImageWeight::Q4_K => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q4_K_M.gguf",
+        ),
+        ErnieImageWeight::Q5_K => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q5_K_M.gguf",
+        ),
+        ErnieImageWeight::Q6_K => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-Q6_K.gguf",
+        ),
+        ErnieImageWeight::BF16 => download_file_hf_hub(
+            "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
+            "Ministral-3-3B-Instruct-2512-BF16.gguf",
+        ),
+    }
 }

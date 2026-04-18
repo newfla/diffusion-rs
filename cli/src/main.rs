@@ -10,7 +10,7 @@ use diffusion_rs::{
     },
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
-        Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
+        ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
         Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
         NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder, PresetDiscriminants,
         QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
@@ -347,6 +347,18 @@ fn get_preset(args: &Args) -> Preset {
         PresetDiscriminants::Anima2 => Preset::Anima2(
             args.weights
                 .unwrap_or_else(|| Anima2Weight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::ErnieImage => Preset::ErnieImage(
+            args.weights
+                .unwrap_or_else(|| ErnieImageWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::ErnieImageTurbo => Preset::ErnieImageTurbo(
+            args.weights
+                .unwrap_or_else(|| ErnieImageWeight::default().into())
                 .try_into()
                 .unwrap(),
         ),
