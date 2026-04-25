@@ -600,17 +600,12 @@ impl ModelConfigBuilder {
         {
             panic!("Invalid combination for {upscaler:?} and {custom_model:?}")
         }
-        self.hires_params = Some((
-            upscaler,
-            params,
-            custom_model.map(Into::into),
-        ));
+        self.hires_params = Some((upscaler, params, custom_model.map(Into::into)));
 
         self
     }
 
     fn hires_init() -> (Upscaler, HiresParams, Option<CLibPath>) {
-
         (
             Upscaler::SD_HIRES_UPSCALER_NONE,
             HiresParamsBuilder::default().build().unwrap(),
@@ -722,9 +717,11 @@ impl Drop for ModelConfig {
 impl From<ModelConfig> for ModelConfigBuilder {
     fn from(value: ModelConfig) -> Self {
         let mut builder = ModelConfigBuilder::default();
-        let hires_path = value.hires_params.2.clone().map(|f|{
-            PathBuf::from_str(&f.0.into_string().unwrap()).unwrap()
-        });
+        let hires_path = value
+            .hires_params
+            .2
+            .clone()
+            .map(|f| PathBuf::from_str(&f.0.into_string().unwrap()).unwrap());
         builder
             .n_threads(value.n_threads)
             .offload_params_to_cpu(value.offload_params_to_cpu)
@@ -773,7 +770,11 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .circular_x(value.circular_x)
             .circular_y(value.circular_y)
             .use_qwen_image_zero_cond_true(value.use_qwen_image_zero_cond_true)
-            .hires_params( value.hires_params.0, value.hires_params.1.clone(), hires_path.as_deref());
+            .hires_params(
+                value.hires_params.0,
+                value.hires_params.1.clone(),
+                hires_path.as_deref(),
+            );
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1397,17 +1398,17 @@ fn gen_img_maybe_progress(
             hires_path = path.as_ptr();
         }
 
-        let hires =  sd_hires_params_t {
-                enabled: model_config.hires_params.0 != Upscaler::SD_HIRES_UPSCALER_NONE,
-                upscaler : model_config.hires_params.0,
-                model_path: hires_path,
-                scale: model_config.hires_params.1.scale,
-                target_width: model_config.hires_params.1.width,
-                target_height: model_config.hires_params.1.height,
-                steps: model_config.hires_params.1.steps,
-                denoising_strength: model_config.hires_params.1.denoising_strength,
-                upscale_tile_size: model_config.hires_params.1.upscale_tile_size,
-            };
+        let hires = sd_hires_params_t {
+            enabled: model_config.hires_params.0 != Upscaler::SD_HIRES_UPSCALER_NONE,
+            upscaler: model_config.hires_params.0,
+            model_path: hires_path,
+            scale: model_config.hires_params.1.scale,
+            target_width: model_config.hires_params.1.width,
+            target_height: model_config.hires_params.1.height,
+            steps: model_config.hires_params.1.steps,
+            denoising_strength: model_config.hires_params.1.denoising_strength,
+            upscale_tile_size: model_config.hires_params.1.upscale_tile_size,
+        };
 
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
