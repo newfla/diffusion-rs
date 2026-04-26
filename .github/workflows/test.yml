@@ -187,7 +187,7 @@ jobs:
           | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
           echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
           | sudo tee /etc/apt/sources.list.d/oneAPI.list
-          sudo apt update && sudo apt install -y intel-basekit-2025.3.2-19 intel-hpckit-2025.3.1-52
+          sudo apt update && sudo apt install -y intel-basekit=2025.3.2-19 intel-hpckit=2025.3.1-52
       - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: |
