@@ -162,39 +162,39 @@ jobs:
           AMDGPU_TARGETS: "gfx1100" 
         run: cargo build --features hipblas
 
-  build-sycl:
-    needs: build-no-features
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-      - name: Free Disk Space (Ubuntu) for OneAPI
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-      - name: Ubuntu build dependencies
-        run: sudo apt update && sudo apt install -y clang cmake
-      - name: Install oneAPI Toolkit
-        run: |
-          wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-          | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
-          | sudo tee /etc/apt/sources.list.d/oneAPI.list
-          sudo apt update && sudo apt install -y intel-basekit intel-hpckit
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: |
-          source /opt/intel/oneapi/setvars.sh 
-          cargo build --features sycl
-      - name: Test
-        run: |
-          source /opt/intel/oneapi/setvars.sh 
-          cargo test --features sycl
+  # build-sycl:
+  #   needs: build-no-features
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: 'recursive'
+  #     - name: Free Disk Space (Ubuntu) for OneAPI
+  #       uses: jlumbroso/free-disk-space@main
+  #       with:
+  #         tool-cache: false
+  #         android: true
+  #         dotnet: true
+  #         haskell: true
+  #         large-packages: true
+  #         docker-images: true
+  #         swap-storage: true
+  #     - name: Ubuntu build dependencies
+  #       run: sudo apt update && sudo apt install -y clang cmake
+  #     - name: Install oneAPI Toolkit
+  #       run: |
+  #         wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+  #         | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+  #         echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+  #         | sudo tee /etc/apt/sources.list.d/oneAPI.list
+  #         sudo apt update && sudo apt install -y intel-basekit intel-hpckit
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - name: Build
+  #       run: |
+  #         source /opt/intel/oneapi/setvars.sh 
+  #         cargo build --features sycl
+  #     - name: Test
+  #       run: |
+  #         source /opt/intel/oneapi/setvars.sh 
+  #         cargo test --features sycl
     

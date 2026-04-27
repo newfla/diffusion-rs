@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::ptr::null;
 use std::ptr::null_mut;
 use std::slice;
+use std::str::FromStr;
 use std::sync::mpsc::Sender;
 
 use chrono::Local;
@@ -21,6 +22,7 @@ use diffusion_rs_sys::sd_embedding_t;
 use diffusion_rs_sys::sd_get_default_sample_method;
 use diffusion_rs_sys::sd_get_default_scheduler;
 use diffusion_rs_sys::sd_guidance_params_t;
+use diffusion_rs_sys::sd_hires_params_t;
 use diffusion_rs_sys::sd_image_t;
 use diffusion_rs_sys::sd_img_gen_params_t;
 use diffusion_rs_sys::sd_img_gen_params_to_str;
@@ -66,6 +68,9 @@ pub use diffusion_rs_sys::preview_t as PreviewType;
 
 /// Lora mode
 pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
+
+/// Hires mode
+pub use diffusion_rs_sys::sd_hires_upscaler_t as Upscaler;
 
 static VALID_EXT: [&str; 3] = ["gguf", "safetensors", "pt"];
 
@@ -231,6 +236,29 @@ pub enum ScmPolicy {
     #[default]
     /// Check threshold before caching
     Dynamic,
+}
+
+/// Hires parameters
+#[derive(Builder, Debug, Clone)]
+pub struct HiresParams {
+    /// highres fix target width, 0 to use scale (default: 0)
+    #[builder(default = "0")]
+    width: i32,
+    /// highres fix target height, 0 to use scale (default: 0)
+    #[builder(default = "0")]
+    height: i32,
+    /// highres fix target width, 0 to use scale (default: 0)
+    #[builder(default = "0")]
+    steps: i32,
+    /// highres fix upscaler tile size, reserved for model-backed upscalers (default: 128)
+    #[builder(default = "128")]
+    upscale_tile_size: i32,
+    /// highres fix scale when sizes is not set (default: 2.0)
+    #[builder(default = "2.0")]
+    scale: f32,
+    /// highres fix second pass denoising strength (default: 0.7)
+    #[builder(default = "0.7")]
+    denoising_strength: f32,
 }
 
 /// Config struct for a specific diffusion model
@@ -456,6 +484,9 @@ pub struct ModelConfig {
 
     #[builder(default = "None", private)]
     diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
+
+    #[builder(default = "Self::hires_init()", setter(custom))]
+    hires_params: (Upscaler, HiresParams, Option<CLibPath>),
 }
 
 impl ModelConfigBuilder {
@@ -556,6 +587,30 @@ impl ModelConfigBuilder {
             Some(num_cpus::get_physical() as i32)
         };
         self
+    }
+
+    pub fn hires_params(
+        &mut self,
+        upscaler: Upscaler,
+        params: HiresParams,
+        custom_model: Option<&Path>,
+    ) -> &mut Self {
+        if upscaler == Upscaler::SD_HIRES_UPSCALER_COUNT
+            || (upscaler == Upscaler::SD_HIRES_UPSCALER_MODEL && custom_model.is_none())
+        {
+            panic!("Invalid combination for {upscaler:?} and {custom_model:?}")
+        }
+        self.hires_params = Some((upscaler, params, custom_model.map(Into::into)));
+
+        self
+    }
+
+    fn hires_init() -> (Upscaler, HiresParams, Option<CLibPath>) {
+        (
+            Upscaler::SD_HIRES_UPSCALER_NONE,
+            HiresParamsBuilder::default().build().unwrap(),
+            None,
+        )
     }
 }
 
@@ -662,6 +717,11 @@ impl Drop for ModelConfig {
 impl From<ModelConfig> for ModelConfigBuilder {
     fn from(value: ModelConfig) -> Self {
         let mut builder = ModelConfigBuilder::default();
+        let hires_path = value
+            .hires_params
+            .2
+            .clone()
+            .map(|f| PathBuf::from_str(&f.0.into_string().unwrap()).unwrap());
         builder
             .n_threads(value.n_threads)
             .offload_params_to_cpu(value.offload_params_to_cpu)
@@ -709,7 +769,12 @@ impl From<ModelConfig> for ModelConfigBuilder {
             .circular(value.circular)
             .circular_x(value.circular_x)
             .circular_y(value.circular_y)
-            .use_qwen_image_zero_cond_true(value.use_qwen_image_zero_cond_true);
+            .use_qwen_image_zero_cond_true(value.use_qwen_image_zero_cond_true)
+            .hires_params(
+                value.hires_params.0,
+                value.hires_params.1.clone(),
+                hires_path.as_deref(),
+            );
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1328,6 +1393,23 @@ fn gen_img_maybe_progress(
             cache.scm_mask = scm_mask.as_ptr();
         }
 
+        let mut hires_path = null();
+        if let Some(path) = &model_config.hires_params.2 {
+            hires_path = path.as_ptr();
+        }
+
+        let hires = sd_hires_params_t {
+            enabled: model_config.hires_params.0 != Upscaler::SD_HIRES_UPSCALER_NONE,
+            upscaler: model_config.hires_params.0,
+            model_path: hires_path,
+            scale: model_config.hires_params.1.scale,
+            target_width: model_config.hires_params.1.width,
+            target_height: model_config.hires_params.1.height,
+            steps: model_config.hires_params.1.steps,
+            denoising_strength: model_config.hires_params.1.denoising_strength,
+            upscale_tile_size: model_config.hires_params.1.upscale_tile_size,
+        };
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -1351,6 +1433,7 @@ fn gen_img_maybe_progress(
             cache,
             loras: loras.as_ptr(),
             lora_count: loras.len() as u32,
+            hires,
         };
 
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))

@@ -5,8 +5,8 @@ use clap::{Parser, ValueEnum};
 
 use diffusion_rs::{
     api::{
-        DbCacheParamsBuilder, EasyCacheParamsBuilder, PreviewType, SpectrumCacheParamsBuilder,
-        UCacheParamsBuilder, gen_img,
+        DbCacheParamsBuilder, EasyCacheParamsBuilder, HiresParamsBuilder, PreviewType,
+        SpectrumCacheParamsBuilder, UCacheParamsBuilder, Upscaler, gen_img,
     },
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
@@ -42,6 +42,18 @@ enum CacheMode {
 enum PreviewMode {
     Fast,
     Accurate,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+enum UpscalerMode {
+    Latent,
+    LatentNearest,
+    LatentNearestExact,
+    LatentAntialiased,
+    LatentBicubic,
+    LatentBicubicAntialiased,
+    Lanczos,
+    Nearest,
 }
 
 #[derive(Parser)]
@@ -90,6 +102,14 @@ struct Args {
     #[arg(short, long, ignore_case = true)]
     preview: Option<PreviewMode>,
 
+    /// Enable upscaler
+    #[arg(long, ignore_case = true)]
+    upscaler: Option<UpscalerMode>,
+
+    /// Upscaler scale factor (default 2.0)
+    #[arg(long, ignore_case = true, default_value_t = 2.0)]
+    upscaler_scale: f32,
+
     /// Set Huggingface Hub token. Only used when downloading models that have not been cached before
     #[arg(short, long)]
     token: Option<String>,
@@ -98,9 +118,9 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     low_vram: bool,
 
-    /// Enable Random Seed: different runs will produce different results
-    #[arg(short, long, default_value_t = false)]
-    random_seed: bool,
+    /// RNG seed (-1 --> random)
+    #[arg(short, long, default_value_t = -1)]
+    seed: i32,
 }
 
 fn main() {
@@ -141,9 +161,7 @@ fn main() {
                 config.steps(*steps);
             }
 
-            if args.random_seed {
-                config.seed(-1);
-            }
+            config.seed(args.seed);
 
             if let Some(width) = args.width {
                 config.width(width);
@@ -188,6 +206,30 @@ fn main() {
                     CacheMode::SPECTRUM => config
                         .spectrum_caching(SpectrumCacheParamsBuilder::default().build().unwrap()),
                 };
+
+                if let Some(upscaler) = args.upscaler {
+                    let converted = match upscaler {
+                        UpscalerMode::Latent => Upscaler::SD_HIRES_UPSCALER_LATENT,
+                        UpscalerMode::LatentNearest => Upscaler::SD_HIRES_UPSCALER_LATENT_NEAREST,
+                        UpscalerMode::LatentNearestExact => {
+                            Upscaler::SD_HIRES_UPSCALER_LATENT_NEAREST_EXACT
+                        }
+                        UpscalerMode::LatentAntialiased => {
+                            Upscaler::SD_HIRES_UPSCALER_LATENT_ANTIALIASED
+                        }
+                        UpscalerMode::LatentBicubic => Upscaler::SD_HIRES_UPSCALER_LATENT_BICUBIC,
+                        UpscalerMode::LatentBicubicAntialiased => {
+                            Upscaler::SD_HIRES_UPSCALER_LATENT_BICUBIC_ANTIALIASED
+                        }
+                        UpscalerMode::Lanczos => Upscaler::SD_HIRES_UPSCALER_LANCZOS,
+                        UpscalerMode::Nearest => Upscaler::SD_HIRES_UPSCALER_NEAREST,
+                    };
+                    let params = HiresParamsBuilder::default()
+                        .scale(args.upscaler_scale)
+                        .build()
+                        .unwrap();
+                    model_config.hires_params(converted, params, None);
+                }
             }
             config.preview_output(preview_filename);
 
