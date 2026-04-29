@@ -262,7 +262,7 @@ pub struct HiresParams {
 }
 
 /// Config struct for a specific diffusion model
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug)]
 #[builder(
     setter(into, strip_option),
     build_fn(error = "ConfigBuilderError", validate = "Self::validate")
@@ -714,8 +714,8 @@ impl Drop for ModelConfig {
     }
 }
 
-impl From<ModelConfig> for ModelConfigBuilder {
-    fn from(value: ModelConfig) -> Self {
+impl From<&ModelConfig> for ModelConfigBuilder {
+    fn from(value: &ModelConfig) -> Self {
         let mut builder = ModelConfigBuilder::default();
         let hires_path = value
             .hires_params
@@ -785,7 +785,7 @@ impl From<ModelConfig> for ModelConfigBuilder {
     }
 }
 
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug)]
 #[builder(setter(into, strip_option), build_fn(validate = "Self::validate"))]
 /// Config struct common to all diffusion methods
 pub struct Config {
@@ -1043,18 +1043,18 @@ impl ConfigBuilder {
     }
 }
 
-impl From<Config> for ConfigBuilder {
-    fn from(value: Config) -> Self {
+impl From<&Config> for ConfigBuilder {
+    fn from(value: &Config) -> Self {
         let mut builder = ConfigBuilder::default();
         builder
-            .pm_id_images_dir(value.pm_id_images_dir)
-            .init_img(value.init_img)
-            .mask_img(value.mask_img)
-            .control_image(value.control_image)
-            .ref_images(value.ref_images)
-            .output(value.output)
-            .prompt(value.prompt)
-            .negative_prompt(value.negative_prompt)
+            .pm_id_images_dir(value.pm_id_images_dir.clone())
+            .init_img(value.init_img.clone())
+            .mask_img(value.mask_img.clone())
+            .control_image(value.control_image.clone())
+            .ref_images(value.ref_images.clone())
+            .output(value.output.clone())
+            .prompt(value.prompt.clone())
+            .negative_prompt(value.negative_prompt.clone())
             .cfg_scale(value.cfg_scale)
             .strength(value.strength)
             .pm_style_strength(value.pm_style_strength)
@@ -1067,12 +1067,12 @@ impl From<Config> for ConfigBuilder {
             .batch_count(value.batch_count)
             .clip_skip(value.clip_skip)
             .slg_scale(value.slg_scale)
-            .skip_layer(value.skip_layer)
+            .skip_layer(value.skip_layer.clone())
             .skip_layer_start(value.skip_layer_start)
             .skip_layer_end(value.skip_layer_end)
             .canny(value.canny)
             .disable_auto_resize_ref_image(value.disable_auto_resize_ref_image)
-            .preview_output(value.preview_output)
+            .preview_output(value.preview_output.clone())
             .preview_mode(value.preview_mode)
             .preview_noisy(value.preview_noisy)
             .preview_interval(value.preview_interval)
@@ -1611,14 +1611,14 @@ mod tests {
             .unwrap();
 
         gen_img(&config, &mut model_config).unwrap();
-        let config2 = ConfigBuilder::from(config.clone())
+        let config2 = ConfigBuilder::from(&config)
             .prompt("a lovely duck drinking water from a straw")
             .output(PathBuf::from("./output_2.png"))
             .build()
             .unwrap();
         gen_img(&config2, &mut model_config).unwrap();
 
-        let config3 = ConfigBuilder::from(config)
+        let config3 = ConfigBuilder::from(&config)
             .prompt("a lovely dog drinking water from a starbucks cup")
             .batch_count(2)
             .output(PathBuf::from("./"))
