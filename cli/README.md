@@ -2,7 +2,7 @@
 
 ## Usage
 ```
-cli.exe flux1schnell  "a lovely duck holding a sign says 'drink your water'" --random-seed --token YourHfHubToken
+cli.exe flux1schnell  "a lovely duck holding a sign says 'drink your water'" --token YourHfHubToken
 ```
 ## Help
 ```

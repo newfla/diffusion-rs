@@ -879,8 +879,8 @@ pub struct Config {
     #[builder(default = "20")]
     steps: i32,
 
-    /// RNG seed (default: 42, use random seed for < 0)
-    #[builder(default = "42")]
+    /// RNG seed (default: -1, use random seed for < 0)
+    #[builder(default = "-1")]
     seed: i64,
 
     /// Number of images to generate (default: 1)
