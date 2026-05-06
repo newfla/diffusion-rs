@@ -281,6 +281,10 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     offload_params_to_cpu: bool,
 
+    /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting
+    #[builder(default = "0.0")]
+    max_vram: f32,
+
     /// Path to esrgan model. Upscale images after generate, just RealESRGAN_x4plus_anime_6B supported by now
     #[builder(default = "Default::default()")]
     upscale_model: Option<CLibPath>,
@@ -690,6 +694,7 @@ impl ModelConfig {
                     circular_y: self.circular || self.circular_y,
                     qwen_image_zero_cond_t: self.use_qwen_image_zero_cond_true,
                     enable_mmap: self.enable_mmap,
+                    max_vram: self.max_vram,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
@@ -724,6 +729,7 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .map(|f| PathBuf::from_str(&f.0.into_string().unwrap()).unwrap());
         builder
             .n_threads(value.n_threads)
+            .max_vram(value.max_vram)
             .offload_params_to_cpu(value.offload_params_to_cpu)
             .upscale_repeats(value.upscale_repeats)
             .model(value.model.clone())
