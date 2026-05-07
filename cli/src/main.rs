@@ -75,7 +75,7 @@ struct Args {
     weights: Option<WeightType>,
 
     /// Override the preset default number of inference steps
-    #[arg(short, long)]
+    #[arg(long)]
     steps: Option<i32>,
 
     /// Override the preset default width
