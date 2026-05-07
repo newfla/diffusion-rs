@@ -252,8 +252,8 @@ fn main() {
 
 fn get_output_file_name(args: &Args) -> (PathBuf, PathBuf) {
     let ts = Local::now().format("%Y.%m.%d-%H.%M.%S");
-    let file_name = format!("output_{}.png", ts);
-    let preview = format!("preview_output_{}.png", ts);
+    let file_name = format!("output_{:?}_{}.png", args.preset, ts);
+    let preview = format!("preview_output_{:?}_{}.png", args.preset, ts);
     (args.output.join(file_name), args.output.join(preview))
 }
 
