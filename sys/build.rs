@@ -235,7 +235,6 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", destination.display());
     println!("cargo:rustc-link-lib=static=stable-diffusion");
     println!("cargo:rustc-link-lib=static=ggml-base");
-    println!("cargo:rustc-link-lib=static=ggml-blas");
     println!("cargo:rustc-link-lib=static=ggml-cpu");
     println!("cargo:rustc-link-lib=static=ggml");
 
@@ -246,6 +245,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=ggml-hip");
 
     if use_metal {
+        println!("cargo:rustc-link-lib=static=ggml-blas");
         println!("cargo:rustc-link-lib=static=ggml-metal");
     }
 
