@@ -132,10 +132,14 @@ fn main() {
         }
     }
 
+    if target.contains("apple") {
+        println!("cargo:rustc-link-lib=framework=Accelerate");
+        println!("cargo:rustc-link-lib=framework=Foundation");
+    }
+
     #[cfg(feature = "metal")]
     {
         config.define("SD_METAL", "ON");
-        println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=Metal");
         println!("cargo:rustc-link-lib=framework=MetalKit");
     }
@@ -209,11 +213,9 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", destination.display());
     println!("cargo:rustc-link-lib=static=stable-diffusion");
     println!("cargo:rustc-link-lib=static=ggml-base");
+    println!("cargo:rustc-link-lib=static=ggml-blas");
     println!("cargo:rustc-link-lib=static=ggml-cpu");
-
-    if target.contains("apple") {
-        println!("cargo:rustc-link-lib=framework=Accelerate");
-    }
+    println!("cargo:rustc-link-lib=static=ggml");
 
     #[cfg(feature = "cuda")]
     println!("cargo:rustc-link-lib=static=ggml-cuda");
