@@ -75,7 +75,7 @@ struct Args {
     weights: Option<WeightType>,
 
     /// Override the preset default number of inference steps
-    #[arg(short, long)]
+    #[arg(long)]
     steps: Option<i32>,
 
     /// Override the preset default width
@@ -115,8 +115,12 @@ struct Args {
     token: Option<String>,
 
     /// Enable optimization to use less VRAM: clip_on_cpu, vae tiling, flash_attention, offload_params_to_cpu
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     low_vram: bool,
+
+    /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting
+    #[arg(long, default_value_t = 0.0)]
+    max_vram: f32,
 
     /// RNG seed (-1 --> random)
     #[arg(short, long, default_value_t = -1)]
@@ -149,7 +153,7 @@ fn main() {
         .preset(preset)
         .prompt(&args.prompt)
         .with_modifier(move |(mut config, mut model_config)| {
-            // atch request?
+            // Batch request?
             if args.batch > 1 {
                 config.batch_count(args.batch);
                 config.output(args.output);
@@ -162,6 +166,8 @@ fn main() {
             }
 
             config.seed(args.seed);
+
+            model_config.max_vram(args.max_vram);
 
             if let Some(width) = args.width {
                 config.width(width);
@@ -246,8 +252,8 @@ fn main() {
 
 fn get_output_file_name(args: &Args) -> (PathBuf, PathBuf) {
     let ts = Local::now().format("%Y.%m.%d-%H.%M.%S");
-    let file_name = format!("output_{}.png", ts);
-    let preview = format!("preview_output_{}.png", ts);
+    let file_name = format!("output_{:?}_{}.png", args.preset, ts);
+    let preview = format!("preview_output_{:?}_{}.png", args.preset, ts);
     (args.output.join(file_name), args.output.join(preview))
 }
 

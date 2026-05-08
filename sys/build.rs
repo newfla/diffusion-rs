@@ -75,6 +75,30 @@ fn main() {
         .very_verbose(true)
         .pic(true);
 
+    #[allow(unused_assignments)]
+    #[allow(unused_mut)]
+    let mut use_metal = false;
+
+    #[allow(unused_assignments)]
+    #[allow(unused_mut)]
+    let mut use_vulkan = false;
+
+    #[cfg(feature = "metal")]
+    {
+        use_metal = true;
+        use_vulkan = false;
+    }
+
+    #[cfg(feature = "vulkan")]
+    {
+        use_vulkan = true;
+        use_metal = false;
+    }
+
+    if target.contains("apple") && !use_vulkan {
+        use_metal = true;
+    }
+
     //Enable cmake feature flags
     #[cfg(feature = "cuda")]
     {
@@ -132,17 +156,19 @@ fn main() {
         }
     }
 
-    #[cfg(feature = "metal")]
-    {
-        config.define("SD_METAL", "ON");
+    if target.contains("apple") {
+        println!("cargo:rustc-link-lib=framework=Accelerate");
         println!("cargo:rustc-link-lib=framework=Foundation");
+    }
+
+    if use_metal {
+        config.define("SD_METAL", "ON");
         println!("cargo:rustc-link-lib=framework=Metal");
         println!("cargo:rustc-link-lib=framework=MetalKit");
     }
 
-    #[cfg(feature = "vulkan")]
-    {
-        let vulkan_path = env::var("VULKAN_SDK").map(|path| PathBuf::from(path));
+    if use_vulkan {
+        let vulkan_path = env::var("VULKAN_SDK").map(PathBuf::from);
         if target.contains("msvc") {
             println!("cargo:rerun-if-env-changed=VULKAN_SDK");
             println!("cargo:rustc-link-lib=vulkan-1");
@@ -210,10 +236,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=stable-diffusion");
     println!("cargo:rustc-link-lib=static=ggml-base");
     println!("cargo:rustc-link-lib=static=ggml-cpu");
-
-    if target.contains("apple") {
-        println!("cargo:rustc-link-lib=framework=Accelerate");
-    }
+    println!("cargo:rustc-link-lib=static=ggml");
 
     #[cfg(feature = "cuda")]
     println!("cargo:rustc-link-lib=static=ggml-cuda");
@@ -221,11 +244,14 @@ fn main() {
     #[cfg(feature = "hipblas")]
     println!("cargo:rustc-link-lib=static=ggml-hip");
 
-    #[cfg(feature = "metal")]
-    println!("cargo:rustc-link-lib=static=ggml-metal");
+    if use_metal {
+        println!("cargo:rustc-link-lib=static=ggml-blas");
+        println!("cargo:rustc-link-lib=static=ggml-metal");
+    }
 
-    #[cfg(feature = "vulkan")]
-    println!("cargo:rustc-link-lib=static=ggml-vulkan");
+    if use_vulkan {
+        println!("cargo:rustc-link-lib=static=ggml-vulkan");
+    }
 
     #[cfg(feature = "sycl")]
     println!("cargo:rustc-link-lib=static=ggml-sycl");
