@@ -1521,3 +1521,29 @@ fn ernie_image_llm(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
         ),
     }
 }
+
+pub fn hi_dream_o1_image_dev() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub(
+        "Comfy-Org/HiDream-O1-Image",
+        "checkpoints/hidream_o1_image_dev_bf16.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config.model(model);
+    config.cfg_scale(1.0).steps(20).height(1024).width(1024);
+
+    Ok((config, model_config))
+}
+
+pub fn hi_dream_o1_image() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub(
+        "Comfy-Org/HiDream-O1-Image",
+        "checkpoints/hidream_o1_image_bf16.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config.model(model);
+    config.cfg_scale(1.0).steps(20).height(1024).width(1024);
+
+    Ok((config, model_config))
+}

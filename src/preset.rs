@@ -9,11 +9,12 @@ use crate::{
         anima, anima2, chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo,
         ernie_image, ernie_image_turbo, flux_1_dev, flux_1_mini, flux_1_schnell, flux_2_dev,
         flux_2_klein_4b, flux_2_klein_9b, flux_2_klein_base_4b, flux_2_klein_base_9b,
-        juggernaut_xl_11, nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo,
-        sdxl_base_1_0, sdxl_turbo_1_0, sdxs512_dream_shaper, segmind_vega, ssd_1b,
-        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
-        stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium,
-        stable_diffusion_3_medium, twinflow_z_image_turbo, z_image_turbo,
+        hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, nitro_sd_realism,
+        nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0,
+        sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
+        stable_diffusion_2_1, stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo,
+        stable_diffusion_3_5_medium, stable_diffusion_3_medium, twinflow_z_image_turbo,
+        z_image_turbo,
     },
 };
 
@@ -300,14 +301,18 @@ pub enum Preset {
     Flux2KleinBase9B(Flux2KleinBase9BWeight),
     /// guidance_scale 9. 25 steps. 1024x1024
     SegmindVega,
-    /// cfg__scale 4.0. 30 steps 1024x1024. Vae tiling enabled
+    /// cfg_scale 4.0. 30 steps 1024x1024. Vae tiling enabled
     Anima(AnimaWeight),
-    /// cfg__scale 4.0. 30 steps 1024x1024. Vae tiling enabled
+    /// cfg_scale 4.0. 30 steps 1024x1024. Vae tiling enabled
     Anima2(Anima2Weight),
     /// cfg_scale 5.0. 20 steps 1024x1024. Vae tiling enabled. Flash attention enabled.
     ErnieImage(ErnieImageWeight),
     /// cfg_scale 1.0. 8 steps 1024x1024. Vae tiling enabled. Flash attention enabled.
     ErnieImageTurbo(ErnieImageWeight),
+    /// cfg_scale 1.0. 20 steps 1024x1024.
+    HiDreamO1ImageDev,
+    /// cfg_scale 1.0. 20 steps 1024x1024.
+    HiDreamO1Image,
 }
 
 impl Preset {
@@ -349,6 +354,8 @@ impl Preset {
             Preset::Anima2(sd_type_t) => anima2(sd_type_t),
             Preset::ErnieImage(sd_type_t) => ernie_image(sd_type_t),
             Preset::ErnieImageTurbo(sd_type_t) => ernie_image_turbo(sd_type_t),
+            Preset::HiDreamO1ImageDev => hi_dream_o1_image_dev(),
+            Preset::HiDreamO1Image => hi_dream_o1_image(),
         }
     }
 }
