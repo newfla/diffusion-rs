@@ -489,8 +489,13 @@ pub struct ModelConfig {
     #[builder(default = "None", private)]
     diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
 
+    /// Hires fix parameters and upscaler model.
     #[builder(default = "Self::hires_init()", setter(custom))]
     hires_params: (Upscaler, HiresParams, Option<CLibPath>),
+
+    /// Extra parameters for sampling, currently used for SDXL sample params, in json string format
+    #[builder(default = "CLibString::default()")]
+    extra_sample_params: CLibString,
 }
 
 impl ModelConfigBuilder {
@@ -780,7 +785,8 @@ impl From<&ModelConfig> for ModelConfigBuilder {
                 value.hires_params.0,
                 value.hires_params.1.clone(),
                 hires_path.as_deref(),
-            );
+            )
+            .extra_sample_params(value.extra_sample_params.clone());
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1248,6 +1254,7 @@ fn gen_img_maybe_progress(
             custom_sigmas: model_config.sigmas.as_mut_ptr(),
             custom_sigmas_count: model_config.sigmas.len() as i32,
             flow_shift: model_config.flow_shift,
+            extra_sample_args: model_config.extra_sample_params.as_ptr(),
         };
         let control_image = sd_image_t {
             width: 0,

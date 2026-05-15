@@ -410,6 +410,8 @@ fn get_preset(args: &Args) -> Preset {
                 .try_into()
                 .unwrap(),
         ),
+        PresetDiscriminants::HiDreamO1ImageDev => Preset::HiDreamO1ImageDev,
+        PresetDiscriminants::HiDreamO1Image => Preset::HiDreamO1Image,
     };
     preset
 }
