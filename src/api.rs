@@ -97,6 +97,56 @@ pub enum DiffusionError {
     Upscaler,
 }
 
+#[non_exhaustive]
+#[derive(Clone, Debug, strum::Display)]
+#[strum(serialize_all = "lowercase")]
+/// Backend devices
+pub enum BackendDevice {
+    CPU,
+    CUDA0,
+    VULKAN0,
+    METAL,
+    GPU,
+    AUTO,
+    DEFAULT,
+}
+
+#[non_exhaustive]
+#[derive(Clone, Debug, strum::Display)]
+#[strum(serialize_all = "lowercase")]
+/// Module that can be bound to a specific [BackendDevice]
+pub enum Module {
+    Diffusion,
+    Model,
+    Unet,
+    Dit,
+    Te,
+    Clip,
+    Text,
+    Textencoder,
+    Textencoders,
+    Conditioner,
+    Cond,
+    Llm,
+    T5,
+    T5xxl,
+    ClipVision,
+    Vision,
+    Vae,
+    Firststage,
+    Autoencoder,
+    Tae,
+    Controlnet,
+    Control,
+    Photomaker,
+    PhotomakerId,
+    PmId,
+    Photo,
+    Upscaler,
+    Esrgan,
+    Hires,
+}
+
 #[repr(i32)]
 #[non_exhaustive]
 #[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
@@ -483,12 +533,6 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     circular_y: bool,
 
-    #[builder(default = "None", private)]
-    upscaler_ctx: Option<*mut upscaler_ctx_t>,
-
-    #[builder(default = "None", private)]
-    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
-
     /// Hires fix parameters and upscaler model.
     #[builder(default = "Self::hires_init()", setter(custom))]
     hires_params: (Upscaler, HiresParams, Option<CLibPath>),
@@ -496,6 +540,20 @@ pub struct ModelConfig {
     /// Extra parameters for sampling, currently used for SDXL sample params, in json string format
     #[builder(default = "CLibString::default()")]
     extra_sample_params: CLibString,
+
+    /// Select the runtime backend used to execute model graphs
+    #[builder(default = "(None, CLibString::default())", setter(custom))]
+    backend: (Option<HashMap<Module, BackendDevice>>, CLibString),
+
+    /// Select the backend used to allocate model parameters
+    #[builder(default = "(None, CLibString::default())", setter(custom))]
+    params_backend: (Option<HashMap<Module, BackendDevice>>, CLibString),
+
+    #[builder(default = "None", private)]
+    upscaler_ctx: Option<*mut upscaler_ctx_t>,
+
+    #[builder(default = "None", private)]
+    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
 }
 
 impl ModelConfigBuilder {
@@ -621,6 +679,26 @@ impl ModelConfigBuilder {
             None,
         )
     }
+
+    pub fn backend(&mut self, backend_map: HashMap<Module, BackendDevice>) -> &mut Self {
+        let backend_str = backend_map
+            .iter()
+            .map(|(key, value)| format!("{}={}", key, value))
+            .collect::<Vec<String>>()
+            .join(",");
+        self.backend = Some((Some(backend_map), CLibString::from(backend_str)));
+        self
+    }
+
+    pub fn params_backend(&mut self, backend_map: HashMap<Module, BackendDevice>) -> &mut Self {
+        let params_backend_str = backend_map
+            .iter()
+            .map(|(key, value)| format!("{}={}", key, value))
+            .collect::<Vec<String>>()
+            .join(",");
+        self.params_backend = Some((Some(backend_map), CLibString::from(params_backend_str)));
+        self
+    }
 }
 
 impl ModelConfig {
@@ -636,6 +714,8 @@ impl ModelConfig {
                         self.diffusion_conv_direct,
                         self.n_threads,
                         self.upscale_tile_size,
+                        self.backend.1.as_ptr(),
+                        self.params_backend.1.as_ptr(),
                     );
                     self.upscaler_ctx = Some(upscaler);
                 }
@@ -700,6 +780,8 @@ impl ModelConfig {
                     qwen_image_zero_cond_t: self.use_qwen_image_zero_cond_true,
                     enable_mmap: self.enable_mmap,
                     max_vram: self.max_vram,
+                    backend: self.backend.1.as_ptr(),
+                    params_backend: self.params_backend.1.as_ptr(),
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
@@ -786,7 +868,9 @@ impl From<&ModelConfig> for ModelConfigBuilder {
                 value.hires_params.1.clone(),
                 hires_path.as_deref(),
             )
-            .extra_sample_params(value.extra_sample_params.clone());
+            .extra_sample_params(value.extra_sample_params.clone())
+            .backend(value.backend.0.clone().unwrap_or_default())
+            .params_backend(value.params_backend.0.clone().unwrap_or_default());
 
         builder.lora_models_internal(value.lora_models.clone());
 
