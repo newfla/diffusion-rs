@@ -40,7 +40,7 @@ Options:
       --low-vram
           Enable optimization to use less VRAM: clip_on_cpu, vae tiling, flash_attention, offload_params_to_cpu
       --max-vram <MAX_VRAM>
-          Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting [default: 0]
+          Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting; -1 auto-detects free VRAM minus 1 GiB [default: -1]
   -s, --seed <SEED>
           RNG seed (-1 --> random) [default: -1]
   -h, --help

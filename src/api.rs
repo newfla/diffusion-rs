@@ -281,8 +281,8 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     offload_params_to_cpu: bool,
 
-    /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting
-    #[builder(default = "0.0")]
+    /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting; -1 auto-detects free VRAM minus 1 GiB
+    #[builder(default = "-1.0")]
     max_vram: f32,
 
     /// Path to esrgan model. Upscale images after generate, just RealESRGAN_x4plus_anime_6B supported by now
