@@ -549,6 +549,18 @@ pub struct ModelConfig {
     #[builder(default = "(None, CLibString::default())", setter(custom))]
     params_backend: (Option<HashMap<Module, BackendDevice>>, CLibString),
 
+    /// Path to LTXAV embeddings connectors
+    #[builder(default = "CLibPath::default()")]
+    embeddings_connectors: CLibPath,
+
+    /// Path to standalone LTX audio vae model
+    #[builder(default = "CLibPath::default()")]
+    audio_vae: CLibPath,
+
+    /// Enable temporal tiling for LTX video VAE decode
+    #[builder(default = "true")]
+    vae_temporal_tiling: bool,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -782,6 +794,8 @@ impl ModelConfig {
                     max_vram: self.max_vram,
                     backend: self.backend.1.as_ptr(),
                     params_backend: self.params_backend.1.as_ptr(),
+                    embeddings_connectors_path: self.embeddings_connectors.as_ptr(),
+                    audio_vae_path: self.audio_vae.as_ptr(),
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
@@ -1353,6 +1367,7 @@ fn gen_img_maybe_progress(
             target_overlap: model_config.vae_tile_overlap,
             rel_size_x: model_config.vae_relative_tile_size.0,
             rel_size_y: model_config.vae_relative_tile_size.1,
+            temporal_tiling: model_config.vae_temporal_tiling,
         };
         let pm_params = sd_pm_params_t {
             id_images: null_mut(),
