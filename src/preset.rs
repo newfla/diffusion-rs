@@ -9,12 +9,12 @@ use crate::{
         anima, anima2, chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo,
         ernie_image, ernie_image_turbo, flux_1_dev, flux_1_mini, flux_1_schnell, flux_2_dev,
         flux_2_klein_4b, flux_2_klein_9b, flux_2_klein_base_4b, flux_2_klein_base_9b,
-        hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, nitro_sd_realism,
-        nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0,
-        sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
-        stable_diffusion_2_1, stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo,
-        stable_diffusion_3_5_medium, stable_diffusion_3_medium, twinflow_z_image_turbo,
-        z_image_turbo,
+        hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, long_cat_image,
+        nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0,
+        sdxl_turbo_1_0, sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4,
+        stable_diffusion_1_5, stable_diffusion_2_1, stable_diffusion_3_5_large,
+        stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium, stable_diffusion_3_medium,
+        twinflow_z_image_turbo, z_image_turbo,
     },
 };
 
@@ -41,7 +41,8 @@ use crate::{
     AnimaWeight(derive(Default)),
     Anima2Weight(derive(Default)),
     SDXS512DreamShaperWeight(derive(Default)),
-    ErnieImageWeight(derive(Default))
+    ErnieImageWeight(derive(Default)),
+    LongCatImageWeight(derive(Default))
 )]
 #[derive(Debug, Clone, Copy, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
@@ -74,10 +75,17 @@ pub enum WeightType {
         Flux2Klein9BWeight(default),
         Flux2KleinBase9BWeight(default),
         AnimaWeight,
-        ErnieImageWeight(default)
+        ErnieImageWeight(default),
+        LongCatImageWeight(default)
     )]
     Q4_0,
-    #[subenum(Flux2Weight, QwenImageWeight, AnimaWeight, ErnieImageWeight)]
+    #[subenum(
+        Flux2Weight,
+        QwenImageWeight,
+        AnimaWeight,
+        ErnieImageWeight,
+        LongCatImageWeight
+    )]
     Q4_1,
     #[subenum(
         NitroSDRealismWeight,
@@ -88,10 +96,17 @@ pub enum WeightType {
         QwenImageWeight,
         TwinFlowZImageTurboExpWeight,
         AnimaWeight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     Q5_0,
-    #[subenum(Flux2Weight, QwenImageWeight, AnimaWeight, ErnieImageWeight)]
+    #[subenum(
+        Flux2Weight,
+        QwenImageWeight,
+        AnimaWeight,
+        ErnieImageWeight,
+        LongCatImageWeight
+    )]
     Q5_1,
     #[subenum(
         Flux1Weight,
@@ -112,7 +127,8 @@ pub enum WeightType {
         AnimaWeight(default),
         Anima2Weight(default),
         SDXS512DreamShaperWeight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     Q8_0,
     Q8_1,
@@ -139,7 +155,8 @@ pub enum WeightType {
         QwenImageWeight,
         TwinFlowZImageTurboExpWeight,
         AnimaWeight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     Q3_K,
     #[subenum(
@@ -149,7 +166,8 @@ pub enum WeightType {
         QwenImageWeight,
         AnimaWeight,
         Anima2Weight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     Q4_K,
     #[subenum(
@@ -158,7 +176,8 @@ pub enum WeightType {
         QwenImageWeight,
         AnimaWeight,
         Anima2Weight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     Q5_K,
     #[subenum(
@@ -172,7 +191,8 @@ pub enum WeightType {
         TwinFlowZImageTurboExpWeight,
         AnimaWeight,
         Anima2Weight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     Q6_K,
     Q8_K,
@@ -205,12 +225,15 @@ pub enum WeightType {
         Flux2KleinBase9BWeight,
         AnimaWeight,
         Anima2Weight,
-        ErnieImageWeight
+        ErnieImageWeight,
+        LongCatImageWeight
     )]
     BF16,
     TQ1_0,
     TQ2_0,
     MXFP4,
+    NVFP4,
+    Q1_0,
     #[subenum(SSD1BWeight(default), QwenImageWeight)]
     F8_E4M3,
 }
@@ -313,6 +336,9 @@ pub enum Preset {
     HiDreamO1ImageDev,
     /// cfg_scale 1.0. 20 steps 1024x1024.
     HiDreamO1Image,
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
+    /// cfg_scale 5.0. Enable [crate::api::SampleMethod::EULER_SAMPLE_METHOD] and Diffusion Flash attention. flow_shift 3.0.  512 x 512. 20 steps
+    LongCatImage(LongCatImageWeight),
 }
 
 impl Preset {
@@ -356,6 +382,7 @@ impl Preset {
             Preset::ErnieImageTurbo(sd_type_t) => ernie_image_turbo(sd_type_t),
             Preset::HiDreamO1ImageDev => hi_dream_o1_image_dev(),
             Preset::HiDreamO1Image => hi_dream_o1_image(),
+            Preset::LongCatImage(sd_type_t) => long_cat_image(sd_type_t),
         }
     }
 }
@@ -681,5 +708,10 @@ mod tests {
     #[test]
     fn test_ernie_image_turbo() {
         run(Preset::ErnieImageTurbo(super::ErnieImageWeight::Q4_0));
+    }
+    #[ignore]
+    #[test]
+    fn long_cat_image() {
+        run(Preset::LongCatImage(super::LongCatImageWeight::Q4_0));
     }
 }

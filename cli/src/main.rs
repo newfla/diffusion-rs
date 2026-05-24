@@ -11,10 +11,10 @@ use diffusion_rs::{
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
         ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
-        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight,
-        NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder, PresetDiscriminants,
-        QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
-        WeightType, ZImageTurboWeight,
+        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, LongCatImageWeight,
+        NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder,
+        PresetDiscriminants, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
+        TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
     },
     util::set_hf_token,
 };
@@ -412,6 +412,12 @@ fn get_preset(args: &Args) -> Preset {
         ),
         PresetDiscriminants::HiDreamO1ImageDev => Preset::HiDreamO1ImageDev,
         PresetDiscriminants::HiDreamO1Image => Preset::HiDreamO1Image,
+        PresetDiscriminants::LongCatImage => Preset::LongCatImage(
+            args.weights
+                .unwrap_or_else(|| LongCatImageWeight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
     };
     preset
 }

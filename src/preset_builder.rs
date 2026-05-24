@@ -10,8 +10,9 @@ use crate::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder,
         DiffInstructStarWeight, ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight,
         Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight,
-        NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight,
-        SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
+        LongCatImageWeight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight,
+        QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
+        ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -1546,4 +1547,135 @@ pub fn hi_dream_o1_image() -> Result<ConfigsBuilder, ApiError> {
     config.cfg_scale(1.0).steps(20).height(1024).width(1024);
 
     Ok((config, model_config))
+}
+
+pub fn long_cat_image(sd_type: LongCatImageWeight) -> Result<ConfigsBuilder, ApiError> {
+    let (model, llm) = long_cat_image_weight_llm(sd_type)?;
+    let vae = download_file_hf_hub("black-forest-labs/FLUX.1-dev", "ae.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .flow_shift(3.)
+        .diffusion_flash_attention(true);
+
+    config
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
+        .cfg_scale(5.)
+        .steps(20)
+        .height(512)
+        .width(512);
+
+    Ok((config, model_config))
+}
+
+fn long_cat_image_weight_llm(sd_type: LongCatImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+    let (model, llm) = match sd_type {
+        LongCatImageWeight::Q4_0 => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q4_0.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q4_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q4_1 => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q4_1.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q4_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q5_0 => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q5_0.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q5_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q5_1 => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q5_1.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q5_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q8_0 => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q8_0.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q8_0gguf",
+            ),
+        ),
+        LongCatImageWeight::Q3_K => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q3_K_M.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q3_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q4_K => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q4_K_M.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q4_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q5_K => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q5_K_M.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q5_K_M.gguf",
+            ),
+        ),
+        LongCatImageWeight::Q6_K => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/LongCat-Image-Q6_K.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.Q6_K.gguf",
+            ),
+        ),
+        LongCatImageWeight::BF16 => (
+            (
+                "vantagewithai/LongCat-Image-GGUF",
+                "comfy/comfy/LongCat-Image-BF16.gguf",
+            ),
+            (
+                "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+                "Qwen2.5-VL-7B-Instruct.f16.gguf",
+            ),
+        ),
+    };
+    let model_path = download_file_hf_hub(model.0, model.1)?;
+    let llm_path = download_file_hf_hub(llm.0, llm.1)?;
+    Ok((model_path, llm_path))
 }
