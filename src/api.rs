@@ -309,6 +309,9 @@ pub struct HiresParams {
     /// highres fix second pass denoising strength (default: 0.7)
     #[builder(default = "0.7")]
     denoising_strength: f32,
+    /// Custom sigma values for the highres fix second pass
+    #[builder(default = "None")]
+    hires_sigmas: Option<Vec<f32>>,
 }
 
 /// Config struct for a specific diffusion model
@@ -561,6 +564,10 @@ pub struct ModelConfig {
     #[builder(default = "true")]
     vae_temporal_tiling: bool,
 
+    /// Extra VAE tiling args, key=value list. LTX video VAE supports
+    #[builder(default = "(None, CLibString::default())", setter(custom))]
+    extra_tiling_args: (Option<HashMap<String, String>>, CLibString),
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -709,6 +716,22 @@ impl ModelConfigBuilder {
             .collect::<Vec<String>>()
             .join(",");
         self.params_backend = Some((Some(backend_map), CLibString::from(params_backend_str)));
+        self
+    }
+
+    pub fn extra_tiling_args(
+        &mut self,
+        extra_tiling_args_map: HashMap<String, String>,
+    ) -> &mut Self {
+        let extra_tiling_args_str = extra_tiling_args_map
+            .iter()
+            .map(|(key, value)| format!("{}={}", key, value))
+            .collect::<Vec<String>>()
+            .join(",");
+        self.extra_tiling_args = Some((
+            Some(extra_tiling_args_map),
+            CLibString::from(extra_tiling_args_str),
+        ));
         self
     }
 }
@@ -884,7 +907,8 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             )
             .extra_sample_params(value.extra_sample_params.clone())
             .backend(value.backend.0.clone().unwrap_or_default())
-            .params_backend(value.params_backend.0.clone().unwrap_or_default());
+            .params_backend(value.params_backend.0.clone().unwrap_or_default())
+            .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default());
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1368,6 +1392,7 @@ fn gen_img_maybe_progress(
             rel_size_x: model_config.vae_relative_tile_size.0,
             rel_size_y: model_config.vae_relative_tile_size.1,
             temporal_tiling: model_config.vae_temporal_tiling,
+            extra_tiling_args: model_config.extra_tiling_args.1.as_ptr(),
         };
         let pm_params = sd_pm_params_t {
             id_images: null_mut(),
@@ -1506,8 +1531,14 @@ fn gen_img_maybe_progress(
         }
 
         let mut hires_path = null();
+        let mut hires_sigmas = null_mut();
+        let mut hires_sigmas_count = 0;
         if let Some(path) = &model_config.hires_params.2 {
             hires_path = path.as_ptr();
+        }
+        if let Some(sigmas) = &mut model_config.hires_params.1.hires_sigmas {
+            hires_sigmas = sigmas.as_mut_ptr();
+            hires_sigmas_count = sigmas.len() as i32;
         }
 
         let hires = sd_hires_params_t {
@@ -1520,6 +1551,8 @@ fn gen_img_maybe_progress(
             steps: model_config.hires_params.1.steps,
             denoising_strength: model_config.hires_params.1.denoising_strength,
             upscale_tile_size: model_config.hires_params.1.upscale_tile_size,
+            custom_sigmas: hires_sigmas,
+            custom_sigmas_count: hires_sigmas_count,
         };
 
         let sd_img_gen_params = sd_img_gen_params_t {
