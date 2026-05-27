@@ -9,12 +9,12 @@ use crate::{
         anima, anima2, chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo,
         ernie_image, ernie_image_turbo, flux_1_dev, flux_1_mini, flux_1_schnell, flux_2_dev,
         flux_2_klein_4b, flux_2_klein_9b, flux_2_klein_base_4b, flux_2_klein_base_9b,
-        hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, long_cat_image,
-        nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0,
-        sdxl_turbo_1_0, sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4,
-        stable_diffusion_1_5, stable_diffusion_2_1, stable_diffusion_3_5_large,
-        stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium, stable_diffusion_3_medium,
-        twinflow_z_image_turbo, z_image_turbo,
+        hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, lens, lens_turbo,
+        long_cat_image, nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo,
+        sdxl_base_1_0, sdxl_turbo_1_0, sdxs512_dream_shaper, segmind_vega, ssd_1b,
+        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
+        stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium,
+        stable_diffusion_3_medium, twinflow_z_image_turbo, z_image_turbo,
     },
 };
 
@@ -339,6 +339,12 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
     /// cfg_scale 5.0. Enable [crate::api::SampleMethod::EULER_SAMPLE_METHOD] and Diffusion Flash attention. flow_shift 3.0.  512 x 512. 20 steps
     LongCatImage(LongCatImageWeight),
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.2-dev> providing a token via [crate::util::set_hf_token]
+    /// cfg_scale 5.0. Enable Model Diffusion Flash attention. 512x512
+    Lens,
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.2-dev> providing a token via [crate::util::set_hf_token]
+    /// cfg_scale 1.0. Enable Model Diffusion Flash attention. 512x512. 4 steps
+    LensTurbo,
 }
 
 impl Preset {
@@ -383,6 +389,8 @@ impl Preset {
             Preset::HiDreamO1ImageDev => hi_dream_o1_image_dev(),
             Preset::HiDreamO1Image => hi_dream_o1_image(),
             Preset::LongCatImage(sd_type_t) => long_cat_image(sd_type_t),
+            Preset::Lens => lens(),
+            Preset::LensTurbo => lens_turbo(),
         }
     }
 }
@@ -711,7 +719,19 @@ mod tests {
     }
     #[ignore]
     #[test]
-    fn long_cat_image() {
+    fn test_long_cat_image() {
         run(Preset::LongCatImage(super::LongCatImageWeight::Q4_0));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lens() {
+        run(Preset::Lens);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_lens_turbo() {
+        run(Preset::LensTurbo);
     }
 }

@@ -418,6 +418,8 @@ fn get_preset(args: &Args) -> Preset {
                 .try_into()
                 .unwrap(),
         ),
+        PresetDiscriminants::Lens => Preset::Lens,
+        PresetDiscriminants::LensTurbo => Preset::LensTurbo,
     };
     preset
 }
