@@ -1679,3 +1679,38 @@ fn long_cat_image_weight_llm(sd_type: LongCatImageWeight) -> Result<(PathBuf, Pa
     let llm_path = download_file_hf_hub(llm.0, llm.1)?;
     Ok((model_path, llm_path))
 }
+
+pub fn lens_turbo() -> Result<ConfigsBuilder, ApiError> {
+    let vae = download_file_hf_hub("black-forest-labs/FLUX.2-dev", "ae.safetensors")?;
+    let llm = download_file_hf_hub("unsloth/gpt-oss-20b-GGUF", "gpt-oss-20b-UD-Q4_K_XL.gguf")?;
+    let model = download_file_hf_hub(
+        "Comfy-Org/Lens",
+        "diffusion_models/lens_turbo_bf16.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .diffusion_flash_attention(true);
+    config.cfg_scale(1.).steps(4).height(512).width(512);
+
+    Ok((config, model_config))
+}
+
+pub fn lens() -> Result<ConfigsBuilder, ApiError> {
+    let vae = download_file_hf_hub("black-forest-labs/FLUX.2-dev", "ae.safetensors")?;
+    let llm = download_file_hf_hub("unsloth/gpt-oss-20b-GGUF", "gpt-oss-20b-UD-Q4_K_XL.gguf")?;
+    let model = download_file_hf_hub("Comfy-Org/Lens", "diffusion_models/lens_bf16.safetensors")?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config
+        .diffusion_model(model)
+        .llm(llm)
+        .vae(vae)
+        .diffusion_flash_attention(true);
+    config.cfg_scale(5.).height(512).width(512);
+
+    Ok((config, model_config))
+}
