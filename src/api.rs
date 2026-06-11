@@ -72,6 +72,9 @@ pub use diffusion_rs_sys::lora_apply_mode_t as LoraModeType;
 /// Hires mode
 pub use diffusion_rs_sys::sd_hires_upscaler_t as Upscaler;
 
+/// VAE latent format
+pub use diffusion_rs_sys::sd_vae_format_t as VaeFormat;
+
 static VALID_EXT: [&str; 3] = ["gguf", "safetensors", "pt"];
 
 #[allow(unused)]
@@ -386,6 +389,10 @@ pub struct ModelConfig {
     #[builder(default = "Default::default()")]
     vae: CLibPath,
 
+    /// should match the VAE latent layout used by the PiD checkpoint. This is important when using standalone VAE files because the PiD diffusion checkpoint alone does not identify the VAE format.
+    #[builder(default = "VaeFormat::SD_VAE_FORMAT_AUTO")]
+    vae_format: VaeFormat,
+
     /// Path to taesd. Using Tiny AutoEncoder for fast decoding (low quality)
     #[builder(default = "Default::default()")]
     taesd: CLibPath,
@@ -567,6 +574,10 @@ pub struct ModelConfig {
     /// Extra VAE tiling args, key=value list. LTX video VAE supports
     #[builder(default = "(None, CLibString::default())", setter(custom))]
     extra_tiling_args: (Option<HashMap<String, String>>, CLibString),
+
+    /// Enable residency+prefetch streaming on top of [ModelConfig::max_vram] (no effect without [ModelConfig::max_vram]; defaults to false)
+    #[builder(default = "false")]
+    stream_layers: bool,
 
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
@@ -819,6 +830,8 @@ impl ModelConfig {
                     params_backend: self.params_backend.1.as_ptr(),
                     embeddings_connectors_path: self.embeddings_connectors.as_ptr(),
                     audio_vae_path: self.audio_vae.as_ptr(),
+                    vae_format: self.vae_format,
+                    stream_layers: self.stream_layers,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
