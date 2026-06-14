@@ -7,16 +7,14 @@ use diffusion_rs::{
     api::{
         DbCacheParamsBuilder, EasyCacheParamsBuilder, HiresParamsBuilder, PreviewType,
         SpectrumCacheParamsBuilder, UCacheParamsBuilder, Upscaler, gen_img,
-    },
-    preset::{
+    }, modifier::lazily_load_params_from_disk, preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
         ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
         Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, LongCatImageWeight,
         NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder,
         PresetDiscriminants, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
         TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
-    },
-    util::set_hf_token,
+    }, util::set_hf_token
 };
 use execution_time::ExecutionTime;
 use strum::VariantNames;
@@ -183,10 +181,12 @@ fn main() {
 
             if args.low_vram {
                 model_config
-                    .clip_on_cpu(true)
                     .vae_tiling(true)
-                    .flash_attention(true)
-                    .offload_params_to_cpu(true);
+                    .flash_attention(true);
+
+                let (new_config, new_model_config) = lazily_load_params_from_disk( (config, model_config))?;
+                config = new_config;
+                model_config = new_model_config;
             }
 
             match args.preview {

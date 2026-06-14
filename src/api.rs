@@ -101,7 +101,7 @@ pub enum DiffusionError {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, strum::Display)]
+#[derive(Clone, Debug, strum::Display, strum::EnumIter)]
 #[strum(serialize_all = "lowercase")]
 /// Backend devices
 pub enum BackendDevice {
@@ -111,11 +111,12 @@ pub enum BackendDevice {
     METAL,
     GPU,
     AUTO,
+    DISK,
     DEFAULT,
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, strum::Display)]
+#[derive(Clone, Debug, strum::Display, strum::EnumIter, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "lowercase")]
 /// Module that can be bound to a specific [BackendDevice]
 pub enum Module {
@@ -333,10 +334,6 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     enable_mmap: bool,
 
-    /// Place the weights in RAM to save VRAM, and automatically load them into VRAM when needed
-    #[builder(default = "false")]
-    offload_params_to_cpu: bool,
-
     /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting; -1 auto-detects free VRAM minus 1 GiB
     #[builder(default = "-1.0")]
     max_vram: f32,
@@ -360,6 +357,10 @@ pub struct ModelConfig {
     /// Path to the standalone diffusion model
     #[builder(default = "Default::default()")]
     diffusion_model: CLibPath,
+
+    /// Path to the standalone unconditional diffusion model, currently used by Ideogram4 CFG
+    #[builder(default = "Default::default()")]
+    unconditional_diffusion_model: CLibPath,
 
     /// Path to the qwen2vl text encoder
     #[builder(default = "Default::default()")]
@@ -462,18 +463,6 @@ pub struct ModelConfig {
     /// Prediction type override (default: PREDICTION_COUNT)
     #[builder(default = "Prediction::PREDICTION_COUNT")]
     prediction: Prediction,
-
-    /// Keep vae in cpu (for low vram) (default: false)
-    #[builder(default = "false")]
-    vae_on_cpu: bool,
-
-    /// keep clip in cpu (for low vram) (default: false)
-    #[builder(default = "false")]
-    clip_on_cpu: bool,
-
-    /// Keep controlnet in cpu (for low vram) (default: false)
-    #[builder(default = "false")]
-    control_net_cpu: bool,
 
     /// Use flash attention to reduce memory usage (model only).
     /// For most backends, it slows things down, but for cuda it generally speeds it up too. At the moment, it is only supported for some models and some backends (like cpu, cuda/rocm, metal).
@@ -756,7 +745,6 @@ impl ModelConfig {
                 if self.upscaler_ctx.is_none() {
                     let upscaler = new_upscaler_ctx(
                         self.upscale_model.as_ref().unwrap().as_ptr(),
-                        self.offload_params_to_cpu,
                         self.diffusion_conv_direct,
                         self.n_threads,
                         self.upscale_tile_size,
@@ -770,14 +758,12 @@ impl ModelConfig {
         }
     }
 
-    unsafe fn diffusion_ctx(&mut self, vae_decode_only: bool) -> *mut sd_ctx_t {
+    unsafe fn diffusion_ctx(&mut self) -> *mut sd_ctx_t {
         unsafe {
             // This is required to support img2img after text2img generation
             // otherwise the context is cached and won't have a decode graph
             // leading to an assertion error in sdcpp
-            if let Some((sd_ctx, sd_ctx_params)) = self.diffusion_ctx.as_ref()
-                && sd_ctx_params.vae_decode_only != vae_decode_only
-            {
+            if let Some((sd_ctx, _)) = self.diffusion_ctx.as_ref() {
                 sd_set_progress_callback(None, null_mut());
                 free_sd_ctx(*sd_ctx);
                 self.diffusion_ctx = None;
@@ -793,20 +779,16 @@ impl ModelConfig {
                     high_noise_diffusion_model_path: self.high_noise_diffusion_model.as_ptr(),
                     t5xxl_path: self.t5xxl.as_ptr(),
                     diffusion_model_path: self.diffusion_model.as_ptr(),
+                    uncond_diffusion_model_path: self.unconditional_diffusion_model.as_ptr(),
                     vae_path: self.vae.as_ptr(),
                     taesd_path: self.taesd.as_ptr(),
                     control_net_path: self.control_net.as_ptr(),
                     embeddings: self.embeddings.2.as_ptr(),
                     embedding_count: self.embeddings.1.len() as u32,
                     photo_maker_path: self.photo_maker.as_ptr(),
-                    vae_decode_only,
-                    free_params_immediately: false,
                     n_threads: self.n_threads,
                     wtype: self.weight_type,
                     rng_type: self.rng,
-                    keep_clip_on_cpu: self.clip_on_cpu,
-                    keep_control_net_on_cpu: self.control_net_cpu,
-                    keep_vae_on_cpu: self.vae_on_cpu,
                     diffusion_flash_attn: self.diffusion_flash_attention,
                     flash_attn: self.flash_attention,
                     diffusion_conv_direct: self.diffusion_conv_direct,
@@ -814,7 +796,6 @@ impl ModelConfig {
                     chroma_use_t5_mask: self.chroma_enable_t5_mask,
                     chroma_t5_mask_pad: self.chroma_t5_mask_pad,
                     vae_conv_direct: self.vae_conv_direct,
-                    offload_params_to_cpu: self.offload_params_to_cpu,
                     prediction: self.prediction,
                     force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
                     tae_preview_only: self.taesd_preview_only,
@@ -867,10 +848,10 @@ impl From<&ModelConfig> for ModelConfigBuilder {
         builder
             .n_threads(value.n_threads)
             .max_vram(value.max_vram)
-            .offload_params_to_cpu(value.offload_params_to_cpu)
             .upscale_repeats(value.upscale_repeats)
             .model(value.model.clone())
             .diffusion_model(value.diffusion_model.clone())
+            .unconditional_diffusion_model(value.unconditional_diffusion_model.clone())
             .llm(value.llm.clone())
             .llm_vision(value.llm_vision.clone())
             .clip_l(value.clip_l.clone())
@@ -894,10 +875,7 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .scheduler(value.scheduler)
             .sigmas(value.sigmas.clone())
             .prediction(value.prediction)
-            .vae_on_cpu(value.vae_on_cpu)
-            .clip_on_cpu(value.clip_on_cpu)
             .control_net(value.control_net.clone())
-            .control_net_cpu(value.control_net_cpu)
             .flash_attention(value.flash_attention)
             .chroma_disable_dit_mask(value.chroma_disable_dit_mask)
             .chroma_enable_t5_mask(value.chroma_enable_t5_mask)
@@ -1340,8 +1318,7 @@ fn gen_img_maybe_progress(
         let has_init_image = config.init_img.exists();
         let has_mask_image = config.mask_img.exists();
 
-        let is_decode_only = !has_init_image;
-        let sd_ctx = model_config.diffusion_ctx(is_decode_only);
+        let sd_ctx = model_config.diffusion_ctx();
         let upscaler_ctx = model_config.upscaler_ctx();
 
         let mut init_image = sd_image_t {

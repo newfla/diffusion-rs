@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use crate::{
     api::{ModelConfigBuilder, SampleMethod, Scheduler},
     modifier::{
-        sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q2_k_flux_1, t5xxl_q3_k_flux_1,
-        t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1,
+        offload_params_to_cpu, sdxl_vae_fp16_fix, t5xxl_fp16_flux_1, t5xxl_q2_k_flux_1,
+        t5xxl_q3_k_flux_1, t5xxl_q4_k_flux_1, t5xxl_q8_0_flux_1,
     },
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder,
@@ -494,7 +494,6 @@ pub fn flux_2_dev(sd_type: Flux2Weight) -> Result<ConfigsBuilder, ApiError> {
     model_config
         .diffusion_model(model)
         .llm(llm)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae(vae)
         .vae_tiling(true);
@@ -502,7 +501,7 @@ pub fn flux_2_dev(sd_type: Flux2Weight) -> Result<ConfigsBuilder, ApiError> {
         .cfg_scale(1.)
         .sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_dev_weight(sd_type: Flux2Weight) -> Result<(PathBuf, PathBuf), ApiError> {
@@ -690,7 +689,6 @@ pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, ApiError> 
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae_tiling(true)
         .flow_shift(3.0);
@@ -700,7 +698,7 @@ pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, ApiError> 
         .height(1024)
         .width(1024);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn qwen_image_weight(sd_type: QwenImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
@@ -814,12 +812,11 @@ pub fn ovis_image(sd_type: OvisImageWeight) -> Result<ConfigsBuilder, ApiError> 
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae_tiling(true);
     config.steps(20).cfg_scale(5.).height(512).width(512);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn ovis_image_weight(sd_type: OvisImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
@@ -990,12 +987,11 @@ pub fn flux_2_klein_4b(sd_type: Flux2Klein4BWeight) -> Result<ConfigsBuilder, Ap
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae_tiling(true);
     config.cfg_scale(1.).steps(4).height(1024).width(1024);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_klein_4b_weight(sd_type: Flux2Klein4BWeight) -> Result<(PathBuf, PathBuf), ApiError> {
@@ -1034,12 +1030,11 @@ pub fn flux_2_klein_base_4b(sd_type: Flux2KleinBase4BWeight) -> Result<ConfigsBu
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae_tiling(true);
     config.cfg_scale(4.).steps(20).height(1024).width(1024);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_klein_base_4b_weight(
@@ -1086,12 +1081,11 @@ pub fn flux_2_klein_9b(sd_type: Flux2Klein9BWeight) -> Result<ConfigsBuilder, Ap
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae_tiling(true);
     config.cfg_scale(1.).steps(4).height(1024).width(1024);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_klein_9b_weight(sd_type: Flux2Klein9BWeight) -> Result<(PathBuf, PathBuf), ApiError> {
@@ -1130,12 +1124,11 @@ pub fn flux_2_klein_base_9b(sd_type: Flux2KleinBase9BWeight) -> Result<ConfigsBu
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .offload_params_to_cpu(true)
         .flash_attention(true)
         .vae_tiling(true);
     config.cfg_scale(4.).steps(20).height(1024).width(1024);
 
-    Ok((config, model_config))
+    offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_klein_base_9b_weight(

@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use hf_hub::api::sync::ApiError;
+use strum::IntoEnumIterator;
 
 use crate::{
-    api::{LoraSpec, PreviewType, SampleMethod},
+    api::{BackendDevice, LoraSpec, Module, PreviewType, SampleMethod},
     preset::ConfigsBuilder,
     util::download_file_hf_hub,
 };
@@ -266,7 +269,23 @@ pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 
 /// Offload model parameters to CPU (for low VRAM GPUs)
 pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
-    builder.1.offload_params_to_cpu(true);
+    let params: HashMap<_, _> = Module::iter()
+        .map(|module| (module, BackendDevice::CPU))
+        .collect();
+    // params.
+    builder.1.params_backend(params);
+    Ok(builder)
+}
+
+/// Lazily load model parameters from disk (for low VRAM GPUs)
+pub fn lazily_load_params_from_disk(
+    mut builder: ConfigsBuilder,
+) -> Result<ConfigsBuilder, ApiError> {
+    let params: HashMap<_, _> = Module::iter()
+        .map(|module| (module, BackendDevice::DISK))
+        .collect();
+    // params.
+    builder.1.params_backend(params);
     Ok(builder)
 }
 
