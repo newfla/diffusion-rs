@@ -8,6 +8,7 @@ use diffusion_rs::{
         DbCacheParamsBuilder, EasyCacheParamsBuilder, HiresParamsBuilder, PreviewType,
         SpectrumCacheParamsBuilder, UCacheParamsBuilder, Upscaler, gen_img,
     },
+    modifier::lazily_load_params_from_disk,
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
         ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
@@ -182,11 +183,12 @@ fn main() {
             }
 
             if args.low_vram {
-                model_config
-                    .clip_on_cpu(true)
-                    .vae_tiling(true)
-                    .flash_attention(true)
-                    .offload_params_to_cpu(true);
+                model_config.vae_tiling(true).flash_attention(true);
+
+                let (new_config, new_model_config) =
+                    lazily_load_params_from_disk((config, model_config))?;
+                config = new_config;
+                model_config = new_model_config;
             }
 
             match args.preview {
