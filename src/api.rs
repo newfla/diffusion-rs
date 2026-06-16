@@ -28,6 +28,7 @@ use diffusion_rs_sys::sd_img_gen_params_t;
 use diffusion_rs_sys::sd_img_gen_params_to_str;
 use diffusion_rs_sys::sd_lora_t;
 use diffusion_rs_sys::sd_pm_params_t;
+use diffusion_rs_sys::sd_pulid_params_t;
 use diffusion_rs_sys::sd_sample_params_t;
 use diffusion_rs_sys::sd_set_preview_callback;
 use diffusion_rs_sys::sd_set_progress_callback;
@@ -101,7 +102,7 @@ pub enum DiffusionError {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, strum::Display, strum::EnumIter)]
+#[derive(Clone, Debug, strum::Display, strum::EnumIter, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "lowercase")]
 /// Backend devices
 pub enum BackendDevice {
@@ -335,8 +336,8 @@ pub struct ModelConfig {
     enable_mmap: bool,
 
     /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting; -1 auto-detects free VRAM minus 1 GiB
-    #[builder(default = "-1.0")]
-    max_vram: f32,
+    #[builder(default = "Self::default_max_vram()", setter(custom))]
+    max_vram: (HashMap<BackendDevice, i32>, CLibString),
 
     /// Path to esrgan model. Upscale images after generate, just RealESRGAN_x4plus_anime_6B supported by now
     #[builder(default = "Default::default()")]
@@ -425,6 +426,14 @@ pub struct ModelConfig {
     /// Path to the standalone high noise diffusion model
     #[builder(default = "Default::default()")]
     high_noise_diffusion_model: CLibPath,
+
+    /// Path to PULID weights. Identity is injected during the denoise loop when paired with pulid_id_embedding.
+    #[builder(default = "Default::default()")]
+    pulid_weights_path: CLibPath,
+
+    /// path to a .pulidembd binary produced by pulid_extract_id.py. Carries a (32, 2048) identity embedding extracted from a source portrait. Pair with pulid_weights on the context.
+    #[builder(default = "Default::default()")]
+    pulid_id_embedding_path: CLibPath,
 
     /// Process vae in tiles to reduce memory usage (default: false)
     #[builder(default = "false")]
@@ -719,6 +728,45 @@ impl ModelConfigBuilder {
         self
     }
 
+    pub fn max_vram(&mut self, vram_map: HashMap<BackendDevice, i32>) -> &mut Self {
+        let vram_str = Self::concatenate_max_vram(&vram_map);
+        self.max_vram = Some((vram_map, vram_str));
+        self
+    }
+
+    fn default_max_vram() -> (HashMap<BackendDevice, i32>, CLibString) {
+        let mut map = HashMap::new();
+        #[cfg(feature = "metal")]
+        {
+            map.insert(BackendDevice::METAL, -1);
+        }
+
+        #[cfg(feature = "vulkan")]
+        {
+            map.insert(BackendDevice::VULKAN0, -1);
+        }
+
+        #[cfg(feature = "cuda")]
+        {
+            map.insert(BackendDevice::CUDA0, -1);
+        }
+
+        map.insert(BackendDevice::CPU, -1);
+
+        let map_str = Self::concatenate_max_vram(&map);
+        (map, map_str)
+    }
+
+    fn concatenate_max_vram(vram_map: &HashMap<BackendDevice, i32>) -> CLibString {
+        CLibString::from(
+            vram_map
+                .iter()
+                .map(|(key, value)| format!("{}={}", key, value))
+                .collect::<Vec<String>>()
+                .join(","),
+        )
+    }
+
     pub fn extra_tiling_args(
         &mut self,
         extra_tiling_args_map: HashMap<String, String>,
@@ -806,13 +854,15 @@ impl ModelConfig {
                     circular_y: self.circular || self.circular_y,
                     qwen_image_zero_cond_t: self.use_qwen_image_zero_cond_true,
                     enable_mmap: self.enable_mmap,
-                    max_vram: self.max_vram,
+                    max_vram: self.max_vram.1.as_ptr(),
                     backend: self.backend.1.as_ptr(),
                     params_backend: self.params_backend.1.as_ptr(),
                     embeddings_connectors_path: self.embeddings_connectors.as_ptr(),
                     audio_vae_path: self.audio_vae.as_ptr(),
                     vae_format: self.vae_format,
                     stream_layers: self.stream_layers,
+                    rpc_servers: null(),
+                    pulid_weights_path: self.pulid_weights_path.as_ptr(),
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
@@ -847,7 +897,7 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .map(|f| PathBuf::from_str(&f.0.into_string().unwrap()).unwrap());
         builder
             .n_threads(value.n_threads)
-            .max_vram(value.max_vram)
+            .max_vram(value.max_vram.0.clone())
             .upscale_repeats(value.upscale_repeats)
             .model(value.model.clone())
             .diffusion_model(value.diffusion_model.clone())
@@ -1569,6 +1619,10 @@ fn gen_img_maybe_progress(
             loras: loras.as_ptr(),
             lora_count: loras.len() as u32,
             hires,
+            pulid_params: sd_pulid_params_t {
+                id_embedding_path: model_config.pulid_id_embedding_path.as_ptr(),
+                id_weight: 1.0,
+            },
         };
 
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
