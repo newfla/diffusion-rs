@@ -119,10 +119,6 @@ struct Args {
     #[arg(long, default_value_t = false)]
     low_vram: bool,
 
-    /// Maximum VRAM budget in GiB for graph-cut segmented execution. 0 disables graph splitting
-    #[arg(long, default_value_t = -1.0)]
-    max_vram: f32,
-
     /// RNG seed (-1 --> random)
     #[arg(short, long, default_value_t = -1)]
     seed: i32,
@@ -167,8 +163,6 @@ fn main() {
             }
 
             config.seed(args.seed);
-
-            model_config.max_vram(args.max_vram);
 
             if let Some(width) = args.width {
                 config.width(width);
