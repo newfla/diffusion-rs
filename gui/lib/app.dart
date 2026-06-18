@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import 'package:yaru/yaru.dart';
 
+import 'features/generation/providers/generation_provider.dart';
 import 'features/output/output_panel.dart';
 import 'features/params/params_panel.dart';
+import 'features/params/providers/params_provider.dart';
 import 'shared/theme/theme_provider.dart';
 import 'shared/widgets/drag_handle.dart';
 
@@ -36,6 +39,9 @@ class DiffusionRsApp extends ConsumerWidget {
 }
 
 /// Main layout with AppBar (title + theme toggle) and two-panel body.
+///
+/// Wraps the body in [CallbackShortcuts] + [Focus] for Cmd/Ctrl+Enter
+/// keyboard shortcut (per GEN-06, RESEARCH.md Pattern 4, Pitfall 2).
 class _MainLayout extends ConsumerStatefulWidget {
   const _MainLayout();
 
@@ -61,6 +67,17 @@ class _MainLayoutState extends ConsumerState<_MainLayout> {
   void dispose() {
     _splitController.dispose();
     super.dispose();
+  }
+
+  /// Triggers generation if prompt is non-empty and not already generating.
+  void _onGenerate() {
+    final state = ref.read(generationProvider);
+    if (state.status == GenerationStatus.generating) return;
+
+    final params = ref.read(paramsProvider);
+    if (params.prompt.trim().isEmpty) return;
+
+    ref.read(generationProvider.notifier).generate(params.toMap());
   }
 
   @override
@@ -101,23 +118,37 @@ class _MainLayoutState extends ConsumerState<_MainLayout> {
           ),
         ],
       ),
-      body: MultiSplitView(
-        axis: Axis.horizontal,
-        controller: _splitController,
-        dividerBuilder:
-            (axis, index, resizable, dragging, highlighted, themeData) {
-          return DragHandle(
-            isDragging: dragging,
-            isHighlighted: highlighted,
-          );
+      // CallbackShortcuts for Cmd/Ctrl+Enter (per GEN-06)
+      // Focus with autofocus to maintain focus after divider interaction
+      // (per RESEARCH.md Pitfall 2)
+      body: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+              _onGenerate,
+          const SingleActivator(LogicalKeyboardKey.enter, control: true):
+              _onGenerate,
         },
-        builder: (context, area) {
-          final index = _splitController.areas.indexOf(area);
-          if (index == 0) {
-            return const ParamsPanel();
-          }
-          return const OutputPanel();
-        },
+        child: Focus(
+          autofocus: true,
+          child: MultiSplitView(
+            axis: Axis.horizontal,
+            controller: _splitController,
+            dividerBuilder:
+                (axis, index, resizable, dragging, highlighted, themeData) {
+              return DragHandle(
+                isDragging: dragging,
+                isHighlighted: highlighted,
+              );
+            },
+            builder: (context, area) {
+              final index = _splitController.areas.indexOf(area);
+              if (index == 0) {
+                return const ParamsPanel();
+              }
+              return const OutputPanel();
+            },
+          ),
+        ),
       ),
     );
   }
