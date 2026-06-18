@@ -5,14 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaru/yaru.dart';
 
 import '../generation/providers/generation_provider.dart';
+import '../../features/params/providers/params_provider.dart';
+import 'providers/output_provider.dart';
 
-/// State-driven right panel (per D-12, D-13, and UI-SPEC Right Panel States).
+/// State-driven right panel (per D-12, D-13, D-14, and UI-SPEC Right Panel States).
 ///
-/// Renders one of four distinct states:
-///   - idle: icon + instructional text
-///   - generating (pre-progress): indeterminate spinner
-///   - generating (with progress): linear progress bar + step counter
-///   - complete: generated image + save button
+/// Renders one of five distinct states:
+///   1. idle: icon + instructional text
+///   2. generating (pre-progress): indeterminate spinner
+///   3. generating (with progress): linear progress bar + step counter
+///   4. complete: generated image (BoxFit.contain) + Save button
+///   5. error: error icon + message
+///
+/// The Save button remains visible after saving so the user can save to
+/// a different location (UI-SPEC Save Flow point 6). A SnackBar confirms
+/// the save path for 4 seconds (D-14).
 class OutputPanel extends ConsumerWidget {
   const OutputPanel({super.key});
 
@@ -29,7 +36,7 @@ class OutputPanel extends ConsumerWidget {
           GenerationStatus.generating =>
             _buildGeneratingState(context, generationState),
           GenerationStatus.complete =>
-            _buildCompleteState(context, generationState),
+            _buildCompleteState(context, ref, generationState),
           GenerationStatus.error =>
             _buildErrorState(context, generationState, colorScheme),
         },
@@ -59,17 +66,17 @@ class OutputPanel extends ConsumerWidget {
   }
 
   /// Generating state: spinner before first progress event, then linear
-  /// progress bar + step counter (per D-13).
+  /// progress bar + step counter (per D-13, GEN-03, GEN-04).
   Widget _buildGeneratingState(
     BuildContext context,
     GenerationState state,
   ) {
-    // Before first progress event (step == 0): show indeterminate spinner
+    // Before first progress event (step == 0): show indeterminate spinner.
     if (state.currentStep == 0) {
       return const YaruCircularProgressIndicator();
     }
 
-    // With progress: show linear progress bar + step counter
+    // With progress: show linear progress bar + step counter.
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -88,11 +95,19 @@ class OutputPanel extends ConsumerWidget {
     );
   }
 
-  /// Complete state: generated image + save button (per OUT-03).
+  /// Complete state: generated image + Save button (per OUT-02, OUT-03, OUT-04).
+  ///
+  /// The image is displayed with [BoxFit.contain] to maintain aspect ratio.
+  /// The Save button calls [OutputNotifier.saveImage] and remains visible
+  /// after saving so the user can save to another location (UI-SPEC Save
+  /// Flow point 6).
   Widget _buildCompleteState(
     BuildContext context,
+    WidgetRef ref,
     GenerationState state,
   ) {
+    final params = ref.watch(paramsProvider);
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -106,9 +121,16 @@ class OutputPanel extends ConsumerWidget {
               ),
             ),
           const SizedBox(height: 16),
-          OutlinedButton(
+          ElevatedButton(
             onPressed: () {
-              // Save functionality comes in Plan 03
+              if (state.imagePath != null) {
+                ref.read(outputProvider.notifier).saveImage(
+                      state.imagePath!,
+                      params.selectedPreset,
+                      params.seed,
+                      context,
+                    );
+              }
             },
             child: const Text('Save'),
           ),
@@ -117,7 +139,7 @@ class OutputPanel extends ConsumerWidget {
     );
   }
 
-  /// Error state: error message display.
+  /// Error state: error icon + message display.
   Widget _buildErrorState(
     BuildContext context,
     GenerationState state,

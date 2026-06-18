@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../../../shared/services/temp_directory_manager.dart';
 import '../services/generation_service.dart';
 import '../services/mock_generation_service.dart';
 
@@ -53,8 +53,9 @@ class GenerationState {
 /// The [generate] method transitions through:
 ///   idle -> generating -> complete (or error)
 ///
-/// On completion, copies the bundled placeholder.png asset to a temp directory
-/// and sets [GenerationState.imagePath] so the output panel can display it.
+/// On completion, copies the bundled placeholder.png asset to the session
+/// temp directory (via [TempDirectoryManager]) and sets
+/// [GenerationState.imagePath] so the output panel can display it.
 class GenerationNotifier extends Notifier<GenerationState> {
   StreamSubscription? _subscription;
 
@@ -68,7 +69,7 @@ class GenerationNotifier extends Notifier<GenerationState> {
 
   /// Starts a mock generation run with the given [params].
   Future<void> generate(Map<String, dynamic> params) async {
-    // Prevent concurrent generations
+    // Prevent concurrent generations.
     if (state.status == GenerationStatus.generating) return;
 
     state = const GenerationState(status: GenerationStatus.generating);
@@ -78,10 +79,11 @@ class GenerationNotifier extends Notifier<GenerationState> {
     try {
       await for (final event in service.generate(params)) {
         if (event.isComplete) {
-          // Copy bundled placeholder to temp directory for display
-          final tempDir = await getTemporaryDirectory();
+          // Copy bundled placeholder to session temp directory for display.
+          final tempManager = ref.read(tempDirectoryManagerProvider);
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
           final outputFile = File(
-            '${tempDir.path}/diffusion_rs_gui_output.png',
+            '${tempManager.sessionPath}/output_$timestamp.png',
           );
 
           final byteData = await rootBundle.load('assets/placeholder.png');
