@@ -109,7 +109,6 @@ pub enum BackendDevice {
     CPU,
     CUDA0,
     VULKAN0,
-    METAL,
     GPU,
     AUTO,
     DISK,
@@ -738,7 +737,7 @@ impl ModelConfigBuilder {
         let mut map = HashMap::new();
         #[cfg(feature = "metal")]
         {
-            map.insert(BackendDevice::METAL, -1);
+            map.insert(BackendDevice::GPU, -1);
         }
 
         #[cfg(feature = "vulkan")]
