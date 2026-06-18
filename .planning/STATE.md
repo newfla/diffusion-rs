@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 1
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-06-18T12:55:11.429Z"
+stopped_at: Phase 1 UI-SPEC approved
+last_updated: "2026-06-18T13:10:48.839Z"
 progress:
   total_phases: 2
   completed_phases: 0
@@ -62,7 +62,7 @@ None
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/01-flutter-ui-foundation-mock-mode/01-CONTEXT.md
+**Resume file:** .planning/phases/01-flutter-ui-foundation-mock-mode/01-UI-SPEC.md
 
-Last session: 2026-06-18T12:55:11.417Z
-Stopped at: Phase 1 context gathered
+Last session: 2026-06-18T13:10:48.834Z
+Stopped at: Phase 1 UI-SPEC approved
