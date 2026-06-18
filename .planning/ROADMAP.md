@@ -29,7 +29,13 @@ Il progetto si articola in due fasi verticali. Phase 1 consegna una GUI Flutter 
   3. Al termine della generazione mock (~5 secondi), il pannello destro mostra un'immagine placeholder; l'utente può premere Salva, scegliere una cartella e trovare il file PNG salvato con nome `{preset}_{seed}_{timestamp}.png`
   4. I file temporanei di sessioni precedenti (crash) vengono rimossi all'avvio; i file della sessione corrente vengono rimossi alla chiusura normale dell'app
   5. La scorciatoia Cmd/Ctrl+Enter avvia la generazione esattamente come il bottone Genera
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Walking skeleton: Flutter project scaffold, two-panel Yaru layout, mock generation service, progress bar, placeholder image
+- [ ] 01-02-PLAN.md -- Complete form: all 15 CLI fields in 4 collapsible sections, preset catalog, field validation, keyboard shortcut
+- [ ] 01-03-PLAN.md -- Output panel: save flow with file_picker, temp directory lifecycle management
+
 **UI hint**: yes
 
 ### Phase 2: Rust Bridge Wiring
@@ -48,5 +54,5 @@ Il progetto si articola in due fasi verticali. Phase 1 consegna una GUI Flutter 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Flutter UI Foundation (Mock Mode) | 0/? | Not started | - |
+| 1. Flutter UI Foundation (Mock Mode) | 0/3 | Not started | - |
 | 2. Rust Bridge Wiring | 0/? | Not started | - |
