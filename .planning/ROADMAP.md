@@ -13,7 +13,7 @@ Il progetto si articola in due fasi verticali. Phase 1 consegna una GUI Flutter 
 
 ## Phases
 
-- [ ] **Phase 1: Flutter UI Foundation (Mock Mode)** - GUI completa e interattiva con mock service — zero dipendenze Rust
+- [x] **Phase 1: Flutter UI Foundation (Mock Mode)** - GUI completa e interattiva con mock service — zero dipendenze Rust (completed 2026-06-18)
 - [ ] **Phase 2: Rust Bridge Wiring** - Integrazione reale con diffusion-rs via flutter_rust_bridge FFI
 
 ## Phase Details
@@ -32,13 +32,13 @@ Il progetto si articola in due fasi verticali. Phase 1 consegna una GUI Flutter 
   4. I file temporanei di sessioni precedenti (crash) vengono rimossi all'avvio; i file della sessione corrente vengono rimossi alla chiusura normale dell'app
   5. La scorciatoia Cmd/Ctrl+Enter avvia la generazione esattamente come il bottone Genera
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 
 - [x] 01-01-PLAN.md -- Walking skeleton: Flutter project scaffold, two-panel Yaru layout, mock generation service, progress bar, placeholder image
 - [x] 01-02-PLAN.md -- Complete form: all 15 CLI fields in 4 collapsible sections, preset catalog, field validation, keyboard shortcut
-- [ ] 01-03-PLAN.md -- Output panel: save flow with file_picker, temp directory lifecycle management
+- [x] 01-03-PLAN.md -- Output panel: save flow with file_picker, temp directory lifecycle management
 
 **UI hint**: yes
 
@@ -61,5 +61,5 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Flutter UI Foundation (Mock Mode) | 2/3 | In Progress|  |
+| 1. Flutter UI Foundation (Mock Mode) | 3/3 | Complete   | 2026-06-18 |
 | 2. Rust Bridge Wiring | 0/? | Not started | - |

@@ -49,18 +49,18 @@
 
 ### Pannello Destro — Preview & Output
 
-- [ ] **OUT-01**: Il pannello destro mostra la preview intermedia durante la generazione (aggiornata ad ogni evento progress)
-- [ ] **OUT-02**: Al completamento della generazione, il pannello mostra l'immagine finale
-- [ ] **OUT-03**: L'immagine preview/finale occupa lo spazio disponibile mantenendo il rapporto d'aspetto
-- [ ] **OUT-04**: Bottone "Salva" visibile dopo il completamento della generazione
-- [ ] **OUT-05**: La pressione di "Salva" apre un folder picker; il file viene salvato come PNG con nome `{preset}_{seed}_{timestamp}.png`
-- [ ] **OUT-06**: La cartella di default per il salvataggio è la cartella Immagini/Pictures del sistema
+- [x] **OUT-01**: Il pannello destro mostra la preview intermedia durante la generazione (aggiornata ad ogni evento progress)
+- [x] **OUT-02**: Al completamento della generazione, il pannello mostra l'immagine finale
+- [x] **OUT-03**: L'immagine preview/finale occupa lo spazio disponibile mantenendo il rapporto d'aspetto
+- [x] **OUT-04**: Bottone "Salva" visibile dopo il completamento della generazione
+- [x] **OUT-05**: La pressione di "Salva" apre un folder picker; il file viene salvato come PNG con nome `{preset}_{seed}_{timestamp}.png`
+- [x] **OUT-06**: La cartella di default per il salvataggio è la cartella Immagini/Pictures del sistema
 
 ### Gestione File Temporanei
 
-- [ ] **TMP-01**: Tutti i file temporanei (preview PNG e output PNG) sono scritti in una directory temporanea con session ID unico
-- [ ] **TMP-02**: La directory temporanea viene eliminata alla chiusura normale dell'app
-- [ ] **TMP-03**: Le directory temporanee di sessioni precedenti (crash) vengono rimosse all'avvio della nuova sessione
+- [x] **TMP-01**: Tutti i file temporanei (preview PNG e output PNG) sono scritti in una directory temporanea con session ID unico
+- [x] **TMP-02**: La directory temporanea viene eliminata alla chiusura normale dell'app
+- [x] **TMP-03**: Le directory temporanee di sessioni precedenti (crash) vengono rimosse all'avvio della nuova sessione
 
 ### Mock Mode (Phase 1 — nessuna dipendenza Rust)
 
@@ -143,15 +143,15 @@
 | GEN-04 | Phase 1 | Complete |
 | GEN-05 | Phase 1 | Complete |
 | GEN-06 | Phase 1 | Complete |
-| OUT-01 | Phase 1 | Pending |
-| OUT-02 | Phase 1 | Pending |
-| OUT-03 | Phase 1 | Pending |
-| OUT-04 | Phase 1 | Pending |
-| OUT-05 | Phase 1 | Pending |
-| OUT-06 | Phase 1 | Pending |
-| TMP-01 | Phase 1 | Pending |
-| TMP-02 | Phase 1 | Pending |
-| TMP-03 | Phase 1 | Pending |
+| OUT-01 | Phase 1 | Complete |
+| OUT-02 | Phase 1 | Complete |
+| OUT-03 | Phase 1 | Complete |
+| OUT-04 | Phase 1 | Complete |
+| OUT-05 | Phase 1 | Complete |
+| OUT-06 | Phase 1 | Complete |
+| TMP-01 | Phase 1 | Complete |
+| TMP-02 | Phase 1 | Complete |
+| TMP-03 | Phase 1 | Complete |
 | MOCK-01 | Phase 1 | Complete |
 | MOCK-02 | Phase 1 | Complete |
 | MOCK-03 | Phase 1 | Complete |
