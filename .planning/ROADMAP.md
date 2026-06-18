@@ -32,12 +32,12 @@ Il progetto si articola in due fasi verticali. Phase 1 consegna una GUI Flutter 
   4. I file temporanei di sessioni precedenti (crash) vengono rimossi all'avvio; i file della sessione corrente vengono rimossi alla chiusura normale dell'app
   5. La scorciatoia Cmd/Ctrl+Enter avvia la generazione esattamente come il bottone Genera
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 
 - [x] 01-01-PLAN.md -- Walking skeleton: Flutter project scaffold, two-panel Yaru layout, mock generation service, progress bar, placeholder image
-- [ ] 01-02-PLAN.md -- Complete form: all 15 CLI fields in 4 collapsible sections, preset catalog, field validation, keyboard shortcut
+- [x] 01-02-PLAN.md -- Complete form: all 15 CLI fields in 4 collapsible sections, preset catalog, field validation, keyboard shortcut
 - [ ] 01-03-PLAN.md -- Output panel: save flow with file_picker, temp directory lifecycle management
 
 **UI hint**: yes
@@ -61,5 +61,5 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Flutter UI Foundation (Mock Mode) | 1/3 | In Progress|  |
+| 1. Flutter UI Foundation (Mock Mode) | 2/3 | In Progress|  |
 | 2. Rust Bridge Wiring | 0/? | Not started | - |

@@ -6,12 +6,12 @@ current_phase: 01
 current_phase_name: flutter-ui-foundation-mock-mode
 status: executing
 stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-06-18T14:48:21.594Z"
+last_updated: "2026-06-18T15:18:27.498Z"
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 ## Current Position
 
 **Phase:** 01 (flutter-ui-foundation-mock-mode) — EXECUTING
-**Plan:** 2 of 3
+**Plan:** 3 of 3
 **Status:** Ready to execute
-**Progress:** [███░░░░░░░] 33%
+**Progress:** [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -65,7 +65,7 @@ None
 
 **Resume file:** .planning/phases/01-flutter-ui-foundation-mock-mode/01-UI-SPEC.md
 
-Last session: 2026-06-18T14:47:47.866Z
+Last session: 2026-06-18T15:18:27.485Z
 Stopped at: Phase 1 UI-SPEC approved
 
 ## Performance Metrics
@@ -73,9 +73,12 @@ Stopped at: Phase 1 UI-SPEC approved
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 01 P01 | 24min | 2 tasks | 68 files |
+| Phase 01 P02 | 24min | 2 tasks | 9 files |
 
 ## Decisions
 
 - [Phase ?]: MultiSplitView v3.6.2 uses builder callback, not children property
 - [Phase ?]: Root .gitignore *.png overridden via gui/.gitignore negation for Flutter assets
 - [Phase ?]: Used Notifier<GenerationState> (sync) with async generate() method for generation lifecycle
+- [Phase ?]: Used DropdownButton+InputDecorator instead of deprecated DropdownButtonFormField.value in Flutter 3.44.x
+- [Phase ?]: Preset catalog has 41 presets (verified against src/preset.rs Preset enum)
