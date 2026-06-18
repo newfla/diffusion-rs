@@ -7,18 +7,18 @@
 
 ### Setup & Struttura Progetto
 
-- [ ] **SETUP-01**: Il progetto Flutter risiede in `gui/` come sottocartella del monorepo diffusion-rs esistente
-- [ ] **SETUP-02**: Il bridge crate Rust risiede in `gui/rust/` come workspace Cargo isolato (non membro del root workspace `Cargo.toml`)
-- [ ] **SETUP-03**: Un placeholder `token.txt` vuoto è committato nella root del repo per sbloccare le build CI
-- [ ] **SETUP-04**: La app Flutter compila ed esegue su macOS, Linux e Windows senza modifiche al codice
+- [x] **SETUP-01**: Il progetto Flutter risiede in `gui/` come sottocartella del monorepo diffusion-rs esistente
+- [x] **SETUP-02**: Il bridge crate Rust risiede in `gui/rust/` come workspace Cargo isolato (non membro del root workspace `Cargo.toml`)
+- [x] **SETUP-03**: Un placeholder `token.txt` vuoto è committato nella root del repo per sbloccare le build CI
+- [x] **SETUP-04**: La app Flutter compila ed esegue su macOS, Linux e Windows senza modifiche al codice
 
 ### UI Layout
 
-- [ ] **UI-01**: L'interfaccia è divisa in due pannelli affiancati: sinistra (form parametri) e destra (preview + output)
-- [ ] **UI-02**: I pannelli sono ridimensionabili tramite drag handle orizzontale
-- [ ] **UI-03**: La UI supporta tema chiaro e scuro con il design system Yaru
-- [ ] **UI-04**: Il tema segue le impostazioni di sistema per default
-- [ ] **UI-05**: L'utente può sovrascrivere il tema manualmente tramite un toggle (Chiaro / Sistema / Scuro)
+- [x] **UI-01**: L'interfaccia è divisa in due pannelli affiancati: sinistra (form parametri) e destra (preview + output)
+- [x] **UI-02**: I pannelli sono ridimensionabili tramite drag handle orizzontale
+- [x] **UI-03**: La UI supporta tema chiaro e scuro con il design system Yaru
+- [x] **UI-04**: Il tema segue le impostazioni di sistema per default
+- [x] **UI-05**: L'utente può sovrascrivere il tema manualmente tramite un toggle (Chiaro / Sistema / Scuro)
 
 ### Form Parametri (Pannello Sinistro)
 
@@ -40,10 +40,10 @@
 
 ### Controlli Generazione
 
-- [ ] **GEN-01**: Bottone "Genera" che avvia la generazione
+- [x] **GEN-01**: Bottone "Genera" che avvia la generazione
 - [ ] **GEN-02**: Alla pressione di "Genera", tutti i campi del form vengono disabilitati per tutta la durata della generazione
-- [ ] **GEN-03**: Barra di avanzamento lineare visibile durante la generazione
-- [ ] **GEN-04**: Contatore di step testuale accanto alla barra ("Step N / totale")
+- [x] **GEN-03**: Barra di avanzamento lineare visibile durante la generazione
+- [x] **GEN-04**: Contatore di step testuale accanto alla barra ("Step N / totale")
 - [ ] **GEN-05**: Al completamento della generazione, tutti i campi del form vengono riabilitati
 - [ ] **GEN-06**: Scorciatoia da tastiera Cmd/Ctrl+Enter equivalente al bottone Genera
 
@@ -64,9 +64,9 @@
 
 ### Mock Mode (Phase 1 — nessuna dipendenza Rust)
 
-- [ ] **MOCK-01**: In Phase 1, l'app usa `MockGenerationService`: la pressione di "Genera" avvia una sequenza di progress eventi simulati via Stream (non Timer.periodic)
-- [ ] **MOCK-02**: Il mock completa la "generazione" in ~5 secondi con progress step realistici
-- [ ] **MOCK-03**: Al termine del mock, il pannello destro mostra un'immagine placeholder predefinita
+- [x] **MOCK-01**: In Phase 1, l'app usa `MockGenerationService`: la pressione di "Genera" avvia una sequenza di progress eventi simulati via Stream (non Timer.periodic)
+- [x] **MOCK-02**: Il mock completa la "generazione" in ~5 secondi con progress step realistici
+- [x] **MOCK-03**: Al termine del mock, il pannello destro mostra un'immagine placeholder predefinita
 - [ ] **MOCK-04**: La lista preset e pesi in Phase 1 è hardcoded in Dart (derivata da `src/preset.rs` al momento del build)
 
 ### Bridge Rust / Wiring (Phase 2)
@@ -113,15 +113,15 @@
 
 | Requisito | Fase | Stato |
 |-----------|------|-------|
-| SETUP-01 | Phase 1 | Pending |
-| SETUP-02 | Phase 1 | Pending |
-| SETUP-03 | Phase 1 | Pending |
-| SETUP-04 | Phase 1 | Pending |
-| UI-01 | Phase 1 | Pending |
-| UI-02 | Phase 1 | Pending |
-| UI-03 | Phase 1 | Pending |
-| UI-04 | Phase 1 | Pending |
-| UI-05 | Phase 1 | Pending |
+| SETUP-01 | Phase 1 | Complete |
+| SETUP-02 | Phase 1 | Complete |
+| SETUP-03 | Phase 1 | Complete |
+| SETUP-04 | Phase 1 | Complete |
+| UI-01 | Phase 1 | Complete |
+| UI-02 | Phase 1 | Complete |
+| UI-03 | Phase 1 | Complete |
+| UI-04 | Phase 1 | Complete |
+| UI-05 | Phase 1 | Complete |
 | FORM-01 | Phase 1 | Pending |
 | FORM-02 | Phase 1 | Pending |
 | FORM-03 | Phase 1 | Pending |
@@ -137,10 +137,10 @@
 | FORM-13 | Phase 1 | Pending |
 | FORM-14 | Phase 1 | Pending |
 | FORM-15 | Phase 1 | Pending |
-| GEN-01 | Phase 1 | Pending |
+| GEN-01 | Phase 1 | Complete |
 | GEN-02 | Phase 1 | Pending |
-| GEN-03 | Phase 1 | Pending |
-| GEN-04 | Phase 1 | Pending |
+| GEN-03 | Phase 1 | Complete |
+| GEN-04 | Phase 1 | Complete |
 | GEN-05 | Phase 1 | Pending |
 | GEN-06 | Phase 1 | Pending |
 | OUT-01 | Phase 1 | Pending |
@@ -152,9 +152,9 @@
 | TMP-01 | Phase 1 | Pending |
 | TMP-02 | Phase 1 | Pending |
 | TMP-03 | Phase 1 | Pending |
-| MOCK-01 | Phase 1 | Pending |
-| MOCK-02 | Phase 1 | Pending |
-| MOCK-03 | Phase 1 | Pending |
+| MOCK-01 | Phase 1 | Complete |
+| MOCK-02 | Phase 1 | Complete |
+| MOCK-03 | Phase 1 | Complete |
 | MOCK-04 | Phase 1 | Pending |
 | FRB-01 | Phase 2 | Pending |
 | FRB-02 | Phase 2 | Pending |
@@ -167,6 +167,7 @@
 | FRB-09 | Phase 2 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 46 totali
 - Mappati a fasi: 46/46
 - Non mappati: 0 ✓

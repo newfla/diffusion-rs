@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-status: planning
+current_phase: 01
+current_phase_name: flutter-ui-foundation-mock-mode
+status: executing
 stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-06-18T13:10:48.839Z"
+last_updated: "2026-06-18T14:48:21.594Z"
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** L'utente può configurare e avviare una generazione di immagini con lo stesso set di opzioni della CLI, senza aprire un terminale.
-**Current focus:** Phase 1 — Flutter UI Foundation (Mock Mode)
+**Current focus:** Phase 01 — flutter-ui-foundation-mock-mode
 
 ## Current Position
 
-**Phase:** 1 of 2
-**Plan:** None (not yet planned)
-**Status:** Ready to plan
-**Progress:** ░░░░░░░░░░ 0%
+**Phase:** 01 (flutter-ui-foundation-mock-mode) — EXECUTING
+**Plan:** 2 of 3
+**Status:** Ready to execute
+**Progress:** [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -64,5 +65,17 @@ None
 
 **Resume file:** .planning/phases/01-flutter-ui-foundation-mock-mode/01-UI-SPEC.md
 
-Last session: 2026-06-18T13:10:48.834Z
+Last session: 2026-06-18T14:47:47.866Z
 Stopped at: Phase 1 UI-SPEC approved
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 01 P01 | 24min | 2 tasks | 68 files |
+
+## Decisions
+
+- [Phase ?]: MultiSplitView v3.6.2 uses builder callback, not children property
+- [Phase ?]: Root .gitignore *.png overridden via gui/.gitignore negation for Flutter assets
+- [Phase ?]: Used Notifier<GenerationState> (sync) with async generate() method for generation lifecycle
