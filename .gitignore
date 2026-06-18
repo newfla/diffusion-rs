@@ -27,3 +27,5 @@ build/
 *.jpeg
 .idea/
 .vscode/
+
+.claude

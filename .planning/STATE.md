@@ -1,0 +1,50 @@
+# Project State
+
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-06-18)
+
+**Core value:** L'utente può configurare e avviare una generazione di immagini con lo stesso set di opzioni della CLI, senza aprire un terminale.
+**Current focus:** Phase 1 — Flutter UI Foundation (Mock Mode)
+
+## Current Position
+
+**Phase:** 1 of 2
+**Plan:** None (not yet planned)
+**Status:** Ready to plan
+**Progress:** ░░░░░░░░░░ 0%
+
+## Performance Metrics
+
+**Phases complete:** 0/2
+**Plans complete:** 0/?
+**Requirements covered:** 46/46
+
+## Accumulated Context
+
+### Key Decisions
+
+- flutter_rust_bridge 2.x per FFI Dart↔Rust — unica soluzione matura per desktop
+- Phase 1 mock-first per disaccoppiare sviluppo UI da build Rust/GPU
+- Yaru 6.x come design system — light/dark built-in, YaruPasswordField per token
+- Riverpod 2.x (AsyncNotifier) per state management — 4 provider: params, generation lifecycle, progress, theme
+- gui/rust/ NON membro del workspace root Cargo.toml — evita trigger build CMake/GPU
+
+### Critical Pre-requisites (Phase 2)
+
+- SETUP-03: token.txt placeholder da committare subito (sblocca CI fresh checkout)
+- FRB-05: campi `step`, `steps`, `time` in `src/api.rs` Progress struct devono diventare `pub`
+- SETUP-02: gui/rust/ come workspace Cargo isolato (non membro root workspace)
+
+### Blockers
+
+None
+
+### Todos
+
+- [ ] Plan Phase 1 (`/gsd-plan-phase 1`)
+
+## Session Continuity
+
+Last session: 2026-06-18
+Stopped at: Project initialized, ready to plan Phase 1
