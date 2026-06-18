@@ -7,7 +7,6 @@ import 'providers/params_provider.dart';
 import 'sections/advanced_section.dart';
 import 'sections/generation_section.dart';
 import 'sections/model_section.dart';
-import 'sections/postproc_section.dart';
 
 /// Left panel containing the parameter form in 4 collapsible sections
 /// and a pinned Generate button at the bottom.
@@ -33,8 +32,8 @@ class ParamsPanel extends ConsumerWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.only(top: 8),
             child: YaruExpansionPanel(
-              // Per D-03: Model + Generation expanded, Post-processing + Advanced collapsed
-              isInitiallyExpanded: const [true, true, false, false],
+              // Model + Generation expanded by default; Advanced collapsed
+              isInitiallyExpanded: const [true, true, false],
               // Allow multiple sections to be open at the same time
               collapseOnExpand: false,
               placeDividers: true,
@@ -50,10 +49,6 @@ class ParamsPanel extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  'Post-processing',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                Text(
                   'Advanced',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -61,7 +56,6 @@ class ParamsPanel extends ConsumerWidget {
               children: const [
                 ModelSection(),
                 GenerationSection(),
-                PostprocSection(),
                 AdvancedSection(),
               ],
             ),

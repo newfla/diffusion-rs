@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../generation/providers/generation_provider.dart';
 import '../providers/params_provider.dart';
 
-/// Advanced section with cache, FORM-15 warning, token, and low VRAM (per D-02, D-05).
+/// Advanced section: cache, FORM-15 warning, upscaler, upscaler scale, token, low VRAM.
 ///
-/// FORM-15 warning is shown when upscaler is active and cache is "None".
-/// Token field stores obscureText toggle state in paramsProvider (not local
-/// state) to survive section rebuilds (per RESEARCH.md Pitfall 7).
+/// Upscaler moved here from Post-processing per user feedback.
+/// FORM-15 warning shown when upscaler is active and cache is "None" (per D-05).
 /// All fields disable during generation (per GEN-02).
-class AdvancedSection extends ConsumerWidget {
+class AdvancedSection extends ConsumerStatefulWidget {
   const AdvancedSection({super.key});
+
+  @override
+  ConsumerState<AdvancedSection> createState() => _AdvancedSectionState();
+}
+
+class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
+  late final TextEditingController _scaleController;
 
   static const _cacheModes = [
     'None',
@@ -23,14 +30,38 @@ class AdvancedSection extends ConsumerWidget {
     'SPECTRUM',
   ];
 
+  static const _upscalerModes = [
+    'None',
+    'RealESRGAN_x4plus',
+    'RealESRGAN_x4plus_anime_6B',
+    'ESRGAN_4x',
+    'RealESRGAN_x2plus',
+    'RealESRGAN_x4plus_netD',
+    'ESRGAN_1x',
+    'RealESRGAN_x2_SA',
+    'RealESRGAN_x4_Anime',
+  ];
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    final scale = ref.read(paramsProvider).upscalerScale;
+    _scaleController = TextEditingController(text: scale.toString());
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final params = ref.watch(paramsProvider);
     final generationState = ref.watch(generationProvider);
     final isGenerating =
         generationState.status == GenerationStatus.generating;
-
-    // FORM-15 warning condition: upscaler active AND cache is None (per D-05)
+    final showScale = params.upscalerMode != 'None';
     final showUpscalerWarning =
         params.upscalerMode != 'None' && params.cacheMode == 'None';
 
@@ -68,7 +99,7 @@ class AdvancedSection extends ConsumerWidget {
             ),
           ),
 
-          // FORM-15 warning text (per D-05, UI-SPEC Copywriting)
+          // FORM-15 warning (per D-05)
           if (showUpscalerWarning) ...[
             const SizedBox(height: 8),
             Text(
@@ -81,12 +112,69 @@ class AdvancedSection extends ConsumerWidget {
           ],
           const SizedBox(height: 12),
 
-          // Token field with obscureText toggle (per FORM-13, T-01-05)
+          // Upscaler dropdown (moved from Post-processing per user feedback)
+          InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Upscaler',
+              border: OutlineInputBorder(),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: params.upscalerMode,
+                isExpanded: true,
+                isDense: true,
+                items: _upscalerModes
+                    .map(
+                      (m) => DropdownMenuItem(value: m, child: Text(m)),
+                    )
+                    .toList(),
+                onChanged: isGenerating
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          ref
+                              .read(paramsProvider.notifier)
+                              .setUpscalerMode(value);
+                        }
+                      },
+              ),
+            ),
+          ),
+
+          // Upscaler scale: visible only when upscaler is not "None" (per FORM-12)
+          if (showScale) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _scaleController,
+              enabled: !isGenerating,
+              decoration: const InputDecoration(
+                labelText: 'Scale factor',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              onChanged: (value) {
+                final parsed = double.tryParse(value);
+                if (parsed != null && parsed > 0) {
+                  ref
+                      .read(paramsProvider.notifier)
+                      .setUpscalerScale(parsed);
+                }
+              },
+            ),
+          ],
+          const SizedBox(height: 12),
+
+          // Token field with obscureText toggle (per FORM-13)
           TextField(
             enabled: !isGenerating,
             obscureText: !params.tokenVisible,
             decoration: InputDecoration(
               labelText: 'HuggingFace Token',
+              hintText: 'Default',
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 onPressed: isGenerating

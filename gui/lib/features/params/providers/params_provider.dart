@@ -108,17 +108,16 @@ class ParamsState {
 class ParamsNotifier extends Notifier<ParamsState> {
   @override
   ParamsState build() {
-    final firstPreset = PresetCatalog.presetNames.first;
     return ParamsState(
-      selectedPreset: firstPreset,
-      selectedWeight: PresetCatalog.getDefaultWeight(firstPreset),
+      selectedPreset: PresetCatalog.presetNames.first,
+      selectedWeight: null,
     );
   }
 
   void setPreset(String preset) {
     state = state.copyWith(
       selectedPreset: preset,
-      selectedWeightFn: () => PresetCatalog.getDefaultWeight(preset),
+      selectedWeightFn: () => null,
     );
   }
 

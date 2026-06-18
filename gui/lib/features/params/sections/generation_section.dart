@@ -6,9 +6,10 @@ import '../../../shared/widgets/seed_field.dart';
 import '../../generation/providers/generation_provider.dart';
 import '../providers/params_provider.dart';
 
-/// Generation section with form fields in the order specified by D-04:
-/// prompt -> negative prompt -> steps -> width/height -> seed.
+/// Generation section: prompt → negative → steps → width/height → seed → preview.
 ///
+/// Preview moved here from Post-processing per user feedback.
+/// Steps, width, height show hint "Default" — backend uses model defaults when null.
 /// All fields disable when generation is running (per GEN-02).
 class GenerationSection extends ConsumerStatefulWidget {
   const GenerationSection({super.key});
@@ -23,6 +24,8 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
   late final TextEditingController _stepsController;
   late final TextEditingController _widthController;
   late final TextEditingController _heightController;
+
+  static const _previewModes = ['None', 'Fast', 'Accurate'];
 
   @override
   void initState() {
@@ -55,6 +58,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
 
   @override
   Widget build(BuildContext context) {
+    final params = ref.watch(paramsProvider);
     final generationState = ref.watch(generationProvider);
     final isGenerating =
         generationState.status == GenerationStatus.generating;
@@ -64,7 +68,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Prompt: multiline, minLines 3, required for Generate (per FORM-03)
+          // Prompt: required (per FORM-03)
           TextField(
             controller: _promptController,
             enabled: !isGenerating,
@@ -81,12 +85,13 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
           ),
           const SizedBox(height: 12),
 
-          // Negative prompt: single line, optional (per FORM-04)
+          // Negative prompt: optional, hint "Default" (per FORM-04)
           TextField(
             controller: _negativePromptController,
             enabled: !isGenerating,
             decoration: const InputDecoration(
               labelText: 'Negative prompt',
+              hintText: 'Default',
               border: OutlineInputBorder(),
             ),
             onChanged: (value) {
@@ -95,12 +100,13 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
           ),
           const SizedBox(height: 12),
 
-          // Steps: numeric, optional (per FORM-05)
+          // Steps: optional, hint "Default" (per FORM-05)
           TextField(
             controller: _stepsController,
             enabled: !isGenerating,
             decoration: const InputDecoration(
               labelText: 'Steps',
+              hintText: 'Default',
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
@@ -113,7 +119,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
           ),
           const SizedBox(height: 12),
 
-          // Width / Height: two fields in a row (per FORM-06)
+          // Width / Height: optional, hint "Default" (per FORM-06)
           Row(
             children: [
               Expanded(
@@ -122,6 +128,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
                   enabled: !isGenerating,
                   decoration: const InputDecoration(
                     labelText: 'Width',
+                    hintText: 'Default',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -140,6 +147,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
                   enabled: !isGenerating,
                   decoration: const InputDecoration(
                     labelText: 'Height',
+                    hintText: 'Default',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -157,6 +165,36 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
 
           // Seed with dice button (per FORM-08)
           SeedField(enabled: !isGenerating),
+          const SizedBox(height: 12),
+
+          // Preview dropdown (moved from Post-processing per user feedback)
+          InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Preview',
+              border: OutlineInputBorder(),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: params.previewMode,
+                isExpanded: true,
+                isDense: true,
+                items: _previewModes
+                    .map(
+                      (m) => DropdownMenuItem(value: m, child: Text(m)),
+                    )
+                    .toList(),
+                onChanged: isGenerating
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          ref
+                              .read(paramsProvider.notifier)
+                              .setPreviewMode(value);
+                        }
+                      },
+              ),
+            ),
+          ),
         ],
       ),
     );
