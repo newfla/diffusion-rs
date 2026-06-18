@@ -62,26 +62,20 @@ class ModelSection extends ConsumerWidget {
               border: OutlineInputBorder(),
             ),
             child: DropdownButtonHideUnderline(
-              child: DropdownButton<String?>(
-                value: hasWeights ? params.selectedWeight : null,
+              child: DropdownButton<String>(
+                value: hasWeights ? params.selectedWeight : 'N/A',
                 isExpanded: true,
                 isDense: true,
                 items: hasWeights
-                    ? [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Default'),
-                        ),
-                        ...weights.map(
-                          (w) => DropdownMenuItem<String?>(
-                            value: w,
-                            child: Text(w),
-                          ),
-                        ),
-                      ]
+                    ? weights
+                        .map(
+                          (w) =>
+                              DropdownMenuItem(value: w, child: Text(w)),
+                        )
+                        .toList()
                     : const [
-                        DropdownMenuItem<String?>(
-                          value: null,
+                        DropdownMenuItem(
+                          value: 'N/A',
                           child: Text('N/A'),
                         ),
                       ],
