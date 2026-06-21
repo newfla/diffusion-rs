@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +72,8 @@ class _SeedFieldState extends ConsumerState<SeedField> {
         IconButton(
           onPressed: widget.enabled
               ? () {
-                  ref.read(paramsProvider.notifier).setSeed(-1);
+                  final randomSeed = Random().nextInt(0x7FFFFFFF);
+                  ref.read(paramsProvider.notifier).setSeed(randomSeed);
                 }
               : null,
           icon: const Icon(Icons.casino),

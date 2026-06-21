@@ -113,7 +113,10 @@ blocked: 0
   reason: "User reported: Il campo dado non genera alcun valore"
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "SeedField.dart imposta seed a -1 (valore default), quindi se il seed è già -1 il click non produce nessun cambiamento visibile. La fix corretta è generare un intero positivo casuale al click, non resettare a -1."
+  artifacts:
+    - path: "gui/lib/shared/widgets/seed_field.dart"
+      issue: "IconButton onPressed sets seed to -1 (same as default) instead of a random positive integer"
+  missing:
+    - "Generate Random.nextInt() value on dice click so the field visually updates"
   debug_session: ""
