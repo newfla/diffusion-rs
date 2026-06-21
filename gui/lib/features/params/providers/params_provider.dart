@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/preset_catalog.dart';
+import '../../../src/rust/api.dart';
 
 /// Immutable state class holding all form field values.
 ///
@@ -108,17 +109,27 @@ class ParamsState {
 class ParamsNotifier extends Notifier<ParamsState> {
   @override
   ParamsState build() {
-    final firstPreset = PresetCatalog.presetNames.first;
+    final firstPreset = getPresets().first;
+    final defaults = PresetCatalog.getDefaults(firstPreset);
+    final firstWeights = getWeightsForPreset(preset: firstPreset);
     return ParamsState(
       selectedPreset: firstPreset,
-      selectedWeight: PresetCatalog.getDefaultWeight(firstPreset),
+      selectedWeight: firstWeights.isEmpty ? null : firstWeights.first,
+      steps: defaults.steps,
+      width: defaults.width,
+      height: defaults.height,
     );
   }
 
   void setPreset(String preset) {
+    final defaults = PresetCatalog.getDefaults(preset);
+    final weights = getWeightsForPreset(preset: preset);
     state = state.copyWith(
       selectedPreset: preset,
-      selectedWeightFn: () => PresetCatalog.getDefaultWeight(preset),
+      selectedWeightFn: () => weights.isEmpty ? null : weights.first,
+      stepsFn: () => defaults.steps,
+      widthFn: () => defaults.width,
+      heightFn: () => defaults.height,
     );
   }
 

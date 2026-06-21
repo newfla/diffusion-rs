@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/models/preset_catalog.dart';
+import '../../../src/rust/api.dart';
 import '../../generation/providers/generation_provider.dart';
 import '../providers/params_provider.dart';
 
@@ -19,8 +19,8 @@ class ModelSection extends ConsumerWidget {
     final generationState = ref.watch(generationProvider);
     final isGenerating =
         generationState.status == GenerationStatus.generating;
-    final hasWeights = PresetCatalog.hasWeights(params.selectedPreset);
-    final weights = PresetCatalog.getWeights(params.selectedPreset);
+    final weights = getWeightsForPreset(preset: params.selectedPreset);
+    final hasWeights = weights.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -37,7 +37,7 @@ class ModelSection extends ConsumerWidget {
                 value: params.selectedPreset,
                 isExpanded: true,
                 isDense: true,
-                items: PresetCatalog.presetNames
+                items: getPresets()
                     .map(
                       (name) =>
                           DropdownMenuItem(value: name, child: Text(name)),

@@ -42,21 +42,29 @@ pub struct GuiProgressEvent {
 /// Return the list of all available preset names.
 ///
 /// Uses `PresetDiscriminants::VARIANTS` from strum to stay in sync with the
-/// Rust `Preset` enum automatically (FRB-01).
+/// Rust `Preset` enum automatically (FRB-01). Wrapped in catch_unwind per FRB-06.
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_presets() -> Vec<String> {
-    PresetDiscriminants::VARIANTS
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
+    std::panic::catch_unwind(|| {
+        PresetDiscriminants::VARIANTS
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    })
+    .unwrap_or_default()
 }
 
 /// Return the valid weight variant names for a given preset.
 ///
 /// For presets without weight options, returns an empty vec.
-/// Preset string is case-insensitive (FRB-02).
+/// Preset string is case-insensitive (FRB-02). Wrapped in catch_unwind per FRB-06.
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_weights_for_preset(preset: String) -> Vec<String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| _get_weights_for_preset(preset)))
+        .unwrap_or_default()
+}
+
+fn _get_weights_for_preset(preset: String) -> Vec<String> {
     use std::str::FromStr;
 
     let disc = match PresetDiscriminants::from_str(&preset) {

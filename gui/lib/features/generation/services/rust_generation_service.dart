@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/progress_event.dart';
 import '../../../shared/services/temp_directory_manager.dart';
-import '../../../src/rust/api/api.dart';
+import '../../../src/rust/api.dart';
+import '../../../src/rust/gui_params.dart';
 import 'generation_service.dart';
 
 /// Real implementation of [GenerationService] that calls diffusion-rs

@@ -44,6 +44,17 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
     _heightController = TextEditingController(
       text: params.height?.toString() ?? '',
     );
+
+    // Sync controllers when preset changes (preset drives steps/width/height defaults).
+    ref.listenManual(
+      paramsProvider.select((p) => p.selectedPreset),
+      (_, _) {
+        final p = ref.read(paramsProvider);
+        _stepsController.text = p.steps?.toString() ?? '';
+        _widthController.text = p.width?.toString() ?? '';
+        _heightController.text = p.height?.toString() ?? '';
+      },
+    );
   }
 
   @override
@@ -100,13 +111,12 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
           ),
           const SizedBox(height: 12),
 
-          // Steps: optional, hint "Default" (per FORM-05)
+          // Steps: preset default auto-filled; empty means backend default
           TextField(
             controller: _stepsController,
             enabled: !isGenerating,
             decoration: const InputDecoration(
               labelText: 'Steps',
-              hintText: 'Default',
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
@@ -128,7 +138,6 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
                   enabled: !isGenerating,
                   decoration: const InputDecoration(
                     labelText: 'Width',
-                    hintText: 'Default',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -147,7 +156,6 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
                   enabled: !isGenerating,
                   decoration: const InputDecoration(
                     labelText: 'Height',
-                    hintText: 'Default',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,

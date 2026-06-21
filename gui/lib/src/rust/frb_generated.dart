@@ -3,12 +3,13 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-import 'api/api.dart';
+import 'api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'gui_params.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Main entrypoint of the Rust API
@@ -54,9 +55,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
       RustLibWire.fromExternalLibrary;
 
   @override
-  Future<void> executeRustInitializers() async {
-    await api.crateApiInitApp();
-  }
+  Future<void> executeRustInitializers() async {}
 
   @override
   ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
@@ -66,11 +65,11 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1918914929;
+  int get rustContentHash => -285676703;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
-        stem: 'rust_lib_diffusion_rs_gui',
+        stem: 'diffusion_rs_gui',
         ioDirectory: 'rust/target/release/',
         webPrefix: 'pkg/',
         wasmBindgenName: 'wasm_bindgen',
@@ -78,14 +77,13 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Stream<GuiProgressEvent> crateApiGenerateImageStream({
+    required GuiParams params,
+  });
+
   List<String> crateApiGetPresets();
 
   List<String> crateApiGetWeightsForPreset({required String preset});
-
-  Stream<GuiProgressEvent> crateApiGenerateImageStream(
-      {required GuiParams params});
-
-  Future<void> crateApiInitApp();
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -97,12 +95,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Stream<GuiProgressEvent> crateApiGenerateImageStream({
+    required GuiParams params,
+  }) {
+    final sink = RustStreamSink<GuiProgressEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_box_autoadd_gui_params(params, serializer);
+            sse_encode_StreamSink_gui_progress_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 1,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_AnyhowException,
+          ),
+          constMeta: kCrateApiGenerateImageStreamConstMeta,
+          argValues: [params, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiGenerateImageStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_image_stream",
+        argNames: ["params", "sink"],
+      );
+
+  @override
   List<String> crateApiGetPresets() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -125,7 +161,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(preset, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -140,65 +176,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiGetWeightsForPresetConstMeta =>
       const TaskConstMeta(
-          debugName: "get_weights_for_preset", argNames: ["preset"]);
+        debugName: "get_weights_for_preset",
+        argNames: ["preset"],
+      );
 
-  @override
-  Stream<GuiProgressEvent> crateApiGenerateImageStream(
-      {required GuiParams params}) {
-    final sink = RustStreamSink<GuiProgressEvent>();
-    unawaited(handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_gui_params(params, serializer);
-        sse_encode_StreamSink_gui_progress_event_Sse(sink, serializer);
-        pdeCallFfi(
-          generalizedFrbRustBinding,
-          serializer,
-          funcId: 3,
-          port: port_,
-        );
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiGenerateImageStreamConstMeta,
-      argValues: [params, sink],
-      apiImpl: this,
-    )));
-    return sink.stream;
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
   }
 
-  TaskConstMeta get kCrateApiGenerateImageStreamConstMeta =>
-      const TaskConstMeta(
-          debugName: "generate_image_stream", argNames: ["params"]);
-
-  @override
-  Future<void> crateApiInitApp() {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 4,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiInitAppConstMeta,
-        argValues: [],
-        apiImpl: this,
-      ),
-    );
+  @protected
+  RustStreamSink<GuiProgressEvent> dco_decode_StreamSink_gui_progress_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
   }
-
-  TaskConstMeta get kCrateApiInitAppConstMeta =>
-      const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -207,9 +201,111 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  GuiParams dco_decode_box_autoadd_gui_params(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_gui_params(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  GuiParams dco_decode_gui_params(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 17)
+      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
+    return GuiParams(
+      preset: dco_decode_String(arr[0]),
+      weight: dco_decode_opt_String(arr[1]),
+      prompt: dco_decode_String(arr[2]),
+      negativePrompt: dco_decode_opt_String(arr[3]),
+      steps: dco_decode_opt_box_autoadd_i_32(arr[4]),
+      width: dco_decode_opt_box_autoadd_i_32(arr[5]),
+      height: dco_decode_opt_box_autoadd_i_32(arr[6]),
+      batchCount: dco_decode_i_32(arr[7]),
+      seed: dco_decode_i_64(arr[8]),
+      cacheMode: dco_decode_opt_String(arr[9]),
+      previewMode: dco_decode_String(arr[10]),
+      upscaler: dco_decode_opt_String(arr[11]),
+      upscalerScale: dco_decode_f_32(arr[12]),
+      token: dco_decode_opt_String(arr[13]),
+      lowVram: dco_decode_bool(arr[14]),
+      previewOutput: dco_decode_String(arr[15]),
+      output: dco_decode_String(arr[16]),
+    );
+  }
+
+  @protected
+  GuiProgressEvent dco_decode_gui_progress_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return GuiProgressEvent(
+      step: dco_decode_i_32(arr[0]),
+      steps: dco_decode_i_32(arr[1]),
+      time: dco_decode_f_32(arr[2]),
+      previewImage: dco_decode_opt_list_prim_u_8_strict(arr[3]),
+      finalImage: dco_decode_opt_list_prim_u_8_strict(arr[4]),
+    );
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
+  }
+
+  @protected
+  Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
   }
 
   @protected
@@ -225,6 +321,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  RustStreamSink<GuiProgressEvent> sse_decode_StreamSink_gui_progress_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
@@ -232,10 +343,149 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  GuiParams sse_decode_box_autoadd_gui_params(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_gui_params(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
+  }
+
+  @protected
+  GuiParams sse_decode_gui_params(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_preset = sse_decode_String(deserializer);
+    var var_weight = sse_decode_opt_String(deserializer);
+    var var_prompt = sse_decode_String(deserializer);
+    var var_negativePrompt = sse_decode_opt_String(deserializer);
+    var var_steps = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_width = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_height = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_batchCount = sse_decode_i_32(deserializer);
+    var var_seed = sse_decode_i_64(deserializer);
+    var var_cacheMode = sse_decode_opt_String(deserializer);
+    var var_previewMode = sse_decode_String(deserializer);
+    var var_upscaler = sse_decode_opt_String(deserializer);
+    var var_upscalerScale = sse_decode_f_32(deserializer);
+    var var_token = sse_decode_opt_String(deserializer);
+    var var_lowVram = sse_decode_bool(deserializer);
+    var var_previewOutput = sse_decode_String(deserializer);
+    var var_output = sse_decode_String(deserializer);
+    return GuiParams(
+      preset: var_preset,
+      weight: var_weight,
+      prompt: var_prompt,
+      negativePrompt: var_negativePrompt,
+      steps: var_steps,
+      width: var_width,
+      height: var_height,
+      batchCount: var_batchCount,
+      seed: var_seed,
+      cacheMode: var_cacheMode,
+      previewMode: var_previewMode,
+      upscaler: var_upscaler,
+      upscalerScale: var_upscalerScale,
+      token: var_token,
+      lowVram: var_lowVram,
+      previewOutput: var_previewOutput,
+      output: var_output,
+    );
+  }
+
+  @protected
+  GuiProgressEvent sse_decode_gui_progress_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_step = sse_decode_i_32(deserializer);
+    var var_steps = sse_decode_i_32(deserializer);
+    var var_time = sse_decode_f_32(deserializer);
+    var var_previewImage = sse_decode_opt_list_prim_u_8_strict(deserializer);
+    var var_finalImage = sse_decode_opt_list_prim_u_8_strict(deserializer);
+    return GuiProgressEvent(
+      step: var_step,
+      steps: var_steps,
+      time: var_time,
+      previewImage: var_previewImage,
+      finalImage: var_finalImage,
+    );
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_prim_u_8_strict(deserializer));
+    } else {
+      return null;
+    }
   }
 
   @protected
@@ -250,21 +500,118 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
+    sse_encode_String(self.message, serializer);
   }
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer) {
+  void sse_encode_StreamSink_gui_progress_event_Sse(
+    RustStreamSink<GuiProgressEvent> self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getUint8() != 0;
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_gui_progress_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
   }
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_gui_params(
+    GuiParams self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_gui_params(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
+  }
+
+  @protected
+  void sse_encode_gui_params(GuiParams self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.preset, serializer);
+    sse_encode_opt_String(self.weight, serializer);
+    sse_encode_String(self.prompt, serializer);
+    sse_encode_opt_String(self.negativePrompt, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.steps, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.width, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.height, serializer);
+    sse_encode_i_32(self.batchCount, serializer);
+    sse_encode_i_64(self.seed, serializer);
+    sse_encode_opt_String(self.cacheMode, serializer);
+    sse_encode_String(self.previewMode, serializer);
+    sse_encode_opt_String(self.upscaler, serializer);
+    sse_encode_f_32(self.upscalerScale, serializer);
+    sse_encode_opt_String(self.token, serializer);
+    sse_encode_bool(self.lowVram, serializer);
+    sse_encode_String(self.previewOutput, serializer);
+    sse_encode_String(self.output, serializer);
+  }
+
+  @protected
+  void sse_encode_gui_progress_event(
+    GuiProgressEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.step, serializer);
+    sse_encode_i_32(self.steps, serializer);
+    sse_encode_f_32(self.time, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.previewImage, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.finalImage, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
   }
 
   @protected
@@ -278,6 +625,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_prim_u_8_strict(
+    Uint8List? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_prim_u_8_strict(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
@@ -286,165 +666,5 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
-  }
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putUint8(self ? 1 : 0);
-  }
-
-  @protected
-  List<String> sse_decode_list_String(SseDeserializer deserializer) {
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <String>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_String(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
-  int sse_decode_i_64(SseDeserializer deserializer) {
-    return deserializer.buffer.getInt64();
-  }
-
-  @protected
-  double sse_decode_f_32(SseDeserializer deserializer) {
-    return deserializer.buffer.getFloat32();
-  }
-
-  @protected
-  double sse_decode_f_64(SseDeserializer deserializer) {
-    return deserializer.buffer.getFloat64();
-  }
-
-  @protected
-  String? sse_decode_opt_String(SseDeserializer deserializer) {
-    if (sse_decode_bool(deserializer)) {
-      return sse_decode_String(deserializer);
-    } else {
-      return null;
-    }
-  }
-
-  @protected
-  int? sse_decode_opt_i_32(SseDeserializer deserializer) {
-    if (sse_decode_bool(deserializer)) {
-      return sse_decode_i_32(deserializer);
-    } else {
-      return null;
-    }
-  }
-
-  @protected
-  Uint8List? sse_decode_opt_list_prim_u_8_strict(
-      SseDeserializer deserializer) {
-    if (sse_decode_bool(deserializer)) {
-      return sse_decode_list_prim_u_8_strict(deserializer);
-    } else {
-      return null;
-    }
-  }
-
-  @protected
-  GuiProgressEvent sse_decode_gui_progress_event(
-      SseDeserializer deserializer) {
-    var step = sse_decode_i_32(deserializer);
-    var steps = sse_decode_i_32(deserializer);
-    var time = sse_decode_f_32(deserializer);
-    var previewImage = sse_decode_opt_list_prim_u_8_strict(deserializer);
-    var finalImage = sse_decode_opt_list_prim_u_8_strict(deserializer);
-    return GuiProgressEvent(
-      step: step,
-      steps: steps,
-      time: time,
-      previewImage: previewImage,
-      finalImage: finalImage,
-    );
-  }
-
-  @protected
-  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
-    var inner = sse_decode_String(deserializer);
-    return AnyhowException(inner);
-  }
-
-  @protected
-  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_String(item, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_i_64(int self, SseSerializer serializer) {
-    serializer.buffer.putInt64(self);
-  }
-
-  @protected
-  void sse_encode_f_32(double self, SseSerializer serializer) {
-    serializer.buffer.putFloat32(self);
-  }
-
-  @protected
-  void sse_encode_f_64(double self, SseSerializer serializer) {
-    serializer.buffer.putFloat64(self);
-  }
-
-  @protected
-  void sse_encode_opt_String(String? self, SseSerializer serializer) {
-    sse_encode_bool(self != null, serializer);
-    if (self != null) {
-      sse_encode_String(self, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_opt_i_32(int? self, SseSerializer serializer) {
-    sse_encode_bool(self != null, serializer);
-    if (self != null) {
-      sse_encode_i_32(self, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_StreamSink_gui_progress_event_Sse(
-      RustStreamSink<GuiProgressEvent> self, SseSerializer serializer) {
-    sse_encode_String(
-        self.setupAndSerialize(
-            codec: SseCodec(
-          decodeSuccessData: sse_decode_gui_progress_event,
-          decodeErrorData: sse_decode_AnyhowException,
-        )),
-        serializer);
-  }
-
-  @protected
-  void sse_encode_gui_params(GuiParams self, SseSerializer serializer) {
-    sse_encode_String(self.preset, serializer);
-    sse_encode_opt_String(self.weight, serializer);
-    sse_encode_String(self.prompt, serializer);
-    sse_encode_opt_String(self.negativePrompt, serializer);
-    sse_encode_opt_i_32(self.steps, serializer);
-    sse_encode_opt_i_32(self.width, serializer);
-    sse_encode_opt_i_32(self.height, serializer);
-    sse_encode_i_32(self.batchCount, serializer);
-    sse_encode_i_64(self.seed, serializer);
-    sse_encode_opt_String(self.cacheMode, serializer);
-    sse_encode_String(self.previewMode, serializer);
-    sse_encode_opt_String(self.upscaler, serializer);
-    sse_encode_f_32(self.upscalerScale, serializer);
-    sse_encode_opt_String(self.token, serializer);
-    sse_encode_bool(self.lowVram, serializer);
-    sse_encode_String(self.previewOutput, serializer);
-    sse_encode_String(self.output, serializer);
   }
 }
