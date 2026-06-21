@@ -1,7 +1,8 @@
 ---
 phase: 2
 slug: rust-bridge-wiring
-status: draft
+status: approved
+reviewed_at: 2026-06-21
 shadcn_initialized: false
 preset: none
 created: 2026-06-21
@@ -106,7 +107,7 @@ Carried forward from Phase 1 -- no changes to the 60/30/10 split.
 |------|------------|-------------|-------|
 | Dominant (60%) | `colorScheme.surface` | #FAFAFA (porcelain) | App background, right panel background, AlertDialog background |
 | Secondary (30%) | `colorScheme.surfaceContainerLow` | #F2F2F2 | Left panel background, collapsible section headers, drag handle area |
-| Accent (10%) | `colorScheme.primary` | #E95420 (Ubuntu orange) | Generate button fill, active progress bar, focused input borders, theme toggle active segment |
+| Accent (10%) | `colorScheme.primary` | #E95420 (Ubuntu orange) | Generate button fill, active progress bar, focused input borders, theme toggle active segment, error dialog OK button |
 | Destructive | `colorScheme.error` | ~#DA3450 (Yaru red) | FORM-15 warning text color, error dialog icon tint (if shown inline, not in Phase 2 dialog) |
 
 ### Dark Theme
@@ -121,7 +122,7 @@ Carried forward from Phase 1 -- no changes to the 60/30/10 split.
 ### Color Rules (carried forward + additions)
 
 - **NEVER hardcode hex values.** Always use `Theme.of(context).colorScheme.*` or `YaruColors.*` constants.
-- Accent (Ubuntu orange) is reserved for: Generate button fill, progress bar active track, focused text field border, theme toggle active segment, seed dice button when active.
+- Accent (Ubuntu orange) is reserved for: Generate button fill, progress bar active track, focused text field border, theme toggle active segment, seed dice button when active, error dialog action button ("OK").
 - Disabled state: use `colorScheme.onSurface.withOpacity(0.38)` for text, `colorScheme.onSurface.withOpacity(0.12)` for fills.
 - AlertDialog scrim: use default Material scrim (semi-transparent black overlay). Do NOT customize.
 - Error dialog "OK" button: uses `colorScheme.primary` (Ubuntu orange) -- standard Material TextButton behavior.
