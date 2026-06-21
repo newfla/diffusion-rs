@@ -14,7 +14,7 @@ Il progetto si articola in due fasi verticali. Phase 1 consegna una GUI Flutter 
 ## Phases
 
 - [x] **Phase 1: Flutter UI Foundation (Mock Mode)** - GUI completa e interattiva con mock service — zero dipendenze Rust (completed 2026-06-18)
-- [ ] **Phase 2: Rust Bridge Wiring** - Integrazione reale con diffusion-rs via flutter_rust_bridge FFI
+- [x] **Phase 2: Rust Bridge Wiring** - Integrazione reale con diffusion-rs via flutter_rust_bridge FFI (completed 2026-06-21)
 
 ## Phase Details
 
@@ -55,16 +55,16 @@ Plans:
   3. Un panic Rust durante la generazione non causa crash della GUI: l'errore è intercettato da `catch_unwind`, la UI si riabilita e mostra un messaggio di errore leggibile
   4. La CI verifica automaticamente che i file generati da FRB codegen siano sincronizzati con il codebase Rust (diff check fallisce la build se desincronizzati)
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 
 - [x] 02-01-PLAN.md -- Rust crate scaffold: gui/rust/ with GuiParams DTO, get_presets(), get_weights_for_preset(), generate_image_stream(), catch_unwind, Progress pub fields
-- [ ] 02-02-PLAN.md -- Dart integration: FRB codegen, RustGenerationService, provider swap, error dialog, output panel downloading state + live preview
+- [x] 02-02-PLAN.md -- Dart integration: FRB codegen, RustGenerationService, provider swap, error dialog, output panel downloading state + live preview
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Flutter UI Foundation (Mock Mode) | 3/3 | Complete   | 2026-06-18 |
-| 2. Rust Bridge Wiring | 1/2 | In Progress|  |
+| 2. Rust Bridge Wiring | 2/2 | Complete   | 2026-06-21 |
