@@ -78,13 +78,12 @@ pub use diffusion_rs_sys::sd_vae_format_t as VaeFormat;
 
 static VALID_EXT: [&str; 3] = ["gguf", "safetensors", "pt"];
 
-#[allow(unused)]
 #[derive(Debug)]
 /// Progress message returned fron [gen_img_with_progress]
 pub struct Progress {
-    step: i32,
-    steps: i32,
-    time: f32,
+    pub step: i32,
+    pub steps: i32,
+    pub time: f32,
 }
 
 #[non_exhaustive]

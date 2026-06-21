@@ -1,0 +1,18 @@
+[workspace]
+
+[package]
+name = "diffusion-rs-gui"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+diffusion-rs = { path = "../.." }
+flutter_rust_bridge = "2.12.0"
+anyhow = "1.0"
+strum = { version = "0.27", features = ["derive"] }
+
+[profile.release]
+panic = "abort"
