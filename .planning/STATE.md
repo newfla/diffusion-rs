@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: flutter-ui-foundation-mock-mode
-status: verifying
-stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-06-18T15:32:44.326Z"
+current_phase: 02
+current_phase_name: rust-bridge-wiring
+status: executing
+stopped_at: Phase 2 UI-SPEC approved
+last_updated: "2026-06-21T17:37:11.138Z"
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 3
+  total_plans: 5
   completed_plans: 3
   percent: 50
 ---
@@ -22,13 +22,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** L'utente può configurare e avviare una generazione di immagini con lo stesso set di opzioni della CLI, senza aprire un terminale.
-**Current focus:** Phase 01 — flutter-ui-foundation-mock-mode
+**Current focus:** Phase 02 — rust-bridge-wiring
 
 ## Current Position
 
-**Phase:** 01 (flutter-ui-foundation-mock-mode) — EXECUTING
-**Plan:** 3 of 3
-**Status:** Phase complete — ready for verification
+**Phase:** 02 (rust-bridge-wiring) — EXECUTING
+**Plan:** 1 of 2
+**Status:** Executing Phase 02
 **Progress:** [██████████] 100%
 
 ## Performance Metrics
@@ -63,10 +63,10 @@ None
 
 ## Session Continuity
 
-**Resume file:** .planning/phases/01-flutter-ui-foundation-mock-mode/01-UI-SPEC.md
+**Resume file:** .planning/phases/02-rust-bridge-wiring/02-UI-SPEC.md
 
-Last session: 2026-06-18T15:32:44.318Z
-Stopped at: Phase 1 UI-SPEC approved
+Last session: 2026-06-21T17:03:28.456Z
+Stopped at: Phase 2 UI-SPEC approved
 
 ## Performance Metrics
 
