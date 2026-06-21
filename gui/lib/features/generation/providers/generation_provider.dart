@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/services/temp_directory_manager.dart';
 import '../services/generation_service.dart';
-import '../services/mock_generation_service.dart';
+import '../services/rust_generation_service.dart';
 
 /// Generation lifecycle status enum (idle/generating/complete/error).
 enum GenerationStatus { idle, generating, complete, error }
@@ -23,12 +23,18 @@ class GenerationState {
   /// Error message when status == error.
   final String? errorMessage;
 
+  /// Live preview image bytes from the Rust backend (D-01, D-02, D-03).
+  /// Populated during generation when the backend produces intermediate frames.
+  /// Null when no preview is available yet for the current step.
+  final Uint8List? previewBytes;
+
   const GenerationState({
     this.status = GenerationStatus.idle,
     this.currentStep = 0,
     this.totalSteps = 0,
     this.imagePath,
     this.errorMessage,
+    this.previewBytes,
   });
 
   GenerationState copyWith({
@@ -37,6 +43,7 @@ class GenerationState {
     int? totalSteps,
     String? imagePath,
     String? errorMessage,
+    Uint8List? Function()? previewBytesFn,
   }) {
     return GenerationState(
       status: status ?? this.status,
@@ -44,6 +51,8 @@ class GenerationState {
       totalSteps: totalSteps ?? this.totalSteps,
       imagePath: imagePath ?? this.imagePath,
       errorMessage: errorMessage ?? this.errorMessage,
+      previewBytes:
+          previewBytesFn != null ? previewBytesFn() : previewBytes,
     );
   }
 }
@@ -53,9 +62,10 @@ class GenerationState {
 /// The [generate] method transitions through:
 ///   idle -> generating -> complete (or error)
 ///
-/// On completion, copies the bundled placeholder.png asset to the session
-/// temp directory (via [TempDirectoryManager]) and sets
-/// [GenerationState.imagePath] so the output panel can display it.
+/// On completion, writes the final image bytes from the Rust backend to
+/// the session temp directory and sets [GenerationState.imagePath] so the
+/// output panel can display it. During generation, preview image bytes
+/// are passed through [GenerationState.previewBytes] for live display.
 class GenerationNotifier extends Notifier<GenerationState> {
   StreamSubscription? _subscription;
 
@@ -67,7 +77,7 @@ class GenerationNotifier extends Notifier<GenerationState> {
     return const GenerationState();
   }
 
-  /// Starts a mock generation run with the given [params].
+  /// Starts an image generation run with the given [params].
   Future<void> generate(Map<String, dynamic> params) async {
     // Prevent concurrent generations.
     if (state.status == GenerationStatus.generating) return;
@@ -79,32 +89,34 @@ class GenerationNotifier extends Notifier<GenerationState> {
     try {
       await for (final event in service.generate(params)) {
         if (event.isComplete) {
-          // Copy bundled placeholder to session temp directory for display.
+          // Write final image bytes to the session temp directory.
           final tempManager = ref.read(tempDirectoryManagerProvider);
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           final outputFile = File(
             '${tempManager.sessionPath}/output_$timestamp.png',
           );
 
-          final byteData = await rootBundle.load('assets/placeholder.png');
-          await outputFile.writeAsBytes(
-            byteData.buffer.asUint8List(
-              byteData.offsetInBytes,
-              byteData.lengthInBytes,
-            ),
-          );
+          if (event.previewImage != null) {
+            // Final image bytes arrived from Rust -- write to output file.
+            await outputFile.writeAsBytes(event.previewImage!);
+          }
+          // Fallback: if previewImage is null on completion, check if the
+          // Rust backend already wrote the output file directly on disk.
+          final fileExists = await outputFile.exists();
 
           state = GenerationState(
             status: GenerationStatus.complete,
             currentStep: event.step,
             totalSteps: event.steps,
-            imagePath: outputFile.path,
+            imagePath: fileExists ? outputFile.path : null,
           );
         } else {
+          // In-progress event: pass preview bytes for live display (D-01/D-02).
           state = GenerationState(
             status: GenerationStatus.generating,
             currentStep: event.step,
             totalSteps: event.steps,
+            previewBytes: event.previewImage,
           );
         }
       }
@@ -124,8 +136,7 @@ final generationProvider =
 );
 
 /// Provider for the [GenerationService] implementation.
-/// Phase 1: returns [MockGenerationService].
-/// Phase 2: swap this single line to return RustGenerationService.
+/// Phase 2: RustGenerationService replaces MockGenerationService (FRB-09).
 final generationServiceProvider = Provider<GenerationService>((ref) {
-  return MockGenerationService();
+  return RustGenerationService(ref);
 });

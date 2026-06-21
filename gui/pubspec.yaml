@@ -15,11 +15,16 @@ dependencies:
   file_picker: ^11.0.2
   path_provider: ^2.1.6
   uuid: ^4.5.3
+  rust_lib_diffusion_rs_gui:
+    path: rust_builder
+  flutter_rust_bridge: 2.12.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  integration_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true

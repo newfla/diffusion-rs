@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yaru/yaru.dart';
 
+import '../../shared/widgets/error_dialog.dart';
 import '../generation/providers/generation_provider.dart';
 import '../../features/params/providers/params_provider.dart';
 import 'providers/output_provider.dart';
@@ -12,19 +13,45 @@ import 'providers/output_provider.dart';
 ///
 /// Renders one of five distinct states:
 ///   1. idle: icon + instructional text
-///   2. generating (pre-progress): indeterminate spinner
-///   3. generating (with progress): linear progress bar + step counter
+///   2. generating (pre-progress): spinner + "Downloading model..." (D-04)
+///   3. generating (with progress): live preview image + progress bar (D-01/D-02)
 ///   4. complete: generated image (BoxFit.contain) + Save button
-///   5. error: error icon + message
+///   5. error: error icon + message + modal error dialog (D-05)
 ///
 /// The Save button remains visible after saving so the user can save to
 /// a different location (UI-SPEC Save Flow point 6). A SnackBar confirms
 /// the save path for 4 seconds (D-14).
-class OutputPanel extends ConsumerWidget {
+class OutputPanel extends ConsumerStatefulWidget {
   const OutputPanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OutputPanel> createState() => _OutputPanelState();
+}
+
+class _OutputPanelState extends ConsumerState<OutputPanel> {
+  @override
+  void initState() {
+    super.initState();
+    // Listen for error state transitions to trigger the modal error dialog.
+    // Using a post-frame callback ensures the dialog shows after the widget
+    // tree has finished building (per D-05).
+    ref.listenManual<GenerationState>(generationProvider, (previous, next) {
+      if (next.status == GenerationStatus.error &&
+          (previous == null ||
+              previous.status != GenerationStatus.error) &&
+          next.errorMessage != null &&
+          mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            showErrorDialog(context, next.errorMessage!);
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final generationState = ref.watch(generationProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -65,23 +92,53 @@ class OutputPanel extends ConsumerWidget {
     );
   }
 
-  /// Generating state: spinner before first progress event, then linear
-  /// progress bar + step counter (per D-13, GEN-03, GEN-04).
+  /// Generating state: "Downloading model..." spinner when no progress yet,
+  /// then live preview image + progress bar once inference starts (D-04, D-01).
   Widget _buildGeneratingState(
     BuildContext context,
     GenerationState state,
   ) {
-    // Before first progress event (step == 0): show indeterminate spinner.
+    // Before first progress event (step == 0): show spinner + "Downloading
+    // model..." text (per D-04). This covers the model download phase before
+    // inference starts.
     if (state.currentStep == 0) {
-      return const YaruCircularProgressIndicator();
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const YaruCircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            'Downloading model...',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+          ),
+        ],
+      );
     }
 
-    // With progress: show linear progress bar + step counter.
+    // With progress: show live preview image (if available) above progress bar.
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Live preview image display (D-01, D-02, D-03).
+          // If previewBytes is available, show the intermediate frame.
+          // If null for this step, the column simply omits the image
+          // (graceful degradation per D-03).
+          if (state.previewBytes != null)
+            Flexible(
+              child: Image.memory(
+                state.previewBytes!,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+              ),
+            ),
+          if (state.previewBytes != null) const SizedBox(height: 16),
           YaruLinearProgressIndicator(
             value: state.currentStep / state.totalSteps,
           ),
@@ -140,6 +197,8 @@ class OutputPanel extends ConsumerWidget {
   }
 
   /// Error state: error icon + message display.
+  /// The modal error dialog is triggered separately via the listener in
+  /// [initState] (per D-05). This inline display serves as a fallback.
   Widget _buildErrorState(
     BuildContext context,
     GenerationState state,
