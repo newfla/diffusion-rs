@@ -133,6 +133,7 @@ class _OutputPanelState extends ConsumerState<OutputPanel> {
           if (state.previewBytes != null)
             Flexible(
               child: Image.memory(
+                key: ValueKey(state.generationId),
                 state.previewBytes!,
                 fit: BoxFit.contain,
                 gaplessPlayback: true,

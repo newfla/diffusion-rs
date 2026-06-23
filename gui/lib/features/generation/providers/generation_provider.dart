@@ -28,6 +28,11 @@ class GenerationState {
   /// Null when no preview is available yet for the current step.
   final Uint8List? previewBytes;
 
+  /// Monotonically-incrementing counter, bumped on every generate() call.
+  /// Used as ValueKey on Image.memory to force element disposal between
+  /// generations, preventing stale preview frames from persisting.
+  final int generationId;
+
   const GenerationState({
     this.status = GenerationStatus.idle,
     this.currentStep = 0,
@@ -35,6 +40,7 @@ class GenerationState {
     this.imagePath,
     this.errorMessage,
     this.previewBytes,
+    this.generationId = 0,
   });
 
   GenerationState copyWith({
@@ -44,6 +50,7 @@ class GenerationState {
     String? imagePath,
     String? errorMessage,
     Uint8List? Function()? previewBytesFn,
+    int? generationId,
   }) {
     return GenerationState(
       status: status ?? this.status,
@@ -53,6 +60,7 @@ class GenerationState {
       errorMessage: errorMessage ?? this.errorMessage,
       previewBytes:
           previewBytesFn != null ? previewBytesFn() : previewBytes,
+      generationId: generationId ?? this.generationId,
     );
   }
 }
@@ -68,6 +76,7 @@ class GenerationState {
 /// are passed through [GenerationState.previewBytes] for live display.
 class GenerationNotifier extends Notifier<GenerationState> {
   StreamSubscription? _subscription;
+  int _generationId = 0;
 
   @override
   GenerationState build() {
@@ -82,7 +91,11 @@ class GenerationNotifier extends Notifier<GenerationState> {
     // Prevent concurrent generations.
     if (state.status == GenerationStatus.generating) return;
 
-    state = const GenerationState(status: GenerationStatus.generating);
+    _generationId++;
+    state = GenerationState(
+      status: GenerationStatus.generating,
+      generationId: _generationId,
+    );
 
     final service = ref.read(generationServiceProvider);
 
@@ -109,6 +122,7 @@ class GenerationNotifier extends Notifier<GenerationState> {
             currentStep: event.step,
             totalSteps: event.steps,
             imagePath: fileExists ? outputFile.path : null,
+            generationId: _generationId,
           );
         } else {
           // In-progress event: pass preview bytes for live display (D-01/D-02).
@@ -117,6 +131,7 @@ class GenerationNotifier extends Notifier<GenerationState> {
             currentStep: event.step,
             totalSteps: event.steps,
             previewBytes: event.previewImage,
+            generationId: _generationId,
           );
         }
       }
@@ -124,6 +139,7 @@ class GenerationNotifier extends Notifier<GenerationState> {
       state = GenerationState(
         status: GenerationStatus.error,
         errorMessage: e.toString(),
+        generationId: _generationId,
       );
     }
   }
