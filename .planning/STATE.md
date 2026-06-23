@@ -63,3 +63,4 @@ None — milestone complete. Start next milestone with /gsd-new-milestone.
 |---|-------------|------|--------|-----------|
 | 260623-nv0 | Update GUI README with build instructions and project overview | 2026-06-23 | c47d1bd | [260623-nv0-update-gui-readme-with-build-instruction](.planning/quick/260623-nv0-update-gui-readme-with-build-instruction/) |
 | 260623-o38 | Change app titlebar title to DiffusionRS GUI | 2026-06-23 | f40c614 | [260623-o38-change-app-titlebar-title-to-diffusionrs](.planning/quick/260623-o38-change-app-titlebar-title-to-diffusionrs/) |
+| 260623-oer | Fix stale preview bug: clear preview at generation start | 2026-06-23 | fa04541 | [260623-oer-fix-stale-preview-bug-clear-preview-at-g](.planning/quick/260623-oer-fix-stale-preview-bug-clear-preview-at-g/) |
