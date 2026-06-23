@@ -26,7 +26,7 @@ class DiffusionRsApp extends ConsumerWidget {
     return YaruTheme(
       builder: (context, yaru, child) {
         return MaterialApp(
-          title: 'diffusion-rs',
+          title: 'DiffusionRS GUI',
           theme: yaru.theme,
           darkTheme: yaru.darkTheme,
           themeMode: themeMode,
@@ -87,7 +87,7 @@ class _MainLayoutState extends ConsumerState<_MainLayout> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'diffusion-rs',
+          'DiffusionRS GUI',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         actions: [
