@@ -179,16 +179,14 @@ class _OutputPanelState extends ConsumerState<OutputPanel> {
             ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              if (state.imagePath != null) {
-                ref.read(outputProvider.notifier).saveImage(
+            onPressed: state.imagePath != null
+                ? () => ref.read(outputProvider.notifier).saveImage(
                       state.imagePath!,
                       params.selectedPreset,
                       params.seed,
                       context,
-                    );
-              }
-            },
+                    )
+                : null,
             child: const Text('Save'),
           ),
         ],
