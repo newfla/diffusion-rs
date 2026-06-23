@@ -73,6 +73,12 @@ class _MainLayoutState extends ConsumerState<_MainLayout> {
   void _onGenerate() {
     final state = ref.read(generationProvider);
     if (state.status == GenerationStatus.generating) return;
+    // Guard against intermediate complete events (imagePath null) where the
+    // Rust API has finished one phase but not yet delivered the final image.
+    if (state.status == GenerationStatus.complete &&
+        state.imagePath == null) {
+      return;
+    }
 
     final params = ref.read(paramsProvider);
     if (params.prompt.trim().isEmpty) return;

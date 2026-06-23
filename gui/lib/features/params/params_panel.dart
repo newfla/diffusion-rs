@@ -22,8 +22,12 @@ class ParamsPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final generationState = ref.watch(generationProvider);
     final params = ref.watch(paramsProvider);
+    // Also treat intermediate complete events (imagePath null) as "generating"
+    // — the Rust API emits isComplete for each phase, not just the final one.
     final isGenerating =
-        generationState.status == GenerationStatus.generating;
+        generationState.status == GenerationStatus.generating ||
+        (generationState.status == GenerationStatus.complete &&
+            generationState.imagePath == null);
     final promptEmpty = params.prompt.trim().isEmpty;
 
     return Column(
