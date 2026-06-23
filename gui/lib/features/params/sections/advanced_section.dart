@@ -59,8 +59,12 @@ class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
   Widget build(BuildContext context) {
     final params = ref.watch(paramsProvider);
     final generationState = ref.watch(generationProvider);
+    // Also treat intermediate complete events (imagePath null) as "generating"
+    // — the Rust API emits isComplete for each phase, not just the final one.
     final isGenerating =
-        generationState.status == GenerationStatus.generating;
+        generationState.status == GenerationStatus.generating ||
+        (generationState.status == GenerationStatus.complete &&
+            generationState.imagePath == null);
     final showScale = params.upscalerMode != 'None';
     final showUpscalerWarning =
         params.upscalerMode != 'None' && params.cacheMode == 'None';
@@ -82,17 +86,13 @@ class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
                 isExpanded: true,
                 isDense: true,
                 items: _cacheModes
-                    .map(
-                      (m) => DropdownMenuItem(value: m, child: Text(m)),
-                    )
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                     .toList(),
                 onChanged: isGenerating
                     ? null
                     : (value) {
                         if (value != null) {
-                          ref
-                              .read(paramsProvider.notifier)
-                              .setCacheMode(value);
+                          ref.read(paramsProvider.notifier).setCacheMode(value);
                         }
                       },
               ),
@@ -106,8 +106,8 @@ class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
               'Upscaler is active without caching. Select a cache mode '
               'to avoid recomputing all steps during upscaling.',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
           ],
           const SizedBox(height: 12),
@@ -124,9 +124,7 @@ class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
                 isExpanded: true,
                 isDense: true,
                 items: _upscalerModes
-                    .map(
-                      (m) => DropdownMenuItem(value: m, child: Text(m)),
-                    )
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                     .toList(),
                 onChanged: isGenerating
                     ? null
@@ -151,17 +149,16 @@ class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
                 labelText: 'Scale factor',
                 border: OutlineInputBorder(),
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               onChanged: (value) {
                 final parsed = double.tryParse(value);
                 if (parsed != null && parsed > 0) {
-                  ref
-                      .read(paramsProvider.notifier)
-                      .setUpscalerScale(parsed);
+                  ref.read(paramsProvider.notifier).setUpscalerScale(parsed);
                 }
               },
             ),
@@ -185,12 +182,9 @@ class _AdvancedSectionState extends ConsumerState<AdvancedSection> {
                             .setTokenVisible(!params.tokenVisible);
                       },
                 icon: Icon(
-                  params.tokenVisible
-                      ? Icons.visibility_off
-                      : Icons.visibility,
+                  params.tokenVisible ? Icons.visibility_off : Icons.visibility,
                 ),
-                tooltip:
-                    params.tokenVisible ? 'Hide token' : 'Show token',
+                tooltip: params.tokenVisible ? 'Hide token' : 'Show token',
               ),
             ),
             onChanged: (value) {

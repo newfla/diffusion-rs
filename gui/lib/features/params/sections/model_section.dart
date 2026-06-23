@@ -17,8 +17,12 @@ class ModelSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final params = ref.watch(paramsProvider);
     final generationState = ref.watch(generationProvider);
+    // Also treat intermediate complete events (imagePath null) as "generating"
+    // — the Rust API emits isComplete for each phase, not just the final one.
     final isGenerating =
-        generationState.status == GenerationStatus.generating;
+        generationState.status == GenerationStatus.generating ||
+        (generationState.status == GenerationStatus.complete &&
+            generationState.imagePath == null);
     final weights = getWeightsForPreset(preset: params.selectedPreset);
     final hasWeights = weights.isNotEmpty;
 
@@ -47,9 +51,7 @@ class ModelSection extends ConsumerWidget {
                     ? null
                     : (value) {
                         if (value != null) {
-                          ref
-                              .read(paramsProvider.notifier)
-                              .setPreset(value);
+                          ref.read(paramsProvider.notifier).setPreset(value);
                         }
                       },
               ),
@@ -68,16 +70,12 @@ class ModelSection extends ConsumerWidget {
                 isDense: true,
                 items: hasWeights
                     ? weights
-                        .map(
-                          (w) =>
-                              DropdownMenuItem(value: w, child: Text(w)),
-                        )
-                        .toList()
+                          .map(
+                            (w) => DropdownMenuItem(value: w, child: Text(w)),
+                          )
+                          .toList()
                     : const [
-                        DropdownMenuItem(
-                          value: 'N/A',
-                          child: Text('N/A'),
-                        ),
+                        DropdownMenuItem(value: 'N/A', child: Text('N/A')),
                       ],
                 onChanged: (isGenerating || !hasWeights)
                     ? null

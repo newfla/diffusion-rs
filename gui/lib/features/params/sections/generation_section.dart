@@ -46,15 +46,12 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
     );
 
     // Sync controllers when preset changes (preset drives steps/width/height defaults).
-    ref.listenManual(
-      paramsProvider.select((p) => p.selectedPreset),
-      (_, _) {
-        final p = ref.read(paramsProvider);
-        _stepsController.text = p.steps?.toString() ?? '';
-        _widthController.text = p.width?.toString() ?? '';
-        _heightController.text = p.height?.toString() ?? '';
-      },
-    );
+    ref.listenManual(paramsProvider.select((p) => p.selectedPreset), (_, _) {
+      final p = ref.read(paramsProvider);
+      _stepsController.text = p.steps?.toString() ?? '';
+      _widthController.text = p.width?.toString() ?? '';
+      _heightController.text = p.height?.toString() ?? '';
+    });
   }
 
   @override
@@ -71,8 +68,12 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
   Widget build(BuildContext context) {
     final params = ref.watch(paramsProvider);
     final generationState = ref.watch(generationProvider);
+    // Also treat intermediate complete events (imagePath null) as "generating"
+    // — the Rust API emits isComplete for each phase, not just the final one.
     final isGenerating =
-        generationState.status == GenerationStatus.generating;
+        generationState.status == GenerationStatus.generating ||
+        (generationState.status == GenerationStatus.complete &&
+            generationState.imagePath == null);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -122,9 +123,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (value) {
-              ref
-                  .read(paramsProvider.notifier)
-                  .setSteps(int.tryParse(value));
+              ref.read(paramsProvider.notifier).setSteps(int.tryParse(value));
             },
           ),
           const SizedBox(height: 12),
@@ -187,9 +186,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
                 isExpanded: true,
                 isDense: true,
                 items: _previewModes
-                    .map(
-                      (m) => DropdownMenuItem(value: m, child: Text(m)),
-                    )
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                     .toList(),
                 onChanged: isGenerating
                     ? null
