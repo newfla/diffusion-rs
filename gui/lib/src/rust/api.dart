@@ -7,18 +7,19 @@ import 'frb_generated.dart';
 import 'gui_params.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `_get_weights_for_preset`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Return the list of all available preset names.
 ///
 /// Uses `PresetDiscriminants::VARIANTS` from strum to stay in sync with the
-/// Rust `Preset` enum automatically (FRB-01).
+/// Rust `Preset` enum automatically (FRB-01). Wrapped in catch_unwind per FRB-06.
 List<String> getPresets() => RustLib.instance.api.crateApiGetPresets();
 
 /// Return the valid weight variant names for a given preset.
 ///
 /// For presets without weight options, returns an empty vec.
-/// Preset string is case-insensitive (FRB-02).
+/// Preset string is case-insensitive (FRB-02). Wrapped in catch_unwind per FRB-06.
 List<String> getWeightsForPreset({required String preset}) =>
     RustLib.instance.api.crateApiGetWeightsForPreset(preset: preset);
 
