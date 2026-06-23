@@ -65,3 +65,4 @@ None — milestone complete. Start next milestone with /gsd-new-milestone.
 | 260623-o38 | Change app titlebar title to DiffusionRS GUI | 2026-06-23 | f40c614 | [260623-o38-change-app-titlebar-title-to-diffusionrs](.planning/quick/260623-o38-change-app-titlebar-title-to-diffusionrs/) |
 | 260623-oer | Fix stale preview bug: clear preview at generation start | 2026-06-23 | fa04541 | [260623-oer-fix-stale-preview-bug-clear-preview-at-g](.planning/quick/260623-oer-fix-stale-preview-bug-clear-preview-at-g/) |
 | 260623-omk | Fix stale preview: force clear on generate (corrected ValueKey + drop gaplessPlayback) | 2026-06-23 | 6bf4f4c | [260623-omk-fix-stale-preview-force-clear-on-generat](.planning/quick/260623-omk-fix-stale-preview-force-clear-on-generat/) |
+| 260623-p1j | Fix Save button: disable when final image not ready | 2026-06-23 | 09b67f1 | [260623-p1j-fix-save-button-disable-when-final-image](.planning/quick/260623-p1j-fix-save-button-disable-when-final-image/) |
