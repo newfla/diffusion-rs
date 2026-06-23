@@ -132,11 +132,10 @@ class _OutputPanelState extends ConsumerState<OutputPanel> {
           // (graceful degradation per D-03).
           if (state.previewBytes != null)
             Flexible(
+              key: ValueKey(state.generationId),
               child: Image.memory(
-                key: ValueKey(state.generationId),
                 state.previewBytes!,
                 fit: BoxFit.contain,
-                gaplessPlayback: true,
               ),
             ),
           if (state.previewBytes != null) const SizedBox(height: 16),
