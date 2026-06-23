@@ -56,3 +56,9 @@ None
 ### Todos
 
 None — milestone complete. Start next milestone with /gsd-new-milestone.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260623-nv0 | Update GUI README with build instructions and project overview | 2026-06-23 | c47d1bd | [260623-nv0-update-gui-readme-with-build-instruction](.planning/quick/260623-nv0-update-gui-readme-with-build-instruction/) |
