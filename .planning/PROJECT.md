@@ -2,11 +2,11 @@
 
 ## What This Is
 
-Una GUI desktop Flutter per diffusion-rs che espone tutte le funzionalità della CLI in un'interfaccia grafica a due pannelli: sinistra per i parametri di generazione, destra per la preview e l'immagine finale. La GUI comunica con la libreria Rust via flutter_rust_bridge (FFI) e usa file temporanei puliti alla chiusura dell'app. Il progetto vive nella cartella `/gui` del monorepo diffusion-rs esistente.
+Una GUI desktop Flutter per diffusion-rs che espone tutte le funzionalità della CLI in un'interfaccia grafica a due pannelli: sinistra per i parametri di generazione, destra per la preview live e l'immagine finale. La GUI comunica con la libreria Rust via flutter_rust_bridge (FFI), include un meccanismo di live preview step-by-step durante l'inferenza, e usa file temporanei puliti alla chiusura dell'app. Il progetto vive nella cartella `/gui` del monorepo diffusion-rs esistente.
 
 ## Core Value
 
-L'utente può configurare e avviare una generazione di immagini con lo stesso set di opzioni della CLI, senza aprire un terminale.
+L'utente può configurare e avviare una vera generazione di immagini con lo stesso set di opzioni della CLI, senza aprire un terminale, con preview live aggiornata ad ogni step di diffusione.
 
 ## Requirements
 
@@ -19,56 +19,50 @@ L'utente può configurare e avviare una generazione di immagini con lo stesso se
 - ✓ Preview immagine durante la generazione — existing
 - ✓ Upscaler post-generazione (8 modalità) — existing
 - ✓ Modalità di caching accelerate (UCACHE, EASYCACHE, DBCACHE, TAYLORSEER, CACHEDIT, SPECTRUM) — existing
-- ✓ Generazione batch — existing
+- ✓ Generazione batch (Rust backend) — existing
+- ✓ Progetto Flutter in `/gui` come sottocartella del monorepo diffusion-rs — v1.0
+- ✓ Layout a due pannelli ridimensionabile (left: parametri + controlli; right: preview + immagine finale) — v1.0
+- ✓ Dropdown preset (41 varianti da PresetDiscriminants) via Rust FFI — v1.0
+- ✓ Dropdown pesi contestuale al preset via Rust FFI — v1.0
+- ✓ Tutti i 14 campi CLI attivi nel form (prompt, negative, steps, width, height, cache, preview, upscaler, upscaler_scale, seed, low_vram, token) — v1.0
+- ✓ Campo token HuggingFace come campo password (testo oscurato, toggle visibilità) — v1.0
+- ✓ Bottone Generate che disabilita tutti gli input durante la generazione — v1.0
+- ✓ Barra di avanzamento con contatore step durante la generazione — v1.0
+- ✓ Preview live aggiornata ad ogni step di diffusione — v1.0
+- ✓ Immagine finale nel pannello destro con bottone Save — v1.0
+- ✓ File temporanei per immagini (preview e output), ripuliti alla chiusura dell'app — v1.0
+- ✓ Tema visivo Yaru con supporto chiaro/scuro/sistema — v1.0
+- ✓ Scorciatoia Cmd/Ctrl+Enter equivalente al bottone Generate — v1.0
+- ✓ catch_unwind per panic Rust: mostra AlertDialog invece di crashare l'app — v1.0
+- ✓ FRB codegen CI check (diff check per binding sincronizzati) — v1.0
+- ✓ FORM-15 warning: upscaler attivo senza cache — v1.0
 
 ### Active
 
-- [ ] Progetto Flutter in `/gui` come sottocartella del monorepo diffusion-rs
-- [ ] Layout a due pannelli (left: parametri + controlli; right: preview + immagine finale)
-- [ ] Pannello sinistro: dropdown preset, dropdown pesi (contestuale al preset), tutti i campi CLI (prompt, negative, steps, width, height, batch, cache, preview, upscaler, upscaler_scale, seed, low_vram, output folder)
-- [ ] Campo token HuggingFace come campo password (testo oscurato, toggle visibilità)
-- [ ] Bottone Start che disabilita tutti gli input durante la generazione
-- [ ] Barra di avanzamento durante la generazione
-- [ ] Pannello destro: visualizzazione preview intermedia, poi immagine finale con bottone Salva
-- [ ] File temporanei usati per immagini (preview e output), ripuliti alla chiusura dell'app
-- [ ] Tema visivo Yaru (yaru Flutter package)
-- [ ] Supporto tema chiaro/scuro: default = sistema, override manuale via toggle
-- [ ] Fase 1 — mock mode: UI completa e funzionale, nessuna chiamata all'API Rust (progress bar simulata, immagine placeholder)
-- [ ] Fase 2 — wiring: integrazione reale con diffusion-rs via flutter_rust_bridge
+- [ ] Batch count field nel form UI (FORM-07) — generazione di N immagini alla volta
+- [ ] History prompt con recall degli ultimi N prompt usati (UX-01)
+- [ ] Gallery output — pannello che mostra le immagini generate nella sessione corrente (UX-02)
+- [ ] Cancellazione generazione in corso — richiede segnale abort nel backend C++ (UX-03)
+- [ ] Metadata embedding (parametri di generazione) nel PNG salvato (UX-04)
+- [ ] Lista preset raggruppata per famiglia con ricerca (UX-05)
+- [ ] UI per download/gestione modelli da HuggingFace (MDL-01, MDL-02, MDL-03)
 
 ### Out of Scope
 
-- Mobile (iOS/Android) — GUI desktop only, non pianificato
-- Web version — non compatibile con flutter_rust_bridge su web
-- Generazioni concorrenti multiple — una generazione alla volta
-- UI di gestione modelli (download, cancellazione) — fuori scope v1
+- Mobile (iOS/Android) — GUI desktop only; non compatibile con flutter_rust_bridge su mobile
+- Web version — non compatibile con FFI nativa e file system access
+- Generazioni concorrenti multiple — backend single-threaded per design
 - Image-to-image / ControlNet / LoRA UI — esposti solo indirettamente tramite parametri CLI standard
 
 ## Context
 
-Il codice Rust esistente è maturo (v0.1.20, ~30 preset supportati). La CLI (`cli/src/main.rs`) espone 15 parametri rilevanti per la GUI:
+**Shipped v1.0** (2026-06-23): ~4,782 LOC project code (3,662 Dart + 1,120 Rust), 189 files changed.
 
-| Parametro | Tipo | Note |
-|-----------|------|------|
-| preset | dropdown | ~35 varianti da PresetDiscriminants |
-| weights | dropdown | contestuale al preset, non tutti i preset lo supportano |
-| prompt | text area | obbligatorio |
-| negative | text field | opzionale |
-| steps | int field | opzionale, override del default del preset |
-| width / height | int fields | opzionali |
-| batch | int field | default 1 |
-| output | folder picker | default "./" ma → temp dir nella GUI |
-| cache | dropdown | 6 modalità + "nessuno" |
-| preview | dropdown | Fast / Accurate / nessuno |
-| upscaler | dropdown | 8 modalità + "nessuno" (richiede cache attivo) |
-| upscaler_scale | float field | default 2.0, visibile solo se upscaler attivo |
-| token | password field | HuggingFace token, toggle visibilità |
-| low_vram | toggle | bool |
-| seed | int field | -1 = random |
+**Tech stack:** Flutter 3.44.x + Dart, flutter_rust_bridge 2.12.0, Yaru 10.2.0, Riverpod 3.x, Cargokit (CocoaPods-based build integration), multi_split_view 3.6.2, file_picker 11.x, path_provider, uuid.
 
-Il dropdown pesi è context-sensitive: appare e cambia le opzioni in base al preset selezionato (alcuni preset non hanno pesi selezionabili).
-
-flutter_rust_bridge è lo standard de facto per FFI Dart↔Rust su desktop.
+**Known technical debt:**
+- FRB Dart binding stubs hand-written (codegen requires full C++ build chain); need regeneration after build environment is available
+- Batch count not wired in GUI (backend supports it, UI form does not)
 
 ## Constraints
 
@@ -82,25 +76,16 @@ flutter_rust_bridge è lo standard de facto per FFI Dart↔Rust su desktop.
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| flutter_rust_bridge per FFI | Standard de facto per Dart↔Rust su desktop; genera bindings tipizzati automaticamente | — Pending |
-| Fase 1 mock prima del wiring | Disaccoppia sviluppo UI dal build Rust (lungo e dipendente da GPU); permette iterazione veloce | — Pending |
-| Yaru come design system | Aspetto coerente su Linux/macOS/Windows; theme chiaro/scuro built-in | — Pending |
-| Temp dir per output immagini | Evita di sporcare il filesystem dell'utente; path puliti e prevedibili per la GUI | — Pending |
-| Sottocartella /gui nel monorepo | Un unico git, dipendenza Rust sempre aggiornata, CI unificato | — Pending |
-
-## Evolution
-
-Questo documento evolve alle transizioni di fase e ai milestone.
-
-**Dopo ogni fase:**
-1. Requisiti validati? → Sposta in Validated con riferimento alla fase
-2. Nuovi requisiti emersi? → Aggiungi in Active
-3. Decisioni da loggare? → Aggiungi in Key Decisions
-
-**Dopo ogni milestone:**
-1. Review completa di tutte le sezioni
-2. Core Value ancora corretto?
-3. Scope di Out of Scope ancora valido?
+| flutter_rust_bridge per FFI | Standard de facto per Dart↔Rust su desktop; genera bindings tipizzati automaticamente | ✓ Good — cargokit integra build automatica; FRB 2.x streaming idiomatico |
+| Fase 1 mock prima del wiring | Disaccoppia sviluppo UI dal build Rust (lungo e dipendente da GPU) | ✓ Good — UI iterata rapidamente senza build Rust; seam FRB-09 funzionò con una riga |
+| Yaru come design system | Aspetto coerente su Linux/macOS/Windows; theme chiaro/scuro built-in | ✓ Good — design system completo con YaruPasswordField e YaruExpansionPanel |
+| Temp dir per output immagini | Evita di sporcare il filesystem dell'utente; path puliti e prevedibili | ✓ Good — lifecycle con session UUID; cleanup crash sessions all'avvio |
+| Sottocartella /gui nel monorepo | Un unico git, dipendenza Rust sempre aggiornata, CI unificato | ✓ Good — path dep su diffusion-rs sempre in sync |
+| gui/rust/ isolato da root workspace | Evita trigger build CMake/GPU quando non necessario | ✓ Good — empty [workspace] in Cargo.toml; nessun side effect sul root workspace |
+| GenerationService abstract seam | Single provider swap per Phase 2 (D-08) | ✓ Good — FRB-09 completato sostituendo una riga in generation_provider.dart |
+| Exhaustive match arms nel bridge Rust | Compiler error su nuovi preset non mappati | ✓ Good — compile-time safety garantita quando diffusion-rs aggiunge preset |
+| Cargokit package name = pod target name | Cargokit costruisce artifact path da package name; deve coincidere con pod target | ✓ Good — `rust_lib_diffusion_rs_gui` corretto; build fallisce altrimenti |
+| previewBytes in-memory in GenerationState | Evita I/O file per ogni preview step | ✓ Good — Uint8List? in GenerationState; Image.memory nel pannello |
 
 ---
-*Last updated: 2026-06-18 after initialization*
+*Last updated: 2026-06-23 after v1.0 milestone*
