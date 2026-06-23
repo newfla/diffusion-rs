@@ -1,7 +1,7 @@
 [workspace]
 
 [package]
-name = "diffusion-rs-gui"
+name = "rust_lib_diffusion_rs_gui"
 version = "0.1.0"
 edition = "2024"
 
