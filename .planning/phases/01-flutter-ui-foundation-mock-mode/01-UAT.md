@@ -48,9 +48,8 @@ expected: |
   I campi Steps, Width, Height mostrano i valori di default del preset selezionato.
   Il bottone dado (dice) accanto a Seed genera un nuovo valore casuale nel campo Seed.
   Negative prompt è presente e accetta testo.
-result: issue
-reported: "Il campo dado non genera alcun valore"
-severity: major
+result: pass
+note: "Re-tested 2026-06-23 after fix — dice generates random positive integer correctly"
 
 ### 6. FORM-15 warning
 expected: |
@@ -100,23 +99,12 @@ result: pass
 ## Summary
 
 total: 10
-passed: 9
-issues: 1
+passed: 10
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "Il bottone dado (dice) accanto a Seed genera un nuovo valore casuale nel campo Seed"
-  status: failed
-  reason: "User reported: Il campo dado non genera alcun valore"
-  severity: major
-  test: 5
-  root_cause: "SeedField.dart imposta seed a -1 (valore default), quindi se il seed è già -1 il click non produce nessun cambiamento visibile. La fix corretta è generare un intero positivo casuale al click, non resettare a -1."
-  artifacts:
-    - path: "gui/lib/shared/widgets/seed_field.dart"
-      issue: "IconButton onPressed sets seed to -1 (same as default) instead of a random positive integer"
-  missing:
-    - "Generate Random.nextInt() value on dice click so the field visually updates"
-  debug_session: ""
+[none — all gaps resolved]
