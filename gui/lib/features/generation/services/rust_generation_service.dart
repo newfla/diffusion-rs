@@ -26,7 +26,7 @@ class RustGenerationService implements GenerationService {
     final tempManager = _ref.read(tempDirectoryManagerProvider);
     final sessionPath = tempManager.sessionPath;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final previewPath = '$sessionPath/preview.png';
+    final previewPath = '$sessionPath/preview_$timestamp.png';
     final outputPath = '$sessionPath/output_$timestamp.png';
 
     // Map "None" string values to null for optional Rust fields.
