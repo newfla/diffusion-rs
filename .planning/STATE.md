@@ -6,7 +6,7 @@ current_phase: 02
 current_phase_name: rust-bridge-wiring
 status: shipped
 stopped_at: v1.0 milestone complete — archived 2026-06-23
-last_updated: "2026-06-23T00:00:00.000Z"
+last_updated: "2026-06-24T00:00:00.000Z"
 progress:
   total_phases: 2
   completed_phases: 2
@@ -67,3 +67,4 @@ None — milestone complete. Start next milestone with /gsd-new-milestone.
 | 260623-omk | Fix stale preview: force clear on generate (corrected ValueKey + drop gaplessPlayback) | 2026-06-23 | 6bf4f4c | [260623-omk-fix-stale-preview-force-clear-on-generat](.planning/quick/260623-omk-fix-stale-preview-force-clear-on-generat/) |
 | 260623-p1j | Fix Save button: disable when final image not ready | 2026-06-23 | 09b67f1 | [260623-p1j-fix-save-button-disable-when-final-image](.planning/quick/260623-p1j-fix-save-button-disable-when-final-image/) |
 | 260623-p67 | Fix Generate button: keep disabled during intermediate complete phases | 2026-06-23 | 27a2650 | [260623-p67-fix-generate-button-keep-disabled-during](.planning/quick/260623-p67-fix-generate-button-keep-disabled-during/) |
+| 260624-eug | genera una icona per la parte gui flutter. l'icona deve avere una fiamma rossa su background bianco | 2026-06-24 | 2c96c99 | [260624-eug-genera-una-icona-per-la-parte-gui-flutte](.planning/quick/260624-eug-genera-una-icona-per-la-parte-gui-flutte/) |
