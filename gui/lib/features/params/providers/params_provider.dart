@@ -35,7 +35,7 @@ class ParamsState {
     this.height,
     this.seed = -1,
     this.cacheMode = 'None',
-    this.previewMode = 'None',
+    this.previewMode = 'Fast',
     this.upscalerMode = 'None',
     this.upscalerScale = 2.0,
     this.token = '',
@@ -62,8 +62,9 @@ class ParamsState {
   }) {
     return ParamsState(
       selectedPreset: selectedPreset ?? this.selectedPreset,
-      selectedWeight:
-          selectedWeightFn != null ? selectedWeightFn() : selectedWeight,
+      selectedWeight: selectedWeightFn != null
+          ? selectedWeightFn()
+          : selectedWeight,
       prompt: prompt ?? this.prompt,
       negativePrompt: negativePrompt ?? this.negativePrompt,
       steps: stepsFn != null ? stepsFn() : steps,

@@ -25,7 +25,7 @@ class _GenerationSectionState extends ConsumerState<GenerationSection> {
   late final TextEditingController _widthController;
   late final TextEditingController _heightController;
 
-  static const _previewModes = ['None', 'Fast', 'Accurate'];
+  static const _previewModes = ['Fast', 'Accurate'];
 
   @override
   void initState() {

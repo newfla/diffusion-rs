@@ -575,6 +575,10 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     stream_layers: bool,
 
+    /// Load all params into the params backend at model-load time instead of lazily on first use (defaults to false)
+    #[builder(default = "false")]
+    eager_load: bool,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -861,6 +865,7 @@ impl ModelConfig {
                     stream_layers: self.stream_layers,
                     rpc_servers: null(),
                     pulid_weights_path: self.pulid_weights_path.as_ptr(),
+                    eager_load: self.eager_load,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params))
