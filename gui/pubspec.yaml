@@ -1,0 +1,32 @@
+name: diffusion_rs_gui
+description: "Desktop GUI for diffusion-rs -- image generation with Stable Diffusion models."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  yaru: ^10.2.0
+  flutter_riverpod: ^3.3.2
+  multi_split_view: ^3.6.2
+  file_picker: ^11.0.2
+  path_provider: ^2.1.6
+  uuid: ^4.5.3
+  rust_lib_diffusion_rs_gui:
+    path: rust_builder
+  flutter_rust_bridge: 2.12.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/app_icon.png

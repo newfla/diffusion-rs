@@ -1,0 +1,10 @@
+# Flutter-related
+**/Flutter/ephemeral/
+**/Pods/
+
+# Xcode-related
+**/dgph
+**/xcuserdata/
+
+# Override root .gitignore *.png rule for macOS app icons
+!Runner/Assets.xcassets/AppIcon.appiconset/*.png
