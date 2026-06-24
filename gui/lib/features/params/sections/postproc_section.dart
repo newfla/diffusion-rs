@@ -19,7 +19,7 @@ class PostprocSection extends ConsumerStatefulWidget {
 class _PostprocSectionState extends ConsumerState<PostprocSection> {
   late final TextEditingController _scaleController;
 
-  static const _previewModes = ['None', 'Fast', 'Accurate'];
+  static const _previewModes = ['Fast', 'Accurate'];
 
   static const _upscalerModes = [
     'None',
@@ -50,8 +50,7 @@ class _PostprocSectionState extends ConsumerState<PostprocSection> {
   Widget build(BuildContext context) {
     final params = ref.watch(paramsProvider);
     final generationState = ref.watch(generationProvider);
-    final isGenerating =
-        generationState.status == GenerationStatus.generating;
+    final isGenerating = generationState.status == GenerationStatus.generating;
     final showScale = params.upscalerMode != 'None';
 
     return Padding(
@@ -71,9 +70,7 @@ class _PostprocSectionState extends ConsumerState<PostprocSection> {
                 isExpanded: true,
                 isDense: true,
                 items: _previewModes
-                    .map(
-                      (m) => DropdownMenuItem(value: m, child: Text(m)),
-                    )
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                     .toList(),
                 onChanged: isGenerating
                     ? null
@@ -101,9 +98,7 @@ class _PostprocSectionState extends ConsumerState<PostprocSection> {
                 isExpanded: true,
                 isDense: true,
                 items: _upscalerModes
-                    .map(
-                      (m) => DropdownMenuItem(value: m, child: Text(m)),
-                    )
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                     .toList(),
                 onChanged: isGenerating
                     ? null
@@ -128,17 +123,16 @@ class _PostprocSectionState extends ConsumerState<PostprocSection> {
                 labelText: 'Scale factor',
                 border: OutlineInputBorder(),
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               onChanged: (value) {
                 final parsed = double.tryParse(value);
                 if (parsed != null && parsed > 0) {
-                  ref
-                      .read(paramsProvider.notifier)
-                      .setUpscalerScale(parsed);
+                  ref.read(paramsProvider.notifier).setUpscalerScale(parsed);
                 }
               },
             ),
