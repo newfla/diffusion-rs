@@ -21,7 +21,7 @@ use diffusion_rs::preset::{
     Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, LongCatImageWeight,
     NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder,
     PresetDiscriminants, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
-    TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
+    TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight, Krea2Weight,
 };
 use diffusion_rs::util::set_hf_token;
 
@@ -72,6 +72,9 @@ pub fn map_preset(preset_str: &str, weight_str: Option<&str>) -> Result<Preset> 
         PresetDiscriminants::HiDreamO1Image => Ok(Preset::HiDreamO1Image),
         PresetDiscriminants::Lens => Ok(Preset::Lens),
         PresetDiscriminants::LensTurbo => Ok(Preset::LensTurbo),
+        PresetDiscriminants::BooguImage => Ok(Preset::BooguImage),
+        PresetDiscriminants::BooguImageTurbo => Ok(Preset::BooguImageTurbo),
+
 
         // Presets with weights
         PresetDiscriminants::Flux1Dev => with_weight!(Flux1Dev, Flux1Weight),
@@ -98,6 +101,9 @@ pub fn map_preset(preset_str: &str, weight_str: Option<&str>) -> Result<Preset> 
         PresetDiscriminants::ErnieImage => with_weight!(ErnieImage, ErnieImageWeight),
         PresetDiscriminants::ErnieImageTurbo => with_weight!(ErnieImageTurbo, ErnieImageWeight),
         PresetDiscriminants::LongCatImage => with_weight!(LongCatImage, LongCatImageWeight),
+        PresetDiscriminants::Krea2 => with_weight!(Krea2, Krea2Weight),
+        PresetDiscriminants::Krea2Turbo => with_weight!(Krea2Turbo, Krea2Weight),
+
     }
 }
 

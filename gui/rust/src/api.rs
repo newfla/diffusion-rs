@@ -17,7 +17,7 @@ use diffusion_rs::preset::{
     Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, LongCatImageWeight,
     NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, PresetDiscriminants,
     QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
-    ZImageTurboWeight,
+    ZImageTurboWeight, Krea2Weight,
 };
 
 use crate::bridge;
@@ -99,7 +99,10 @@ fn _get_weights_for_preset(preset: String) -> Vec<String> {
         | PresetDiscriminants::HiDreamO1ImageDev
         | PresetDiscriminants::HiDreamO1Image
         | PresetDiscriminants::Lens
-        | PresetDiscriminants::LensTurbo => Vec::new(),
+        | PresetDiscriminants::LensTurbo 
+        | PresetDiscriminants::BooguImage
+        | PresetDiscriminants::BooguImageTurbo
+        => Vec::new(),
 
         // Presets with weights
         PresetDiscriminants::Flux1Dev | PresetDiscriminants::Flux1Schnell => {
@@ -130,6 +133,9 @@ fn _get_weights_for_preset(preset: String) -> Vec<String> {
             weight_variants!(ErnieImageWeight)
         }
         PresetDiscriminants::LongCatImage => weight_variants!(LongCatImageWeight),
+        PresetDiscriminants::Krea2 | PresetDiscriminants::Krea2Turbo => {
+            weight_variants!(Krea2Weight)
+        }
     }
 }
 
