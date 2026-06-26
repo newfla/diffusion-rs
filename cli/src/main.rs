@@ -12,9 +12,9 @@ use diffusion_rs::{
     preset::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight,
         ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight,
-        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, LongCatImageWeight,
-        NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset, PresetBuilder,
-        PresetDiscriminants, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
+        Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight, Krea2Weight,
+        LongCatImageWeight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight, Preset,
+        PresetBuilder, PresetDiscriminants, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
         TwinFlowZImageTurboExpWeight, WeightType, ZImageTurboWeight,
     },
     util::set_hf_token,
@@ -416,6 +416,20 @@ fn get_preset(args: &Args) -> Preset {
         ),
         PresetDiscriminants::Lens => Preset::Lens,
         PresetDiscriminants::LensTurbo => Preset::LensTurbo,
+        PresetDiscriminants::BooguImage => Preset::BooguImage,
+        PresetDiscriminants::BooguImageTurbo => Preset::BooguImageTurbo,
+        PresetDiscriminants::Krea2 => Preset::Krea2(
+            args.weights
+                .unwrap_or_else(|| Krea2Weight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
+        PresetDiscriminants::Krea2Turbo => Preset::Krea2Turbo(
+            args.weights
+                .unwrap_or_else(|| Krea2Weight::default().into())
+                .try_into()
+                .unwrap(),
+        ),
     };
     preset
 }

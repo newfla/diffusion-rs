@@ -10,9 +10,9 @@ use crate::{
         Anima2Weight, AnimaWeight, ChromaRadianceWeight, ChromaWeight, ConfigsBuilder,
         DiffInstructStarWeight, ErnieImageWeight, Flux1MiniWeight, Flux1Weight, Flux2Klein4BWeight,
         Flux2Klein9BWeight, Flux2KleinBase4BWeight, Flux2KleinBase9BWeight, Flux2Weight,
-        LongCatImageWeight, NitroSDRealismWeight, NitroSDVibrantWeight, OvisImageWeight,
-        QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight, TwinFlowZImageTurboExpWeight,
-        ZImageTurboWeight,
+        Krea2Weight, LongCatImageWeight, NitroSDRealismWeight, NitroSDVibrantWeight,
+        OvisImageWeight, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
+        TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
     },
 };
 use diffusion_rs_sys::scheduler_t;
@@ -1706,4 +1706,118 @@ pub fn lens() -> Result<ConfigsBuilder, ApiError> {
     config.cfg_scale(5.).height(512).width(512);
 
     Ok((config, model_config))
+}
+
+pub fn boogu_image() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub(
+        "Comfy-Org/Boogu-Image",
+        "diffusion_models/boogu_image_base_bf16.safetensors",
+    )?;
+    let (config, mut model_config) = boogu_image_common()?;
+    model_config.diffusion_model(model);
+    Ok((config, model_config))
+}
+
+pub fn boogu_image_turbo() -> Result<ConfigsBuilder, ApiError> {
+    let model = download_file_hf_hub(
+        "Comfy-Org/Boogu-Image",
+        "diffusion_models/diffusion_models/diffusion_models/boogu_image_turbo_hotfix_bf16.safetensors",
+    )?;
+    let (mut config, mut model_config) = boogu_image_common()?;
+    model_config.diffusion_model(model);
+    config.steps(4);
+    Ok((config, model_config))
+}
+
+fn boogu_image_common() -> Result<ConfigsBuilder, ApiError> {
+    let llm = download_file_hf_hub(
+        "unsloth/Qwen3-VL-8B-Instruct-GGUF",
+        "Qwen3-VL-8B-Instruct-Q4_K_M.gguf",
+    )?;
+    let vae = download_file_hf_hub("black-forest-labs/FLUX.1-dev", "ae.safetensors")?;
+
+    let config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .llm(llm)
+        .vae(vae)
+        .diffusion_flash_attention(true);
+
+    offload_params_to_cpu((config, model_config))
+}
+
+pub fn krea2(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
+    let model = match sd_type_t {
+        Krea2Weight::Q8_0 => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "BASE/Krea-2-Base-Q8_0.gguf")
+        }
+        Krea2Weight::Q3_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "BASE/Krea-2-Base-Q3_K_M.gguf")
+        }
+        Krea2Weight::Q4_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "BASE/Krea-2-Base-Q4_K_M.gguf")
+        }
+        Krea2Weight::Q5_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "BASE/Krea-2-Base-Q5_K_M.gguf")
+        }
+        Krea2Weight::Q6_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "BASE/Krea-2-Base-Q6_K.gguf")
+        }
+    }?;
+    let (config, mut model_config) = krea2_common(sd_type_t)?;
+    model_config.diffusion_model(model);
+    Ok((config, model_config))
+}
+
+pub fn krea2_turbo(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
+    let model = match sd_type_t {
+        Krea2Weight::Q8_0 => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "TURBO/Krea-2-Turbo-Q8_0.gguf")
+        }
+        Krea2Weight::Q3_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "TURBO/Krea-2-Turbo-Q3_K_M.gguf")
+        }
+        Krea2Weight::Q4_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "TURBO/Krea-2-Turbo-Q4_K_M.gguf")
+        }
+        Krea2Weight::Q5_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "TURBO/Krea-2-Turbo-Q5_K_S.gguf")
+        }
+        Krea2Weight::Q6_K => {
+            download_file_hf_hub("realrebelai/KREA-2_GGUFs", "TURBO/Krea-2-Turbo-Q6_K.gguf")
+        }
+    }?;
+    let (mut config, mut model_config) = krea2_common(sd_type_t)?;
+    model_config.diffusion_model(model);
+    config.steps(4);
+    Ok((config, model_config))
+}
+
+fn krea2_common(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
+    let llm = if sd_type_t == Krea2Weight::Q8_0 {
+        download_file_hf_hub(
+            "Qwen/Qwen3-VL-4B-Instruct-GGUF",
+            "Qwen3VL-4B-Instruct-Q8_0.gguf",
+        )?
+    } else {
+        download_file_hf_hub(
+            "Qwen/Qwen3-VL-4B-Instruct-GGUF",
+            "Qwen3VL-4B-Instruct-Q4_K_M.gguf",
+        )?
+    };
+    let vae = download_file_hf_hub(
+        "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "split_files/vae/wan_2.1_vae.safetensors",
+    )?;
+
+    let config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+
+    model_config
+        .llm(llm)
+        .vae(vae)
+        .diffusion_flash_attention(true);
+
+    offload_params_to_cpu((config, model_config))
 }
