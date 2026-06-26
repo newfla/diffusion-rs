@@ -6,13 +6,13 @@ use subenum::subenum;
 use crate::{
     api::{Config, ConfigBuilder, ConfigBuilderError, ModelConfig, ModelConfigBuilder},
     preset_builder::{
-        anima, anima2, chroma, chroma_radiance, diff_instruct_star, dream_shaper_xl_2_1_turbo,
-        ernie_image, ernie_image_turbo, flux_1_dev, flux_1_mini, flux_1_schnell, flux_2_dev,
-        flux_2_klein_4b, flux_2_klein_9b, flux_2_klein_base_4b, flux_2_klein_base_9b,
-        hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, lens, lens_turbo,
-        long_cat_image, nitro_sd_realism, nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo,
-        sdxl_base_1_0, sdxl_turbo_1_0, sdxs512_dream_shaper, segmind_vega, ssd_1b,
-        stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
+        anima, anima2, boogu_image, boogu_image_turbo, chroma, chroma_radiance, diff_instruct_star,
+        dream_shaper_xl_2_1_turbo, ernie_image, ernie_image_turbo, flux_1_dev, flux_1_mini,
+        flux_1_schnell, flux_2_dev, flux_2_klein_4b, flux_2_klein_9b, flux_2_klein_base_4b,
+        flux_2_klein_base_9b, hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, krea2,
+        krea2_turbo, lens, lens_turbo, long_cat_image, nitro_sd_realism, nitro_sd_vibrant,
+        ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0, sdxs512_dream_shaper,
+        segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
         stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium,
         stable_diffusion_3_medium, twinflow_z_image_turbo, z_image_turbo,
     },
@@ -42,7 +42,8 @@ use crate::{
     Anima2Weight(derive(Default)),
     SDXS512DreamShaperWeight(derive(Default)),
     ErnieImageWeight(derive(Default)),
-    LongCatImageWeight(derive(Default))
+    LongCatImageWeight(derive(Default)),
+    Krea2Weight(derive(Default, PartialEq))
 )]
 #[derive(Debug, Clone, Copy, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
@@ -128,7 +129,8 @@ pub enum WeightType {
         Anima2Weight(default),
         SDXS512DreamShaperWeight,
         ErnieImageWeight,
-        LongCatImageWeight
+        LongCatImageWeight,
+        Krea2Weight
     )]
     Q8_0,
     Q8_1,
@@ -156,7 +158,8 @@ pub enum WeightType {
         TwinFlowZImageTurboExpWeight,
         AnimaWeight,
         ErnieImageWeight,
-        LongCatImageWeight
+        LongCatImageWeight,
+        Krea2Weight(default)
     )]
     Q3_K,
     #[subenum(
@@ -167,7 +170,8 @@ pub enum WeightType {
         AnimaWeight,
         Anima2Weight,
         ErnieImageWeight,
-        LongCatImageWeight
+        LongCatImageWeight,
+        Krea2Weight
     )]
     Q4_K,
     #[subenum(
@@ -177,7 +181,8 @@ pub enum WeightType {
         AnimaWeight,
         Anima2Weight,
         ErnieImageWeight,
-        LongCatImageWeight
+        LongCatImageWeight,
+        Krea2Weight
     )]
     Q5_K,
     #[subenum(
@@ -192,7 +197,8 @@ pub enum WeightType {
         AnimaWeight,
         Anima2Weight,
         ErnieImageWeight,
-        LongCatImageWeight
+        LongCatImageWeight,
+        Krea2Weight
     )]
     Q6_K,
     Q8_K,
@@ -345,6 +351,16 @@ pub enum Preset {
     /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.2-dev> providing a token via [crate::util::set_hf_token]
     /// cfg_scale 1.0. Enable Model Diffusion Flash attention. 512x512. 4 steps
     LensTurbo,
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
+    /// Diffusion Flash attention enabled. 512x512. 20 steps. Offload params to CPU enabled.
+    BooguImage,
+    /// Requires access rights to <https://huggingface.co/black-forest-labs/FLUX.1-dev> providing a token via [crate::util::set_hf_token]
+    /// Diffusion Flash attention enabled. 512x512. 4 steps. Offload params to CPU enabled.
+    BooguImageTurbo,
+    /// Diffusion Flash attention enabled. 512x512. 20 steps. Offload params to CPU enabled.
+    Krea2(Krea2Weight),
+    /// Diffusion Flash attention enabled. 512x512. 4 steps. Offload params to CPU enabled.
+    Krea2Turbo(Krea2Weight),
 }
 
 impl Preset {
@@ -391,6 +407,10 @@ impl Preset {
             Preset::LongCatImage(sd_type_t) => long_cat_image(sd_type_t),
             Preset::Lens => lens(),
             Preset::LensTurbo => lens_turbo(),
+            Preset::BooguImage => boogu_image(),
+            Preset::BooguImageTurbo => boogu_image_turbo(),
+            Preset::Krea2(sd_type_t) => krea2(sd_type_t),
+            Preset::Krea2Turbo(sd_type_t) => krea2_turbo(sd_type_t),
         }
     }
 }
@@ -464,9 +484,9 @@ mod tests {
         preset::{
             ChromaRadianceWeight, ChromaWeight, DiffInstructStarWeight, Flux1MiniWeight,
             Flux1Weight, Flux2Klein4BWeight, Flux2Klein9BWeight, Flux2KleinBase4BWeight,
-            Flux2KleinBase9BWeight, Flux2Weight, NitroSDRealismWeight, NitroSDVibrantWeight,
-            OvisImageWeight, QwenImageWeight, SDXS512DreamShaperWeight, SSD1BWeight,
-            TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
+            Flux2KleinBase9BWeight, Flux2Weight, Krea2Weight, NitroSDRealismWeight,
+            NitroSDVibrantWeight, OvisImageWeight, QwenImageWeight, SDXS512DreamShaperWeight,
+            SSD1BWeight, TwinFlowZImageTurboExpWeight, ZImageTurboWeight,
         },
         util::set_hf_token,
     };
@@ -733,5 +753,29 @@ mod tests {
     #[test]
     fn test_lens_turbo() {
         run(Preset::LensTurbo);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_boogu_image() {
+        run(Preset::BooguImage);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_boogu_image_turbo() {
+        run(Preset::BooguImageTurbo);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_krea2() {
+        run(Preset::Krea2(Krea2Weight::Q3_K));
+    }
+
+    #[ignore]
+    #[test]
+    fn test_krea2_turbo() {
+        run(Preset::Krea2Turbo(Krea2Weight::Q3_K));
     }
 }

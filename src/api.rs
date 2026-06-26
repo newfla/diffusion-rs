@@ -571,7 +571,7 @@ pub struct ModelConfig {
     #[builder(default = "(None, CLibString::default())", setter(custom))]
     extra_tiling_args: (Option<HashMap<String, String>>, CLibString),
 
-    /// Enable residency+prefetch streaming on top of [ModelConfig::max_vram] (no effect without [ModelConfig::max_vram]; defaults to false)
+    /// Enable residency+prefetch streaming on top of [ModelConfigBuilder::max_vram] (no effect without [ModelConfigBuilder::max_vram]; defaults to false)
     #[builder(default = "false")]
     stream_layers: bool,
 

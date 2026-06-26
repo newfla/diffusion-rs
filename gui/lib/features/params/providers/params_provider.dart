@@ -112,10 +112,9 @@ class ParamsNotifier extends Notifier<ParamsState> {
   ParamsState build() {
     final firstPreset = getPresets().first;
     final defaults = PresetCatalog.getDefaults(firstPreset);
-    final firstWeights = getWeightsForPreset(preset: firstPreset);
     return ParamsState(
       selectedPreset: firstPreset,
-      selectedWeight: firstWeights.isEmpty ? null : firstWeights.first,
+      selectedWeight: defaults.weight,
       steps: defaults.steps,
       width: defaults.width,
       height: defaults.height,
@@ -124,10 +123,9 @@ class ParamsNotifier extends Notifier<ParamsState> {
 
   void setPreset(String preset) {
     final defaults = PresetCatalog.getDefaults(preset);
-    final weights = getWeightsForPreset(preset: preset);
     state = state.copyWith(
       selectedPreset: preset,
-      selectedWeightFn: () => weights.isEmpty ? null : weights.first,
+      selectedWeightFn: () => defaults.weight,
       stepsFn: () => defaults.steps,
       widthFn: () => defaults.width,
       heightFn: () => defaults.height,
