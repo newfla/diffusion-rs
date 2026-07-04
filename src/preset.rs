@@ -10,11 +10,12 @@ use crate::{
         dream_shaper_xl_2_1_turbo, ernie_image, ernie_image_turbo, flux_1_dev, flux_1_mini,
         flux_1_schnell, flux_2_dev, flux_2_klein_4b, flux_2_klein_9b, flux_2_klein_base_4b,
         flux_2_klein_base_9b, hi_dream_o1_image, hi_dream_o1_image_dev, juggernaut_xl_11, krea2,
-        krea2_turbo, lens, lens_turbo, long_cat_image, nitro_sd_realism, nitro_sd_vibrant,
-        ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0, sdxs512_dream_shaper,
-        segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5, stable_diffusion_2_1,
-        stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo, stable_diffusion_3_5_medium,
-        stable_diffusion_3_medium, twinflow_z_image_turbo, z_image_turbo,
+        krea2_turbo, lens, lens_turbo, long_cat_image, mini_t2i, nitro_sd_realism,
+        nitro_sd_vibrant, ovis_image, qwen_image, sd_turbo, sdxl_base_1_0, sdxl_turbo_1_0,
+        sdxs512_dream_shaper, segmind_vega, ssd_1b, stable_diffusion_1_4, stable_diffusion_1_5,
+        stable_diffusion_2_1, stable_diffusion_3_5_large, stable_diffusion_3_5_large_turbo,
+        stable_diffusion_3_5_medium, stable_diffusion_3_medium, twinflow_z_image_turbo,
+        z_image_turbo,
     },
 };
 
@@ -361,6 +362,8 @@ pub enum Preset {
     Krea2(Krea2Weight),
     /// Diffusion Flash attention enabled. 512x512. 4 steps. Offload params to CPU enabled.
     Krea2Turbo(Krea2Weight),
+    /// 512x512. 100 steps. cfg_scale 6.0. Enable [crate::api::SampleMethod::EULER_SAMPLE_METHOD]
+    MiniT2I,
 }
 
 impl Preset {
@@ -411,6 +414,7 @@ impl Preset {
             Preset::BooguImageTurbo => boogu_image_turbo(),
             Preset::Krea2(sd_type_t) => krea2(sd_type_t),
             Preset::Krea2Turbo(sd_type_t) => krea2_turbo(sd_type_t),
+            Preset::MiniT2I => mini_t2i(),
         }
     }
 }

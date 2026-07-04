@@ -1821,3 +1821,22 @@ fn krea2_common(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
 
     offload_params_to_cpu((config, model_config))
 }
+
+pub fn mini_t2i() -> Result<ConfigsBuilder, ApiError> {
+    let t5xxl = download_file_hf_hub("google/flan-t5-large", "model.safetensors")?;
+    let diffusion_model = download_file_hf_hub(
+        "MiniT2I/MiniT2I",
+        "minit2i-b-16/transformer/diffusion_pytorch_model.safetensors",
+    )?;
+    let mut config = ConfigBuilder::default();
+    let mut model_config = ModelConfigBuilder::default();
+    model_config.t5xxl(t5xxl).diffusion_model(diffusion_model);
+    config
+        .cfg_scale(6.0)
+        .steps(100)
+        .height(512)
+        .width(512)
+        .sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
+
+    Ok((config, model_config))
+}

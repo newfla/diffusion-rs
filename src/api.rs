@@ -549,7 +549,7 @@ pub struct ModelConfig {
 
     /// Select the runtime backend used to execute model graphs
     #[builder(default = "(None, CLibString::default())", setter(custom))]
-    backend: (Option<HashMap<Module, BackendDevice>>, CLibString),
+    backend: (Option<HashMap<Module, Vec<BackendDevice>>>, CLibString),
 
     /// Select the backend used to allocate model parameters
     #[builder(default = "(None, CLibString::default())", setter(custom))]
@@ -578,6 +578,10 @@ pub struct ModelConfig {
     /// Load all params into the params backend at model-load time instead of lazily on first use (defaults to false)
     #[builder(default = "false")]
     eager_load: bool,
+
+    /// Number of Qwen Image Layered layers; latent/output count is layers + 1 (default: 3)
+    #[builder(default = "3")]
+    qwen_image_layers: i32,
 
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
@@ -710,10 +714,20 @@ impl ModelConfigBuilder {
         )
     }
 
-    pub fn backend(&mut self, backend_map: HashMap<Module, BackendDevice>) -> &mut Self {
+    pub fn backend(&mut self, backend_map: HashMap<Module, Vec<BackendDevice>>) -> &mut Self {
         let backend_str = backend_map
             .iter()
-            .map(|(key, value)| format!("{}={}", key, value))
+            .map(|(key, value)| {
+                format!(
+                    "{}={}",
+                    key,
+                    value
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
+                        .join("&")
+                )
+            })
             .collect::<Vec<String>>()
             .join(",");
         self.backend = Some((Some(backend_map), CLibString::from(backend_str)));
@@ -864,6 +878,7 @@ impl ModelConfig {
                     vae_format: self.vae_format,
                     stream_layers: self.stream_layers,
                     rpc_servers: null(),
+                    split_mode: null(),
                     pulid_weights_path: self.pulid_weights_path.as_ptr(),
                     eager_load: self.eager_load,
                 };
@@ -952,7 +967,8 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .extra_sample_params(value.extra_sample_params.clone())
             .backend(value.backend.0.clone().unwrap_or_default())
             .params_backend(value.params_backend.0.clone().unwrap_or_default())
-            .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default());
+            .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default())
+            .qwen_image_layers(value.qwen_image_layers);
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1329,15 +1345,21 @@ unsafe fn upscale(
                 let upscale_factor = 4; // unused for RealESRGAN_x4plus_anime_6B.pth
                 let mut current_image = data;
                 for _ in 0..upscale_repeats {
-                    let upscaled_image =
-                        diffusion_rs_sys::upscale(upscaler_ctx, current_image, upscale_factor);
+                    let upscaled_image = null_mut();
+                    let mut upscale_count = 1;
 
-                    if upscaled_image.data.is_null() {
+                    if !diffusion_rs_sys::upscale(
+                        upscaler_ctx,
+                        current_image,
+                        upscale_factor,
+                        upscaled_image,
+                        &mut upscale_count,
+                    ) {
                         return Err(DiffusionError::Upscaler);
                     }
 
                     free(current_image.data as *mut c_void);
-                    current_image = upscaled_image;
+                    current_image = *(*(upscaled_image));
                 }
                 Ok(current_image)
             }
@@ -1626,27 +1648,31 @@ fn gen_img_maybe_progress(
                 id_embedding_path: model_config.pulid_id_embedding_path.as_ptr(),
                 id_weight: 1.0,
             },
+            qwen_image_layers: model_config.qwen_image_layers,
         };
 
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
             .into_string()
             .unwrap();
-
-        let slice = generate_image(sd_ctx, &sd_img_gen_params);
+        #[allow(unused_mut)]
+        let mut slice = null_mut();
+        let mut batch_count = config.batch_count;
+        let gen_result = generate_image(sd_ctx, &sd_img_gen_params, slice, &mut batch_count);
         let ret = {
-            if slice.is_null() {
+            if !gen_result || slice.is_null() {
                 return Err(DiffusionError::Forward);
             }
             for (img, path) in slice::from_raw_parts(slice, config.batch_count as usize)
                 .iter()
                 .zip(files)
             {
+                let img = *(*img);
                 // img.data will be null on OOM or other generation errors,
                 // in which case we skip saving and just return an error
                 if img.data.is_null() {
                     return Err(DiffusionError::Forward);
                 }
-                match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
+                match upscale(model_config.upscale_repeats, upscaler_ctx, img) {
                     Ok(img) => save_img(img, &path, Some(&params_str))?,
                     Err(err) => {
                         return Err(err);

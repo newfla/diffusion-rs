@@ -209,6 +209,7 @@ class PresetCatalog {
       height: 512,
       weight: 'Q3_K',
     ),
+    'MiniT2I': PresetDefaults(steps: 100, width: 512, height: 512),
   };
 
   /// Returns the default steps/width/height for [presetName].
