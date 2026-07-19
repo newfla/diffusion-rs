@@ -1,5 +1,5 @@
 use derive_builder::Builder;
-use hf_hub::api::sync::ApiError;
+use hf_hub::HFError;
 use strum::{EnumDiscriminants, EnumString, VariantNames};
 use subenum::subenum;
 
@@ -367,7 +367,7 @@ pub enum Preset {
 }
 
 impl Preset {
-    fn try_configs_builder(self) -> Result<(ConfigBuilder, ModelConfigBuilder), ApiError> {
+    fn try_configs_builder(self) -> Result<(ConfigBuilder, ModelConfigBuilder), HFError> {
         match self {
             Preset::StableDiffusion1_4 => stable_diffusion_1_4(),
             Preset::StableDiffusion1_5 => stable_diffusion_1_5(),
@@ -426,7 +426,7 @@ pub type ConfigsBuilder = (ConfigBuilder, ModelConfigBuilder);
 pub type Configs = (Config, ModelConfig);
 
 /// Helper functions that modifies the [ConfigBuilder] See [crate::modifier]
-type ModifierFunction = dyn FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>;
+type ModifierFunction = dyn FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, HFError>;
 
 #[derive(Builder)]
 #[builder(
@@ -447,7 +447,7 @@ impl PresetBuilder {
     /// Add modifier that will apply in sequence
     pub fn with_modifier<F>(mut self, f: F) -> Self
     where
-        F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> + 'static,
+        F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, HFError> + 'static,
     {
         if self.modifiers.is_none() {
             self.modifiers = Some(Vec::new());
@@ -460,7 +460,7 @@ impl PresetBuilder {
         let preset = self.internal_build()?;
         let configs: ConfigsBuilder = preset
             .try_into()
-            .map_err(|err: ApiError| ConfigBuilderError::ValidationError(err.to_string()))?;
+            .map_err(|err: HFError| ConfigBuilderError::ValidationError(err.to_string()))?;
         let config = configs.0.build()?;
         let config_model = configs.1.build()?;
 
@@ -469,7 +469,7 @@ impl PresetBuilder {
 }
 
 impl TryFrom<PresetConfig> for ConfigsBuilder {
-    type Error = ApiError;
+    type Error = HFError;
 
     fn try_from(value: PresetConfig) -> Result<Self, Self::Error> {
         let mut configs_builder = value.preset.try_configs_builder()?;

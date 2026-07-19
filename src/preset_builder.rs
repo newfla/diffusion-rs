@@ -16,11 +16,11 @@ use crate::{
     },
 };
 use diffusion_rs_sys::scheduler_t;
-use hf_hub::api::sync::ApiError;
+use hf_hub::HFError;
 
 use crate::{api::ConfigBuilder, util::download_file_hf_hub};
 
-pub fn stable_diffusion_1_4() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_1_4() -> Result<ConfigsBuilder, HFError> {
     let model_path =
         download_file_hf_hub("CompVis/stable-diffusion-v-1-4-original", "sd-v1-4.ckpt")?;
 
@@ -31,7 +31,7 @@ pub fn stable_diffusion_1_4() -> Result<ConfigsBuilder, ApiError> {
     Ok((ConfigBuilder::default(), model_config))
 }
 
-pub fn stable_diffusion_1_5() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_1_5() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         "stablediffusiontutorials/stable-diffusion-v1.5",
         "v1-5-pruned-emaonly.safetensors",
@@ -44,7 +44,7 @@ pub fn stable_diffusion_1_5() -> Result<ConfigsBuilder, ApiError> {
     Ok((ConfigBuilder::default(), model_config))
 }
 
-pub fn stable_diffusion_2_1() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_2_1() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         "stabilityai/stable-diffusion-2-1",
         "v2-1_768-nonema-pruned.safetensors",
@@ -61,7 +61,7 @@ pub fn stable_diffusion_2_1() -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-pub fn stable_diffusion_3_medium() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_medium() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         "stabilityai/stable-diffusion-3-medium",
         "sd3_medium_incl_clips_t5xxlfp16.safetensors",
@@ -69,7 +69,7 @@ pub fn stable_diffusion_3_medium() -> Result<ConfigsBuilder, ApiError> {
 
     let mut config = ConfigBuilder::default();
 
-    config.cfg_scale(4.5).steps(30).height(1024).width(1024);
+    config.cfg_scale(4.5_f32).steps(30).height(1024).width(1024);
 
     let mut model_config = ModelConfigBuilder::default();
 
@@ -78,7 +78,7 @@ pub fn stable_diffusion_3_medium() -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-pub fn sdxl_base_1_0() -> Result<ConfigsBuilder, ApiError> {
+pub fn sdxl_base_1_0() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         "stabilityai/stable-diffusion-xl-base-1.0",
         "sd_xl_base_1.0.safetensors",
@@ -94,7 +94,7 @@ pub fn sdxl_base_1_0() -> Result<ConfigsBuilder, ApiError> {
     sdxl_vae_fp16_fix((config, model_config))
 }
 
-pub fn flux_1_dev(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_1_dev(sd_type: Flux1Weight) -> Result<ConfigsBuilder, HFError> {
     let model_path = flux_1_model_weight("dev", sd_type)?;
     let mut builder = flux_1_dev_schnell("dev", 28)?;
 
@@ -108,7 +108,7 @@ pub fn flux_1_dev(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
     }
 }
 
-pub fn flux_1_schnell(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_1_schnell(sd_type: Flux1Weight) -> Result<ConfigsBuilder, HFError> {
     let model_path = flux_1_model_weight("schnell", sd_type)?;
     let mut builder = flux_1_dev_schnell("schnell", 4)?;
 
@@ -122,7 +122,7 @@ pub fn flux_1_schnell(sd_type: Flux1Weight) -> Result<ConfigsBuilder, ApiError> 
     }
 }
 
-fn flux_1_model_weight(model: &str, sd_type: Flux1Weight) -> Result<PathBuf, ApiError> {
+fn flux_1_model_weight(model: &str, sd_type: Flux1Weight) -> Result<PathBuf, HFError> {
     let weight_type = match sd_type {
         Flux1Weight::Q3_K => "q3_k",
         Flux1Weight::Q2_K => "q2_k",
@@ -136,7 +136,7 @@ fn flux_1_model_weight(model: &str, sd_type: Flux1Weight) -> Result<PathBuf, Api
     )
 }
 
-fn flux_1_dev_schnell(vae_model: &str, steps: i32) -> Result<ConfigsBuilder, ApiError> {
+fn flux_1_dev_schnell(vae_model: &str, steps: i32) -> Result<ConfigsBuilder, HFError> {
     let vae_path = download_file_hf_hub(
         format!("black-forest-labs/FLUX.1-{vae_model}").as_str(),
         "ae.safetensors",
@@ -151,7 +151,7 @@ fn flux_1_clip_vae(
     vae_path: PathBuf,
     clip_l_path: PathBuf,
     steps: i32,
-) -> Result<ConfigsBuilder, ApiError> {
+) -> Result<ConfigsBuilder, HFError> {
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
@@ -159,42 +159,46 @@ fn flux_1_clip_vae(
         .vae(vae_path)
         .clip_l(clip_l_path)
         .vae_tiling(true);
-    config.cfg_scale(1.).steps(steps).height(1024).width(1024);
+    config
+        .cfg_scale(1.0_f32)
+        .steps(steps)
+        .height(1024)
+        .width(1024);
 
     Ok((config, model_config))
 }
 
-pub fn sd_turbo() -> Result<ConfigsBuilder, ApiError> {
+pub fn sd_turbo() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub("stabilityai/sd-turbo", "sd_turbo.safetensors")?;
 
     let mut config = ConfigsBuilder::default();
 
     config.1.model(model_path);
-    config.0.guidance(0.).cfg_scale(1.).steps(4);
+    config.0.guidance(0.0_f32).cfg_scale(1.0_f32).steps(4);
 
     Ok(config)
 }
 
-pub fn sdxl_turbo_1_0() -> Result<ConfigsBuilder, ApiError> {
+pub fn sdxl_turbo_1_0() -> Result<ConfigsBuilder, HFError> {
     let model_path =
         download_file_hf_hub("stabilityai/sdxl-turbo", "sd_xl_turbo_1.0_fp16.safetensors")?;
 
     let mut config = ConfigsBuilder::default();
 
     config.1.model(model_path);
-    config.0.guidance(0.).cfg_scale(1.).steps(4);
+    config.0.guidance(0.0_f32).cfg_scale(1.0_f32).steps(4);
     sdxl_vae_fp16_fix(config)
 }
 
-pub fn stable_diffusion_3_5_large() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_5_large() -> Result<ConfigsBuilder, HFError> {
     stable_diffusion_3_5("large", "large", 28, 4.5)
 }
 
-pub fn stable_diffusion_3_5_large_turbo() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_5_large_turbo() -> Result<ConfigsBuilder, HFError> {
     stable_diffusion_3_5("large-turbo", "large_turbo", 4, 0.)
 }
 
-pub fn stable_diffusion_3_5_medium() -> Result<ConfigsBuilder, ApiError> {
+pub fn stable_diffusion_3_5_medium() -> Result<ConfigsBuilder, HFError> {
     stable_diffusion_3_5("medium", "medium", 40, 4.5)
 }
 
@@ -203,7 +207,7 @@ pub fn stable_diffusion_3_5(
     file_model: &str,
     steps: i32,
     cfg_scale: f32,
-) -> Result<ConfigsBuilder, ApiError> {
+) -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         format!("stabilityai/stable-diffusion-3.5-{model}").as_str(),
         format!("sd3.5_{file_model}.safetensors").as_str(),
@@ -242,7 +246,7 @@ pub fn stable_diffusion_3_5(
     Ok(config)
 }
 
-pub fn juggernaut_xl_11() -> Result<ConfigsBuilder, ApiError> {
+pub fn juggernaut_xl_11() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         "RunDiffusion/Juggernaut-XI-v11",
         "Juggernaut-XI-byRunDiffusion.safetensors",
@@ -255,20 +259,20 @@ pub fn juggernaut_xl_11() -> Result<ConfigsBuilder, ApiError> {
         .0
         .sampling_method(SampleMethod::DPM2_SAMPLE_METHOD)
         .steps(20)
-        .guidance(6.)
+        .guidance(6.0_f32)
         .height(1024)
         .width(1024);
 
     Ok(config)
 }
 
-pub fn flux_1_mini(sd_type: Flux1MiniWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_1_mini(sd_type: Flux1MiniWeight) -> Result<ConfigsBuilder, HFError> {
     let model_path = flux_1_mini_model_weight(sd_type)?;
     let vae_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "ae-f16.gguf")?;
     let clip_l_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "clip_l-q8_0.gguf")?;
     let mut builder = flux_1_clip_vae(vae_path, clip_l_path, 20)?;
     builder.1.diffusion_model(model_path);
-    builder.0.cfg_scale(1.);
+    builder.0.cfg_scale(1.0_f32);
     match sd_type {
         Flux1MiniWeight::F32 => t5xxl_fp16_flux_1(builder),
         Flux1MiniWeight::Q8_0 => t5xxl_q8_0_flux_1(builder),
@@ -280,7 +284,7 @@ pub fn flux_1_mini(sd_type: Flux1MiniWeight) -> Result<ConfigsBuilder, ApiError>
     }
 }
 
-fn flux_1_mini_model_weight(sd_type: Flux1MiniWeight) -> Result<PathBuf, ApiError> {
+fn flux_1_mini_model_weight(sd_type: Flux1MiniWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         Flux1MiniWeight::F32 => ("TencentARC/flux-mini", "flux-mini.safetensors"),
         Flux1MiniWeight::BF16 => ("HyperX-Sentience/Flux-Mini-GGUF", "flux-mini-BF16.gguf"),
@@ -293,7 +297,7 @@ fn flux_1_mini_model_weight(sd_type: Flux1MiniWeight) -> Result<PathBuf, ApiErro
     download_file_hf_hub(repo, file)
 }
 
-pub fn chroma(sd_type: ChromaWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn chroma(sd_type: ChromaWeight) -> Result<ConfigsBuilder, HFError> {
     let model_path = chroma_model_weight(sd_type)?;
     let vae_path = download_file_hf_hub("black-forest-labs/FLUX.1-dev", "ae.safetensors")?;
     let mut config = ConfigBuilder::default();
@@ -304,7 +308,7 @@ pub fn chroma(sd_type: ChromaWeight) -> Result<ConfigsBuilder, ApiError> {
         .vae(vae_path)
         .vae_tiling(true);
     config
-        .cfg_scale(4.)
+        .cfg_scale(4.0_f32)
         .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
         .steps(20)
         .height(512)
@@ -318,7 +322,7 @@ pub fn chroma(sd_type: ChromaWeight) -> Result<ConfigsBuilder, ApiError> {
     }
 }
 
-fn chroma_model_weight(sd_type: ChromaWeight) -> Result<PathBuf, ApiError> {
+fn chroma_model_weight(sd_type: ChromaWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         ChromaWeight::BF16 => (
             "silveroxides/Chroma-GGUF",
@@ -336,7 +340,7 @@ fn chroma_model_weight(sd_type: ChromaWeight) -> Result<PathBuf, ApiError> {
     download_file_hf_hub(repo, file)
 }
 
-pub fn nitro_sd_realism(sd_type: NitroSDRealismWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn nitro_sd_realism(sd_type: NitroSDRealismWeight) -> Result<ConfigsBuilder, HFError> {
     let model_path = nitro_sd_realism_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -345,11 +349,11 @@ pub fn nitro_sd_realism(sd_type: NitroSDRealismWeight) -> Result<ConfigsBuilder,
         .model(model_path)
         .timestep_shift(250)
         .scheduler(scheduler_t::SGM_UNIFORM_SCHEDULER);
-    config.cfg_scale(1.).steps(1).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(1).height(1024).width(1024);
     Ok((config, model_config))
 }
 
-fn nitro_sd_realism_weight(sd_type: NitroSDRealismWeight) -> Result<PathBuf, ApiError> {
+fn nitro_sd_realism_weight(sd_type: NitroSDRealismWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         NitroSDRealismWeight::F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_f16.gguf"),
         NitroSDRealismWeight::Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-realism_q2_K.gguf"),
@@ -362,7 +366,7 @@ fn nitro_sd_realism_weight(sd_type: NitroSDRealismWeight) -> Result<PathBuf, Api
     download_file_hf_hub(repo, file)
 }
 
-pub fn nitro_sd_vibrant(sd_type: NitroSDVibrantWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn nitro_sd_vibrant(sd_type: NitroSDVibrantWeight) -> Result<ConfigsBuilder, HFError> {
     let model_path = nitro_sd_vibrant_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -371,11 +375,11 @@ pub fn nitro_sd_vibrant(sd_type: NitroSDVibrantWeight) -> Result<ConfigsBuilder,
         .model(model_path)
         .timestep_shift(500)
         .scheduler(scheduler_t::SGM_UNIFORM_SCHEDULER);
-    config.cfg_scale(1.).steps(1).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(1).height(1024).width(1024);
     Ok((config, model_config))
 }
 
-fn nitro_sd_vibrant_weight(sd_type: NitroSDVibrantWeight) -> Result<PathBuf, ApiError> {
+fn nitro_sd_vibrant_weight(sd_type: NitroSDVibrantWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         NitroSDVibrantWeight::F16 => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_f16.gguf"),
         NitroSDVibrantWeight::Q2_K => ("mrfatso/NitroFusion-GGUF", "nitrosd-vibrant_q2_K.gguf"),
@@ -388,7 +392,7 @@ fn nitro_sd_vibrant_weight(sd_type: NitroSDVibrantWeight) -> Result<PathBuf, Api
     download_file_hf_hub(repo, file)
 }
 
-pub fn diff_instruct_star(sd_type: DiffInstructStarWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn diff_instruct_star(sd_type: DiffInstructStarWeight) -> Result<ConfigsBuilder, HFError> {
     let model_path = diff_instruct_star_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
@@ -397,11 +401,11 @@ pub fn diff_instruct_star(sd_type: DiffInstructStarWeight) -> Result<ConfigsBuil
         .model(model_path)
         .timestep_shift(400)
         .scheduler(scheduler_t::SGM_UNIFORM_SCHEDULER);
-    config.cfg_scale(1.).steps(1).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(1).height(1024).width(1024);
     Ok((config, model_config))
 }
 
-fn diff_instruct_star_weight(sd_type: DiffInstructStarWeight) -> Result<PathBuf, ApiError> {
+fn diff_instruct_star_weight(sd_type: DiffInstructStarWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         DiffInstructStarWeight::F16 => (
             "mrfatso/Diff-InstructStar-GGUF",
@@ -435,19 +439,19 @@ fn diff_instruct_star_weight(sd_type: DiffInstructStarWeight) -> Result<PathBuf,
     download_file_hf_hub(repo, file)
 }
 
-pub fn chroma_radiance(sd_type: ChromaRadianceWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn chroma_radiance(sd_type: ChromaRadianceWeight) -> Result<ConfigsBuilder, HFError> {
     let model_path = chroma_radiance_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
     model_config.model(model_path);
     config
-        .cfg_scale(4.)
+        .cfg_scale(4.0_f32)
         .sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
     t5xxl_fp16_flux_1((config, model_config))
 }
 
-fn chroma_radiance_weight(sd_type: ChromaRadianceWeight) -> Result<PathBuf, ApiError> {
+fn chroma_radiance_weight(sd_type: ChromaRadianceWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         ChromaRadianceWeight::BF16 => (
             "silveroxides/Chroma1-Radiance-GGUF",
@@ -461,17 +465,17 @@ fn chroma_radiance_weight(sd_type: ChromaRadianceWeight) -> Result<PathBuf, ApiE
     download_file_hf_hub(repo, file)
 }
 
-pub fn ssd_1b(sd_type: SSD1BWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn ssd_1b(sd_type: SSD1BWeight) -> Result<ConfigsBuilder, HFError> {
     let model = ssd_1b_weight(sd_type)?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
     model_config.model(model);
-    config.cfg_scale(9.).height(1024).width(1024);
+    config.cfg_scale(9.0_f32).height(1024).width(1024);
     Ok((config, model_config))
 }
 
-fn ssd_1b_weight(sd_type: SSD1BWeight) -> Result<PathBuf, ApiError> {
+fn ssd_1b_weight(sd_type: SSD1BWeight) -> Result<PathBuf, HFError> {
     let (repo, file) = match sd_type {
         SSD1BWeight::F16 => ("segmind/SSD-1B", "SSD-1B-A1111.safetensors"),
         SSD1BWeight::F8_E4M3 => (
@@ -482,7 +486,7 @@ fn ssd_1b_weight(sd_type: SSD1BWeight) -> Result<PathBuf, ApiError> {
     download_file_hf_hub(repo, file)
 }
 
-pub fn flux_2_dev(sd_type: Flux2Weight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_2_dev(sd_type: Flux2Weight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = flux_2_dev_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.2-dev",
@@ -498,13 +502,13 @@ pub fn flux_2_dev(sd_type: Flux2Weight) -> Result<ConfigsBuilder, ApiError> {
         .vae(vae)
         .vae_tiling(true);
     config
-        .cfg_scale(1.)
+        .cfg_scale(1.0_f32)
         .sampling_method(SampleMethod::EULER_SAMPLE_METHOD);
 
     offload_params_to_cpu((config, model_config))
 }
 
-fn flux_2_dev_weight(sd_type: Flux2Weight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn flux_2_dev_weight(sd_type: Flux2Weight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         Flux2Weight::Q4_0 => (
             ("city96/FLUX.2-dev-gguf", "flux2-dev-Q4_0.gguf"),
@@ -589,7 +593,7 @@ fn flux_2_dev_weight(sd_type: Flux2Weight) -> Result<(PathBuf, PathBuf), ApiErro
     Ok((model_path, llm_path))
 }
 
-pub fn z_image_turbo(sd_type: ZImageTurboWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn z_image_turbo(sd_type: ZImageTurboWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = z_image_turbo_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.1-schnell",
@@ -604,12 +608,12 @@ pub fn z_image_turbo(sd_type: ZImageTurboWeight) -> Result<ConfigsBuilder, ApiEr
         .flash_attention(true)
         .vae(vae)
         .vae_tiling(true);
-    config.steps(9).cfg_scale(1.).height(1024).width(512);
+    config.steps(9).cfg_scale(1.0_f32).height(1024).width(512);
 
     Ok((config, model_config))
 }
 
-fn z_image_turbo_weight(sd_type: ZImageTurboWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn z_image_turbo_weight(sd_type: ZImageTurboWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         ZImageTurboWeight::Q4_0 => (
             ("leejet/Z-Image-Turbo-GGUF", "z_image_turbo-Q4_0.gguf"),
@@ -676,7 +680,7 @@ fn z_image_turbo_weight(sd_type: ZImageTurboWeight) -> Result<(PathBuf, PathBuf)
     Ok((model_path, llm_path))
 }
 
-pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = qwen_image_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "Comfy-Org/Qwen-Image_ComfyUI",
@@ -691,17 +695,17 @@ pub fn qwen_image(sd_type: QwenImageWeight) -> Result<ConfigsBuilder, ApiError> 
         .vae(vae)
         .flash_attention(true)
         .vae_tiling(true)
-        .flow_shift(3.0);
+        .flow_shift(3.0_f32);
     config
         .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
-        .cfg_scale(2.5)
+        .cfg_scale(2.5_f32)
         .height(1024)
         .width(1024);
 
     offload_params_to_cpu((config, model_config))
 }
 
-fn qwen_image_weight(sd_type: QwenImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn qwen_image_weight(sd_type: QwenImageWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         QwenImageWeight::Q4_0 => (
             ("QuantStack/Qwen-Image-GGUF", "Qwen_Image-Q4_0.gguf"),
@@ -799,7 +803,7 @@ fn qwen_image_weight(sd_type: QwenImageWeight) -> Result<(PathBuf, PathBuf), Api
     Ok((model_path, llm_path))
 }
 
-pub fn ovis_image(sd_type: OvisImageWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn ovis_image(sd_type: OvisImageWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = ovis_image_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.1-schnell",
@@ -814,12 +818,12 @@ pub fn ovis_image(sd_type: OvisImageWeight) -> Result<ConfigsBuilder, ApiError> 
         .vae(vae)
         .flash_attention(true)
         .vae_tiling(true);
-    config.steps(20).cfg_scale(5.).height(512).width(512);
+    config.steps(20).cfg_scale(5.0_f32).height(512).width(512);
 
     offload_params_to_cpu((config, model_config))
 }
 
-fn ovis_image_weight(sd_type: OvisImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn ovis_image_weight(sd_type: OvisImageWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let model = match sd_type {
         OvisImageWeight::Q4_0 => ("leejet/Ovis-Image-7B-GGUF", "ovis_image-Q4_0.gguf"),
         OvisImageWeight::Q8_0 => ("leejet/Ovis-Image-7B-GGUF", "ovis_image-Q8_0.gguf"),
@@ -836,7 +840,7 @@ fn ovis_image_weight(sd_type: OvisImageWeight) -> Result<(PathBuf, PathBuf), Api
     Ok((model_path, llm_path))
 }
 
-pub fn dream_shaper_xl_2_1_turbo() -> Result<ConfigsBuilder, ApiError> {
+pub fn dream_shaper_xl_2_1_turbo() -> Result<ConfigsBuilder, HFError> {
     let model_path = download_file_hf_hub(
         "Lykon/dreamshaper-xl-v2-turbo",
         "DreamShaperXL_Turbo_v2_1.safetensors",
@@ -849,7 +853,7 @@ pub fn dream_shaper_xl_2_1_turbo() -> Result<ConfigsBuilder, ApiError> {
         .0
         .sampling_method(SampleMethod::DPM2_SAMPLE_METHOD)
         .steps(6)
-        .guidance(2.)
+        .guidance(2.0_f32)
         .height(1024)
         .width(1024);
 
@@ -858,7 +862,7 @@ pub fn dream_shaper_xl_2_1_turbo() -> Result<ConfigsBuilder, ApiError> {
 
 pub fn twinflow_z_image_turbo(
     sd_type: TwinFlowZImageTurboExpWeight,
-) -> Result<ConfigsBuilder, ApiError> {
+) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = twinflow_z_image_turbo_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.1-schnell",
@@ -876,7 +880,7 @@ pub fn twinflow_z_image_turbo(
         .scheduler(Scheduler::SMOOTHSTEP_SCHEDULER);
     config
         .steps(3)
-        .cfg_scale(1.)
+        .cfg_scale(1.0_f32)
         .height(1024)
         .width(512)
         .sampling_method(SampleMethod::DPM2_SAMPLE_METHOD);
@@ -886,7 +890,7 @@ pub fn twinflow_z_image_turbo(
 
 fn twinflow_z_image_turbo_weight(
     sd_type: TwinFlowZImageTurboExpWeight,
-) -> Result<(PathBuf, PathBuf), ApiError> {
+) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         TwinFlowZImageTurboExpWeight::Q4_0 => (
             (
@@ -954,7 +958,7 @@ fn twinflow_z_image_turbo_weight(
     Ok((model_path, llm_path))
 }
 
-pub fn sdxs512_dream_shaper(sd_type: SDXS512DreamShaperWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn sdxs512_dream_shaper(sd_type: SDXS512DreamShaperWeight) -> Result<ConfigsBuilder, HFError> {
     let model = match sd_type {
         SDXS512DreamShaperWeight::F16 => {
             download_file_hf_hub("akleine/sdxs-512", "sdxs.safetensors")?
@@ -969,12 +973,12 @@ pub fn sdxs512_dream_shaper(sd_type: SDXS512DreamShaperWeight) -> Result<Configs
     let mut model_config = ModelConfigBuilder::default();
 
     model_config.model(model);
-    config.steps(1).cfg_scale(1.).height(512).width(512);
+    config.steps(1).cfg_scale(1.0_f32).height(512).width(512);
 
     Ok((config, model_config))
 }
 
-pub fn flux_2_klein_4b(sd_type: Flux2Klein4BWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_2_klein_4b(sd_type: Flux2Klein4BWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = flux_2_klein_4b_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.2-dev",
@@ -989,12 +993,12 @@ pub fn flux_2_klein_4b(sd_type: Flux2Klein4BWeight) -> Result<ConfigsBuilder, Ap
         .vae(vae)
         .flash_attention(true)
         .vae_tiling(true);
-    config.cfg_scale(1.).steps(4).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(4).height(1024).width(1024);
 
     offload_params_to_cpu((config, model_config))
 }
 
-fn flux_2_klein_4b_weight(sd_type: Flux2Klein4BWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn flux_2_klein_4b_weight(sd_type: Flux2Klein4BWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         Flux2Klein4BWeight::Q4_0 => (
             ("leejet/FLUX.2-klein-4B-GGUF", "flux-2-klein-4b-Q4_0.gguf"),
@@ -1017,7 +1021,7 @@ fn flux_2_klein_4b_weight(sd_type: Flux2Klein4BWeight) -> Result<(PathBuf, PathB
     Ok((model_path, llm_path))
 }
 
-pub fn flux_2_klein_base_4b(sd_type: Flux2KleinBase4BWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_2_klein_base_4b(sd_type: Flux2KleinBase4BWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = flux_2_klein_base_4b_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.2-dev",
@@ -1032,14 +1036,14 @@ pub fn flux_2_klein_base_4b(sd_type: Flux2KleinBase4BWeight) -> Result<ConfigsBu
         .vae(vae)
         .flash_attention(true)
         .vae_tiling(true);
-    config.cfg_scale(4.).steps(20).height(1024).width(1024);
+    config.cfg_scale(4.0_f32).steps(20).height(1024).width(1024);
 
     offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_klein_base_4b_weight(
     sd_type: Flux2KleinBase4BWeight,
-) -> Result<(PathBuf, PathBuf), ApiError> {
+) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         Flux2KleinBase4BWeight::Q4_0 => (
             (
@@ -1068,7 +1072,7 @@ fn flux_2_klein_base_4b_weight(
     Ok((model_path, llm_path))
 }
 
-pub fn flux_2_klein_9b(sd_type: Flux2Klein9BWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_2_klein_9b(sd_type: Flux2Klein9BWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = flux_2_klein_9b_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.2-dev",
@@ -1083,12 +1087,12 @@ pub fn flux_2_klein_9b(sd_type: Flux2Klein9BWeight) -> Result<ConfigsBuilder, Ap
         .vae(vae)
         .flash_attention(true)
         .vae_tiling(true);
-    config.cfg_scale(1.).steps(4).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(4).height(1024).width(1024);
 
     offload_params_to_cpu((config, model_config))
 }
 
-fn flux_2_klein_9b_weight(sd_type: Flux2Klein9BWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn flux_2_klein_9b_weight(sd_type: Flux2Klein9BWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         Flux2Klein9BWeight::Q4_0 => (
             ("leejet/FLUX.2-klein-9B-GGUF", "flux-2-klein-9b-Q4_0.gguf"),
@@ -1111,7 +1115,7 @@ fn flux_2_klein_9b_weight(sd_type: Flux2Klein9BWeight) -> Result<(PathBuf, PathB
     Ok((model_path, llm_path))
 }
 
-pub fn flux_2_klein_base_9b(sd_type: Flux2KleinBase9BWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_2_klein_base_9b(sd_type: Flux2KleinBase9BWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = flux_2_klein_base_9b_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "black-forest-labs/FLUX.2-dev",
@@ -1126,14 +1130,14 @@ pub fn flux_2_klein_base_9b(sd_type: Flux2KleinBase9BWeight) -> Result<ConfigsBu
         .vae(vae)
         .flash_attention(true)
         .vae_tiling(true);
-    config.cfg_scale(4.).steps(20).height(1024).width(1024);
+    config.cfg_scale(4.0_f32).steps(20).height(1024).width(1024);
 
     offload_params_to_cpu((config, model_config))
 }
 
 fn flux_2_klein_base_9b_weight(
     sd_type: Flux2KleinBase9BWeight,
-) -> Result<(PathBuf, PathBuf), ApiError> {
+) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         Flux2KleinBase9BWeight::Q4_0 => (
             (
@@ -1155,18 +1159,18 @@ fn flux_2_klein_base_9b_weight(
     Ok((model_path, llm_path))
 }
 
-pub fn segmind_vega() -> Result<ConfigsBuilder, ApiError> {
+pub fn segmind_vega() -> Result<ConfigsBuilder, HFError> {
     let model = download_file_hf_hub("segmind/Segmind-Vega", "segmind-vega.safetensors")?;
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
 
     model_config.model(model).vae_tiling(true);
-    config.guidance(9.).steps(25).height(1024).width(1024);
+    config.guidance(9.0_f32).steps(25).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-pub fn anima(sd_type: AnimaWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn anima(sd_type: AnimaWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = anima_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "circlestone-labs/Anima",
@@ -1180,12 +1184,12 @@ pub fn anima(sd_type: AnimaWeight) -> Result<ConfigsBuilder, ApiError> {
         .llm(llm)
         .vae(vae)
         .vae_tiling(true);
-    config.cfg_scale(4.).steps(30).height(1024).width(1024);
+    config.cfg_scale(4.0_f32).steps(30).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         AnimaWeight::Q4_K => (
             ("Bedovyy/Anima-GGUF", "anima-preview-Q4_K_M.gguf"),
@@ -1266,7 +1270,7 @@ fn anima_weight(sd_type: AnimaWeight) -> Result<(PathBuf, PathBuf), ApiError> {
     Ok((model_path, llm_path))
 }
 
-pub fn anima2(sd_type: Anima2Weight) -> Result<ConfigsBuilder, ApiError> {
+pub fn anima2(sd_type: Anima2Weight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = anima2_weight(sd_type)?;
     let vae = download_file_hf_hub(
         "circlestone-labs/Anima",
@@ -1280,12 +1284,12 @@ pub fn anima2(sd_type: Anima2Weight) -> Result<ConfigsBuilder, ApiError> {
         .llm(llm)
         .vae(vae)
         .vae_tiling(true);
-    config.cfg_scale(4.).steps(30).height(1024).width(1024);
+    config.cfg_scale(4.0_f32).steps(30).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-fn anima2_weight(sd_type: Anima2Weight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn anima2_weight(sd_type: Anima2Weight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         Anima2Weight::Q4_K => (
             ("Bedovyy/Anima-GGUF", "anima-preview2-Q4_K_M.gguf"),
@@ -1331,7 +1335,7 @@ fn anima2_weight(sd_type: Anima2Weight) -> Result<(PathBuf, PathBuf), ApiError> 
     Ok((model_path, llm_path))
 }
 
-pub fn ernie_image(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn ernie_image(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, HFError> {
     let vae = ernie_image_vae()?;
     let llm = ernie_image_llm(sd_type)?;
     let model = ernie_image_weight(sd_type)?;
@@ -1343,12 +1347,12 @@ pub fn ernie_image(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, ApiError
         .vae(vae)
         .diffusion_flash_attention(true)
         .vae_tiling(true);
-    config.cfg_scale(5.).steps(20).height(1024).width(1024);
+    config.cfg_scale(5.0_f32).steps(20).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-pub fn ernie_image_turbo(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn ernie_image_turbo(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, HFError> {
     let vae = ernie_image_vae()?;
     let llm = ernie_image_llm(sd_type)?;
     let model = ernie_image_turbo_weight(sd_type)?;
@@ -1360,12 +1364,12 @@ pub fn ernie_image_turbo(sd_type: ErnieImageWeight) -> Result<ConfigsBuilder, Ap
         .vae(vae)
         .diffusion_flash_attention(true)
         .vae_tiling(true);
-    config.cfg_scale(1.).steps(8).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(8).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-fn ernie_image_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
+fn ernie_image_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, HFError> {
     match sd_type {
         ErnieImageWeight::F16 => {
             download_file_hf_hub("unsloth/ERNIE-Image-GGUF", "ernie-image-F16.gguf")
@@ -1406,7 +1410,7 @@ fn ernie_image_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
     }
 }
 
-fn ernie_image_turbo_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
+fn ernie_image_turbo_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, HFError> {
     match sd_type {
         ErnieImageWeight::F16 => download_file_hf_hub(
             "unsloth/ERNIE-Image-Turbo-GGUF",
@@ -1459,11 +1463,11 @@ fn ernie_image_turbo_weight(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiErr
     }
 }
 
-fn ernie_image_vae() -> Result<PathBuf, ApiError> {
+fn ernie_image_vae() -> Result<PathBuf, HFError> {
     download_file_hf_hub("Comfy-Org/ERNIE-Image", "vae/flux2-vae.safetensors")
 }
 
-fn ernie_image_llm(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
+fn ernie_image_llm(sd_type: ErnieImageWeight) -> Result<PathBuf, HFError> {
     match sd_type {
         ErnieImageWeight::F16 => download_file_hf_hub(
             "unsloth/Ministral-3-3B-Instruct-2512-GGUF",
@@ -1516,7 +1520,7 @@ fn ernie_image_llm(sd_type: ErnieImageWeight) -> Result<PathBuf, ApiError> {
     }
 }
 
-pub fn hi_dream_o1_image_dev() -> Result<ConfigsBuilder, ApiError> {
+pub fn hi_dream_o1_image_dev() -> Result<ConfigsBuilder, HFError> {
     let model = download_file_hf_hub(
         "Comfy-Org/HiDream-O1-Image",
         "checkpoints/hidream_o1_image_dev_bf16.safetensors",
@@ -1524,12 +1528,12 @@ pub fn hi_dream_o1_image_dev() -> Result<ConfigsBuilder, ApiError> {
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
     model_config.model(model);
-    config.cfg_scale(1.0).steps(20).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(20).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-pub fn hi_dream_o1_image() -> Result<ConfigsBuilder, ApiError> {
+pub fn hi_dream_o1_image() -> Result<ConfigsBuilder, HFError> {
     let model = download_file_hf_hub(
         "Comfy-Org/HiDream-O1-Image",
         "checkpoints/hidream_o1_image_bf16.safetensors",
@@ -1537,12 +1541,12 @@ pub fn hi_dream_o1_image() -> Result<ConfigsBuilder, ApiError> {
     let mut config = ConfigBuilder::default();
     let mut model_config = ModelConfigBuilder::default();
     model_config.model(model);
-    config.cfg_scale(1.0).steps(20).height(1024).width(1024);
+    config.cfg_scale(1.0_f32).steps(20).height(1024).width(1024);
 
     Ok((config, model_config))
 }
 
-pub fn long_cat_image(sd_type: LongCatImageWeight) -> Result<ConfigsBuilder, ApiError> {
+pub fn long_cat_image(sd_type: LongCatImageWeight) -> Result<ConfigsBuilder, HFError> {
     let (model, llm) = long_cat_image_weight_llm(sd_type)?;
     let vae = download_file_hf_hub("black-forest-labs/FLUX.1-dev", "ae.safetensors")?;
     let mut config = ConfigBuilder::default();
@@ -1552,12 +1556,12 @@ pub fn long_cat_image(sd_type: LongCatImageWeight) -> Result<ConfigsBuilder, Api
         .diffusion_model(model)
         .llm(llm)
         .vae(vae)
-        .flow_shift(3.)
+        .flow_shift(3.0_f32)
         .diffusion_flash_attention(true);
 
     config
         .sampling_method(SampleMethod::EULER_SAMPLE_METHOD)
-        .cfg_scale(5.)
+        .cfg_scale(5.0_f32)
         .steps(20)
         .height(512)
         .width(512);
@@ -1565,7 +1569,7 @@ pub fn long_cat_image(sd_type: LongCatImageWeight) -> Result<ConfigsBuilder, Api
     Ok((config, model_config))
 }
 
-fn long_cat_image_weight_llm(sd_type: LongCatImageWeight) -> Result<(PathBuf, PathBuf), ApiError> {
+fn long_cat_image_weight_llm(sd_type: LongCatImageWeight) -> Result<(PathBuf, PathBuf), HFError> {
     let (model, llm) = match sd_type {
         LongCatImageWeight::Q4_0 => (
             (
@@ -1673,7 +1677,7 @@ fn long_cat_image_weight_llm(sd_type: LongCatImageWeight) -> Result<(PathBuf, Pa
     Ok((model_path, llm_path))
 }
 
-pub fn lens_turbo() -> Result<ConfigsBuilder, ApiError> {
+pub fn lens_turbo() -> Result<ConfigsBuilder, HFError> {
     let vae = download_file_hf_hub("black-forest-labs/FLUX.2-dev", "ae.safetensors")?;
     let llm = download_file_hf_hub("unsloth/gpt-oss-20b-GGUF", "gpt-oss-20b-UD-Q4_K_XL.gguf")?;
     let model = download_file_hf_hub(
@@ -1687,12 +1691,12 @@ pub fn lens_turbo() -> Result<ConfigsBuilder, ApiError> {
         .llm(llm)
         .vae(vae)
         .diffusion_flash_attention(true);
-    config.cfg_scale(1.).steps(4).height(512).width(512);
+    config.cfg_scale(1.0_f32).steps(4).height(512).width(512);
 
     Ok((config, model_config))
 }
 
-pub fn lens() -> Result<ConfigsBuilder, ApiError> {
+pub fn lens() -> Result<ConfigsBuilder, HFError> {
     let vae = download_file_hf_hub("black-forest-labs/FLUX.2-dev", "ae.safetensors")?;
     let llm = download_file_hf_hub("unsloth/gpt-oss-20b-GGUF", "gpt-oss-20b-UD-Q4_K_XL.gguf")?;
     let model = download_file_hf_hub("Comfy-Org/Lens", "diffusion_models/lens_bf16.safetensors")?;
@@ -1703,12 +1707,12 @@ pub fn lens() -> Result<ConfigsBuilder, ApiError> {
         .llm(llm)
         .vae(vae)
         .diffusion_flash_attention(true);
-    config.cfg_scale(5.).height(512).width(512);
+    config.cfg_scale(5.0_f32).height(512).width(512);
 
     Ok((config, model_config))
 }
 
-pub fn boogu_image() -> Result<ConfigsBuilder, ApiError> {
+pub fn boogu_image() -> Result<ConfigsBuilder, HFError> {
     let model = download_file_hf_hub(
         "Comfy-Org/Boogu-Image",
         "diffusion_models/boogu_image_base_bf16.safetensors",
@@ -1718,7 +1722,7 @@ pub fn boogu_image() -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-pub fn boogu_image_turbo() -> Result<ConfigsBuilder, ApiError> {
+pub fn boogu_image_turbo() -> Result<ConfigsBuilder, HFError> {
     let model = download_file_hf_hub(
         "Comfy-Org/Boogu-Image",
         "diffusion_models/diffusion_models/diffusion_models/boogu_image_turbo_hotfix_bf16.safetensors",
@@ -1729,7 +1733,7 @@ pub fn boogu_image_turbo() -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-fn boogu_image_common() -> Result<ConfigsBuilder, ApiError> {
+fn boogu_image_common() -> Result<ConfigsBuilder, HFError> {
     let llm = download_file_hf_hub(
         "unsloth/Qwen3-VL-8B-Instruct-GGUF",
         "Qwen3-VL-8B-Instruct-Q4_K_M.gguf",
@@ -1747,7 +1751,7 @@ fn boogu_image_common() -> Result<ConfigsBuilder, ApiError> {
     offload_params_to_cpu((config, model_config))
 }
 
-pub fn krea2(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
+pub fn krea2(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, HFError> {
     let model = match sd_type_t {
         Krea2Weight::Q8_0 => {
             download_file_hf_hub("realrebelai/KREA-2_GGUFs", "BASE/Krea-2-Base-Q8_0.gguf")
@@ -1770,7 +1774,7 @@ pub fn krea2(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-pub fn krea2_turbo(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
+pub fn krea2_turbo(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, HFError> {
     let model = match sd_type_t {
         Krea2Weight::Q8_0 => {
             download_file_hf_hub("realrebelai/KREA-2_GGUFs", "TURBO/Krea-2-Turbo-Q8_0.gguf")
@@ -1794,7 +1798,7 @@ pub fn krea2_turbo(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
     Ok((config, model_config))
 }
 
-fn krea2_common(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
+fn krea2_common(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, HFError> {
     let llm = if sd_type_t == Krea2Weight::Q8_0 {
         download_file_hf_hub(
             "Qwen/Qwen3-VL-4B-Instruct-GGUF",
@@ -1822,7 +1826,7 @@ fn krea2_common(sd_type_t: Krea2Weight) -> Result<ConfigsBuilder, ApiError> {
     offload_params_to_cpu((config, model_config))
 }
 
-pub fn mini_t2i() -> Result<ConfigsBuilder, ApiError> {
+pub fn mini_t2i() -> Result<ConfigsBuilder, HFError> {
     let t5xxl = download_file_hf_hub("google/flan-t5-large", "model.safetensors")?;
     let diffusion_model = download_file_hf_hub(
         "MiniT2I/MiniT2I",
@@ -1832,7 +1836,7 @@ pub fn mini_t2i() -> Result<ConfigsBuilder, ApiError> {
     let mut model_config = ModelConfigBuilder::default();
     model_config.t5xxl(t5xxl).diffusion_model(diffusion_model);
     config
-        .cfg_scale(6.0)
+        .cfg_scale(6.0_f32)
         .steps(100)
         .height(512)
         .width(512)

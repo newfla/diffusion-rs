@@ -1,9 +1,16 @@
 use std::{
+    env,
     path::PathBuf,
-    sync::{OnceLock, RwLock},
+    sync::{
+        OnceLock, RwLock,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 
-use hf_hub::api::sync::{ApiBuilder, ApiError};
+use hf_hub::{
+    HFClientBuilder, HFError,
+    progress::{DownloadEvent, FileStatus, ProgressEvent, ProgressHandler},
+};
 
 static TOKEN: OnceLock<RwLock<String>> = OnceLock::new();
 
@@ -15,11 +22,69 @@ pub fn set_hf_token(token: &str) {
 }
 
 /// Download file from huggingface hub
-pub fn download_file_hf_hub(repo: &str, file: &str) -> Result<PathBuf, ApiError> {
-    let token = TOKEN.get().map(|token| token.read().unwrap().to_owned());
-    let repo = ApiBuilder::new()
-        .with_token(token)
-        .build()?
-        .model(repo.to_string());
-    repo.get(file)
+pub fn download_file_hf_hub(repo: &str, file: &str) -> Result<PathBuf, HFError> {
+    let (owner, repo) = repo.split_once("/").unwrap_or_default();
+    let mut hf_client =
+        if let Some(token) = TOKEN.get().map(|token| token.read().unwrap().to_owned()) {
+            HFClientBuilder::new().token(token)
+        } else {
+            HFClientBuilder::new()
+        };
+    if let Some(home_dir) = env::home_dir() {
+        let cache_dir = home_dir.join(".cache/huggingface");
+        hf_client = hf_client.cache_dir(cache_dir);
+    }
+    hf_client
+        .build_sync()?
+        .model(owner, repo)
+        .download_file()
+        .filename(file)
+        .progress(PrintProgressHandler(
+            repo.to_string(),
+            file.to_string(),
+            AtomicU64::new(0),
+        ))
+        .send()
+}
+
+struct PrintProgressHandler(String, String, AtomicU64);
+
+impl ProgressHandler for PrintProgressHandler {
+    fn on_progress(&self, event: &ProgressEvent) {
+        if let ProgressEvent::Download(dl) = event {
+            match dl {
+                DownloadEvent::Start {
+                    total_files,
+                    total_bytes,
+                } => {
+                    println!("Starting download: {total_files} file(s), {total_bytes} bytes");
+                }
+                DownloadEvent::Progress { files } => {
+                    for f in files {
+                        let pct = (f.bytes_completed * 100)
+                            .checked_div(f.total_bytes)
+                            .unwrap_or(0);
+                        let status = match f.status {
+                            FileStatus::Started => "started",
+                            FileStatus::InProgress => "downloading",
+                            FileStatus::Complete => "complete",
+                        };
+                        if pct > self.2.load(Ordering::Relaxed) {
+                            self.2.store(pct, Ordering::Relaxed);
+                            println!(
+                                "  {}: {pct}% ({}/{}) [{status}]",
+                                format_args!("{}/{}", self.0, self.1),
+                                f.bytes_completed,
+                                f.total_bytes
+                            );
+                        }
+                    }
+                }
+                DownloadEvent::Complete => {
+                    println!("Download complete.");
+                }
+                _ => {}
+            }
+        }
+    }
 }
