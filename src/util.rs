@@ -1,15 +1,12 @@
 use std::{
     env,
     path::PathBuf,
-    sync::{
-        OnceLock, RwLock,
-        atomic::{AtomicU64, Ordering},
-    },
+    sync::{OnceLock, RwLock},
 };
 
 use hf_hub::{
     HFClientBuilder, HFError,
-    progress::{DownloadEvent, FileStatus, ProgressEvent, ProgressHandler},
+    progress::{DownloadEvent, ProgressEvent, ProgressHandler},
 };
 
 static TOKEN: OnceLock<RwLock<String>> = OnceLock::new();
@@ -39,48 +36,41 @@ pub fn download_file_hf_hub(repo: &str, file: &str) -> Result<PathBuf, HFError> 
         .model(owner, repo)
         .download_file()
         .filename(file)
-        .progress(PrintProgressHandler(
-            repo.to_string(),
-            file.to_string(),
-            AtomicU64::new(0),
-        ))
+        .progress(PrintProgressHandler(repo.to_string(), file.to_string()))
         .send()
 }
 
-struct PrintProgressHandler(String, String, AtomicU64);
+struct PrintProgressHandler(String, String);
 
 impl ProgressHandler for PrintProgressHandler {
     fn on_progress(&self, event: &ProgressEvent) {
         if let ProgressEvent::Download(dl) = event {
             match dl {
                 DownloadEvent::Start {
-                    total_files,
+                    total_files: _,
                     total_bytes,
                 } => {
-                    println!("Starting download: {total_files} file(s), {total_bytes} bytes");
+                    println!(
+                        "Starting download: {}/{}, {total_bytes} bytes",
+                        self.0, self.1
+                    );
                 }
                 DownloadEvent::Progress { files } => {
                     for f in files {
                         let pct = (f.bytes_completed * 100)
                             .checked_div(f.total_bytes)
                             .unwrap_or(0);
-                        let status = match f.status {
-                            FileStatus::Started => "started",
-                            FileStatus::InProgress => "downloading",
-                            FileStatus::Complete => "complete",
-                        };
-                        if pct > self.2.load(Ordering::Relaxed) {
-                            self.2.store(pct, Ordering::Relaxed);
-                            println!(
-                                "  {}: {pct}% ({}/{}) [{status}]",
-                                format_args!("{}/{}", self.0, self.1),
-                                f.bytes_completed,
-                                f.total_bytes
-                            );
-                        }
+                        print!("\r");
+                        print!(
+                            "  {}: {pct}% ({}/{}) bytes",
+                            format_args!("{}/{}", self.0, self.1),
+                            f.bytes_completed,
+                            f.total_bytes
+                        );
                     }
                 }
                 DownloadEvent::Complete => {
+                    println!();
                     println!("Download complete.");
                 }
                 _ => {}

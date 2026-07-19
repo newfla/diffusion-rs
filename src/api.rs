@@ -583,11 +583,15 @@ pub struct ModelConfig {
     #[builder(default = "3")]
     qwen_image_layers: i32,
 
+    /// Pick the diffusion/te/vae device placements automatically from the model size and the per-device memory budgets (max_vram; defaults to free memory minus a small margin). Overrides backend and params-backend; may split modules across GPUs (split-mode still selects layer or row)
+    #[builder(default = "false")]
+    auto_fit: bool,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
     #[builder(default = "None", private)]
-    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
+    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t, CLibString)>,
 }
 
 impl ModelConfigBuilder {
@@ -827,12 +831,13 @@ impl ModelConfig {
             // This is required to support img2img after text2img generation
             // otherwise the context is cached and won't have a decode graph
             // leading to an assertion error in sdcpp
-            if let Some((sd_ctx, _)) = self.diffusion_ctx.as_ref() {
+            if let Some((sd_ctx, _, _)) = self.diffusion_ctx.as_ref() {
                 sd_set_progress_callback(None, null_mut());
                 free_sd_ctx(*sd_ctx);
                 self.diffusion_ctx = None;
             }
             if self.diffusion_ctx.is_none() {
+                let model_args = self.model_args();
                 let sd_ctx_params = sd_ctx_params_t {
                     model_path: self.model.as_ptr(),
                     llm_path: self.llm.as_ptr(),
@@ -856,9 +861,6 @@ impl ModelConfig {
                     diffusion_flash_attn: self.diffusion_flash_attention,
                     flash_attn: self.flash_attention,
                     diffusion_conv_direct: self.diffusion_conv_direct,
-                    chroma_use_dit_mask: !self.chroma_disable_dit_mask,
-                    chroma_use_t5_mask: self.chroma_enable_t5_mask,
-                    chroma_t5_mask_pad: self.chroma_t5_mask_pad,
                     vae_conv_direct: self.vae_conv_direct,
                     prediction: self.prediction,
                     force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
@@ -866,9 +868,6 @@ impl ModelConfig {
                     lora_apply_mode: self.lora_apply_mode,
                     tensor_type_rules: null_mut(),
                     sampler_rng_type: self.sampler_rng_type,
-                    circular_x: self.circular || self.circular_x,
-                    circular_y: self.circular || self.circular_y,
-                    qwen_image_zero_cond_t: self.use_qwen_image_zero_cond_true,
                     enable_mmap: self.enable_mmap,
                     max_vram: self.max_vram.1.as_ptr(),
                     backend: self.backend.1.as_ptr(),
@@ -881,12 +880,22 @@ impl ModelConfig {
                     split_mode: null(),
                     pulid_weights_path: self.pulid_weights_path.as_ptr(),
                     eager_load: self.eager_load,
+                    auto_fit: self.auto_fit,
+                    model_args: model_args.as_ptr(),
+                    motion_module_path: null(),
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
-                self.diffusion_ctx = Some((ctx, sd_ctx_params))
+                self.diffusion_ctx = Some((ctx, sd_ctx_params, model_args))
             }
-            self.diffusion_ctx.unwrap().0
+            self.diffusion_ctx.as_ref().unwrap().0
         }
+    }
+
+    fn model_args(&self) -> CLibString {
+        format!("chroma_use_dit_mask={}, chroma_use_t5_mask={}, chroma_t5_mask_pad={}, qwen_image_zero_cond_t={}", 
+        !self.chroma_disable_dit_mask, self.chroma_enable_t5_mask,
+        self.chroma_t5_mask_pad, self.use_qwen_image_zero_cond_true
+    ).into()
     }
 }
 
@@ -894,7 +903,7 @@ impl Drop for ModelConfig {
     fn drop(&mut self) {
         //Cleanup CTX section
         unsafe {
-            if let Some((sd_ctx, _)) = self.diffusion_ctx {
+            if let Some((sd_ctx, _, _)) = self.diffusion_ctx {
                 free_sd_ctx(sd_ctx);
             }
 
@@ -1111,6 +1120,10 @@ pub struct Config {
     #[builder(default = "false")]
     disable_auto_resize_ref_image: bool,
 
+    /// Automatically increase the indices of references images based on the order they are listed (starting with 1).
+    #[builder(default = "true")]
+    increase_ref_index: bool,
+
     #[builder(default = "Self::cache_init()", private)]
     cache: (sd_cache_params_t, Option<CLibString>),
 }
@@ -1266,6 +1279,7 @@ impl From<&Config> for ConfigBuilder {
             .skip_layer_end(value.skip_layer_end)
             .canny(value.canny)
             .disable_auto_resize_ref_image(value.disable_auto_resize_ref_image)
+            .increase_ref_index(value.increase_ref_index)
             .preview_output(value.preview_output.clone())
             .preview_mode(value.preview_mode)
             .preview_noisy(value.preview_noisy)
@@ -1620,6 +1634,22 @@ fn gen_img_maybe_progress(
             custom_sigmas_count: hires_sigmas_count,
         };
 
+        let resize_before_vae = if config.disable_auto_resize_ref_image {
+            0
+        } else {
+            1
+        };
+        let increaze_ref_index = if config.increase_ref_index {
+            ", ref_index_mode=increase"
+        } else {
+            ""
+        };
+        let ref_image_args: CLibString = format!(
+            "resize_before_vae={}{}",
+            resize_before_vae, increaze_ref_index
+        )
+        .into();
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -1627,7 +1657,6 @@ fn gen_img_maybe_progress(
             init_image,
             ref_images: ref_image_ptr,
             ref_images_count: num_ref_images as i32,
-            increase_ref_index: false,
             mask_image,
             width: config.width,
             height: config.height,
@@ -1639,7 +1668,6 @@ fn gen_img_maybe_progress(
             control_strength: config.control_strength,
             pm_params,
             vae_tiling_params,
-            auto_resize_ref_image: config.disable_auto_resize_ref_image,
             cache,
             loras: loras.as_ptr(),
             lora_count: loras.len() as u32,
@@ -1649,6 +1677,9 @@ fn gen_img_maybe_progress(
                 id_weight: 1.0,
             },
             qwen_image_layers: model_config.qwen_image_layers,
+            circular_x: model_config.circular_x,
+            circular_y: model_config.circular_y,
+            ref_image_args: ref_image_args.as_ptr(),
         };
 
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
