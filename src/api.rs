@@ -12,6 +12,7 @@ use std::sync::mpsc::Sender;
 
 use chrono::Local;
 use derive_builder::Builder;
+use diffusion_rs_sys::free_sd_images;
 use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::generate_image;
 use diffusion_rs_sys::new_upscaler_ctx;
@@ -1685,25 +1686,28 @@ fn gen_img_maybe_progress(
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
             .into_string()
             .unwrap();
-        #[allow(unused_mut)]
-        let mut slice = null_mut();
-        let mut batch_count = config.batch_count;
-        let gen_result = generate_image(sd_ctx, &sd_img_gen_params, slice, &mut batch_count);
+        let mut images_out = null_mut();
+        let mut images_out_count = 0;
+        let gen_result = generate_image(
+            sd_ctx,
+            &sd_img_gen_params,
+            &mut images_out,
+            &mut images_out_count,
+        );
         let ret = {
-            if !gen_result || slice.is_null() {
+            if !gen_result || images_out.is_null() {
                 return Err(DiffusionError::Forward);
             }
-            for (img, path) in slice::from_raw_parts(slice, config.batch_count as usize)
+            for (img, path) in slice::from_raw_parts(images_out, images_out_count as usize)
                 .iter()
                 .zip(files)
             {
-                let img = *(*img);
                 // img.data will be null on OOM or other generation errors,
                 // in which case we skip saving and just return an error
                 if img.data.is_null() {
                     return Err(DiffusionError::Forward);
                 }
-                match upscale(model_config.upscale_repeats, upscaler_ctx, img) {
+                match upscale(model_config.upscale_repeats, upscaler_ctx, *img) {
                     Ok(img) => save_img(img, &path, Some(&params_str))?,
                     Err(err) => {
                         return Err(err);
@@ -1712,7 +1716,7 @@ fn gen_img_maybe_progress(
             }
             Ok(())
         };
-        free(slice as *mut c_void);
+        free_sd_images(images_out, images_out_count);
         ret
     }
 }
