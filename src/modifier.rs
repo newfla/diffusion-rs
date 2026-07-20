@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use hf_hub::api::sync::ApiError;
+use hf_hub::HFError;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
 /// Add the <https://huggingface.co/ximso/RealESRGAN_x4plus_anime_6B> upscaler
 pub fn real_esrgan_x4plus_anime_6_b(
     mut builder: ConfigsBuilder,
-) -> Result<ConfigsBuilder, ApiError> {
+) -> Result<ConfigsBuilder, HFError> {
     let upscaler_path = download_file_hf_hub(
         "ximso/RealESRGAN_x4plus_anime_6B",
         "RealESRGAN_x4plus_anime_6B.pth",
@@ -22,14 +22,14 @@ pub fn real_esrgan_x4plus_anime_6_b(
 }
 
 /// Apply <https://huggingface.co/madebyollin/sdxl-vae-fp16-fix> to avoid black images with xl models
-pub fn sdxl_vae_fp16_fix(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn sdxl_vae_fp16_fix(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let vae_path = download_file_hf_hub("madebyollin/sdxl-vae-fp16-fix", "sdxl.vae.safetensors")?;
     builder.1.vae(vae_path);
     Ok(builder)
 }
 
 /// Apply <https://huggingface.co/madebyollin/taesd> taesd autoencoder for faster decoding (SD v1/v2)
-pub fn taesd(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn taesd(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let taesd_path =
         download_file_hf_hub("madebyollin/taesd", "diffusion_pytorch_model.safetensors")?;
     builder.1.taesd(taesd_path);
@@ -37,7 +37,7 @@ pub fn taesd(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
 }
 
 /// Apply <https://huggingface.co/madebyollin/taesdxl> taesd autoencoder for faster decoding (SDXL)
-pub fn taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let taesd_path =
         download_file_hf_hub("madebyollin/taesdxl", "diffusion_pytorch_model.safetensors")?;
     builder.1.taesd(taesd_path);
@@ -45,7 +45,7 @@ pub fn taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>
 }
 
 /// Apply <https://huggingface.co/cqyan/hybrid-sd-tinyvae> taesd autoencoder for faster decoding (SD v1/v2)
-pub fn hybrid_taesd(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn hybrid_taesd(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let taesd_path = download_file_hf_hub(
         "cqyan/hybrid-sd-tinyvae",
         "diffusion_pytorch_model.safetensors",
@@ -55,7 +55,7 @@ pub fn hybrid_taesd(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiEr
 }
 
 /// Apply <https://huggingface.co/cqyan/hybrid-sd-tinyvae-xl> taesd autoencoder for faster decoding (SDXL)
-pub fn hybrid_taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn hybrid_taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let taesd_path = download_file_hf_hub(
         "cqyan/hybrid-sd-tinyvae-xl",
         "diffusion_pytorch_model.safetensors",
@@ -66,7 +66,7 @@ pub fn hybrid_taesd_xl(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
 
 /// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdv1-5> to reduce inference steps for SD v1 between 2-8 (default 8)
 /// cfg_scale 1. 8 steps.
-pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "latent-consistency/lcm-lora-sdv1-5",
         "pytorch_lora_weights.safetensors",
@@ -79,13 +79,13 @@ pub fn lcm_lora_sd_1_5(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
             multiplier: 1.0,
         }],
     );
-    builder.0.cfg_scale(1.).steps(8);
+    builder.0.cfg_scale(1.0_f32).steps(8);
     Ok(builder)
 }
 
 /// Apply <https://huggingface.co/latent-consistency/lcm-lora-sdxl> to reduce inference steps for SD v1 between 2-8 (default 8)
 /// Enabled [SampleMethod::LCM_SAMPLE_METHOD]. cfg_scale 2. 8 steps.
-pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "latent-consistency/lcm-lora-sdxl",
         "pytorch_lora_weights.safetensors",
@@ -101,7 +101,7 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
     );
     builder
         .0
-        .cfg_scale(2.)
+        .cfg_scale(2.0_f32)
         .steps(8)
         .sampling_method(SampleMethod::LCM_SAMPLE_METHOD);
     Ok(builder)
@@ -110,7 +110,7 @@ pub fn lcm_lora_sdxl_base_1_0(mut builder: ConfigsBuilder) -> Result<ConfigsBuil
 /// Apply <https://huggingface.co/nerijs/pixel-art-xl>
 pub fn lora_pixel_art_sdxl_base_1_0(
     mut builder: ConfigsBuilder,
-) -> Result<ConfigsBuilder, ApiError> {
+) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub("nerijs/pixel-art-xl", "pixel-art-xl.safetensors")?;
 
     builder.1.lora_models(
@@ -125,7 +125,7 @@ pub fn lora_pixel_art_sdxl_base_1_0(
 }
 
 /// Apply <https://huggingface.co/nerijs/pastelcomic-flux>
-pub fn lora_pastelcomic_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lora_pastelcomic_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub("nerijs/pastelcomic-flux", "pastelcomic_v2.safetensors")?;
 
     builder.1.lora_models(
@@ -140,7 +140,7 @@ pub fn lora_pastelcomic_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBui
 }
 
 /// Apply <https://huggingface.co/strangerzonehf/Ghibli-Flux-Cartoon-LoRA>
-pub fn lora_ghibli_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lora_ghibli_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "strangerzonehf/Ghibli-Flux-Cartoon-LoRA",
         "Ghibili-Cartoon-Art.safetensors",
@@ -158,7 +158,7 @@ pub fn lora_ghibli_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, A
 }
 
 /// Apply <https://huggingface.co/strangerzonehf/Flux-Midjourney-Mix2-LoRA>
-pub fn lora_midjourney_mix_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lora_midjourney_mix_2_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "strangerzonehf/Flux-Midjourney-Mix2-LoRA",
         "mjV6.safetensors",
@@ -176,7 +176,7 @@ pub fn lora_midjourney_mix_2_flux(mut builder: ConfigsBuilder) -> Result<Configs
 }
 
 /// Apply <https://huggingface.co/prithivMLmods/Retro-Pixel-Flux-LoRA>
-pub fn lora_retro_pixel_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lora_retro_pixel_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "prithivMLmods/Retro-Pixel-Flux-LoRA",
         "Retro-Pixel.safetensors",
@@ -194,7 +194,7 @@ pub fn lora_retro_pixel_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuild
 }
 
 /// Apply <https://huggingface.co/prithivMLmods/Canopus-Pixar-3D-Flux-LoRA>
-pub fn lora_canopus_pixar_3d_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lora_canopus_pixar_3d_flux(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "prithivMLmods/Canopus-Pixar-3D-Flux-LoRA",
         "Canopus-Pixar-3D-FluxDev-LoRA.safetensors",
@@ -212,7 +212,7 @@ pub fn lora_canopus_pixar_3d_flux(mut builder: ConfigsBuilder) -> Result<Configs
 }
 
 /// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors> fp8_e4m3fn t5xxl text encoder to reduce memory usage
-pub fn t5xxl_fp8_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn t5xxl_fp8_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let t5xxl_path = download_file_hf_hub(
         "comfyanonymous/flux_text_encoders",
         "t5xxl_fp8_e4m3fn.safetensors",
@@ -224,7 +224,7 @@ pub fn t5xxl_fp8_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, A
 
 /// Apply <https://huggingface.co/comfyanonymous/flux_text_encoders/blob/main/t5xxl_fp16.safetensors>
 /// Default for flux_1_dev/schnell
-pub fn t5xxl_fp16_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn t5xxl_fp16_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let t5xxl_path = download_file_hf_hub(
         "comfyanonymous/flux_text_encoders",
         "t5xxl_fp16.safetensors",
@@ -235,7 +235,7 @@ pub fn t5xxl_fp16_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 }
 
 /// Apply <https://huggingface.co/Green-Sky/flux.1-schnell-GGUF/blob/main/t5xxl_q2_k.gguf>
-pub fn t5xxl_q2_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn t5xxl_q2_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let t5xxl_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "t5xxl_q2_k.gguf")?;
 
     builder.1.t5xxl(t5xxl_path);
@@ -243,7 +243,7 @@ pub fn t5xxl_q2_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 }
 
 /// Apply <https://huggingface.co/Green-Sky/flux.1-schnell-GGUF/blob/main/t5xxl_q3_k.gguf>
-pub fn t5xxl_q3_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn t5xxl_q3_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let t5xxl_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "t5xxl_q3_k.gguf")?;
 
     builder.1.t5xxl(t5xxl_path);
@@ -252,7 +252,7 @@ pub fn t5xxl_q3_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 
 /// Apply <https://huggingface.co/Green-Sky/flux.1-schnell-GGUF/blob/main/t5xxl_q4_k.gguf>
 /// Default for flux_1_mini
-pub fn t5xxl_q4_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn t5xxl_q4_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let t5xxl_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "t5xxl_q4_k.gguf")?;
 
     builder.1.t5xxl(t5xxl_path);
@@ -260,7 +260,7 @@ pub fn t5xxl_q4_k_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 }
 
 /// Apply <https://huggingface.co/Green-Sky/flux.1-schnell-GGUF/blob/main/t5xxl_q8_0.gguf>
-pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let t5xxl_path = download_file_hf_hub("Green-Sky/flux.1-schnell-GGUF", "t5xxl_q8_0.gguf")?;
 
     builder.1.t5xxl(t5xxl_path);
@@ -268,7 +268,7 @@ pub fn t5xxl_q8_0_flux_1(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, 
 }
 
 /// Offload model parameters to CPU (for low VRAM GPUs)
-pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let params: HashMap<_, _> = Module::iter()
         .map(|module| (module, BackendDevice::CPU))
         .collect();
@@ -280,7 +280,7 @@ pub fn offload_params_to_cpu(mut builder: ConfigsBuilder) -> Result<ConfigsBuild
 /// Lazily load model parameters from disk (for low VRAM GPUs)
 pub fn lazily_load_params_from_disk(
     mut builder: ConfigsBuilder,
-) -> Result<ConfigsBuilder, ApiError> {
+) -> Result<ConfigsBuilder, HFError> {
     let params: HashMap<_, _> = Module::iter()
         .map(|module| (module, BackendDevice::DISK))
         .collect();
@@ -291,7 +291,7 @@ pub fn lazily_load_params_from_disk(
 
 /// Apply <https://huggingface.co/kylielee505/mylcmlorassd> to reduce inference steps for SD v1 between 2-8 (default 8)
 /// cfg_scale 1. 8 steps.
-pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "kylielee505/mylcmlorassd",
         "pytorch_lora_weights.safetensors",
@@ -304,42 +304,42 @@ pub fn lcm_lora_ssd_1b(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, Ap
             multiplier: 1.0,
         }],
     );
-    builder.0.cfg_scale(1.).steps(8);
+    builder.0.cfg_scale(1.0_f32).steps(8);
     Ok(builder)
 }
 
 /// Enable vae tiling
-pub fn vae_tiling(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn vae_tiling(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     builder.1.vae_tiling(true);
     Ok(builder)
 }
 
 /// Enable preview with [crate::api::PreviewType::PREVIEW_PROJ]
-pub fn preview_proj(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn preview_proj(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     builder.0.preview_mode(PreviewType::PREVIEW_PROJ);
     Ok(builder)
 }
 
 /// Enable preview with [crate::api::PreviewType::PREVIEW_TAE]
-pub fn preview_tae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn preview_tae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     builder.0.preview_mode(PreviewType::PREVIEW_TAE);
     Ok(builder)
 }
 
 /// Enable preview with [crate::api::PreviewType::PREVIEW_VAE]
-pub fn preview_vae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn preview_vae(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     builder.0.preview_mode(PreviewType::PREVIEW_VAE);
     Ok(builder)
 }
 
 /// Enable flash attention
-pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn enable_flash_attention(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     builder.1.flash_attention(true);
     Ok(builder)
 }
 
 /// Apply <https://huggingface.co/segmind/Segmind-VegaRT> to [crate::preset::Preset::SegmindVega]
-pub fn lcm_lora_segmind_vega_rt(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lcm_lora_segmind_vega_rt(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path =
         download_file_hf_hub("segmind/Segmind-VegaRT", "pytorch_lora_weights.safetensors")?;
     builder.1.lora_models(
@@ -350,12 +350,12 @@ pub fn lcm_lora_segmind_vega_rt(mut builder: ConfigsBuilder) -> Result<ConfigsBu
             multiplier: 1.0,
         }],
     );
-    builder.0.guidance(0.).steps(4);
+    builder.0.guidance(0.0_f32).steps(4);
     Ok(builder)
 }
 
 /// Apply <https://huggingface.co/Einhorn/Anima-Preview_8_Step_Turbo_Lora>
-pub fn lora_anima_8_steps_turbo(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn lora_anima_8_steps_turbo(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let lora_path = download_file_hf_hub(
         "Einhorn/Anima-Preview_8_Step_Turbo_Lora",
         "Anima-Preview_Turbo_8step.safetensors",
@@ -369,12 +369,12 @@ pub fn lora_anima_8_steps_turbo(mut builder: ConfigsBuilder) -> Result<ConfigsBu
             multiplier: 1.0,
         }],
     );
-    builder.0.cfg_scale(1.).steps(8);
+    builder.0.cfg_scale(1.0_f32).steps(8);
     Ok(builder)
 }
 
 /// Apply <https://huggingface.co/black-forest-labs/FLUX.2-small-decoder> small decoder for faster decoding with a minor quality reduction
-pub fn flux_2_small_decoder(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> {
+pub fn flux_2_small_decoder(mut builder: ConfigsBuilder) -> Result<ConfigsBuilder, HFError> {
     let vae_path = download_file_hf_hub(
         "black-forest-labs/FLUX.2-small-decoder",
         "full_encoder_small_decoder.safetensors",
@@ -385,7 +385,7 @@ pub fn flux_2_small_decoder(mut builder: ConfigsBuilder) -> Result<ConfigsBuilde
 
 #[cfg(test)]
 mod tests {
-    use hf_hub::api::sync::ApiError;
+    use hf_hub::HFError;
 
     use crate::{
         api::gen_img,
@@ -410,7 +410,7 @@ mod tests {
 
     fn run<F>(preset: Preset, prompt: &str, m: F)
     where
-        F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError> + 'static,
+        F: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, HFError> + 'static,
     {
         let (mut config, mut model_config) = PresetBuilder::default()
             .preset(preset)

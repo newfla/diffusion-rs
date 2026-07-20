@@ -24,21 +24,23 @@ documentation = "https://docs.rs/diffusion-rs"
 chrono.workspace = true
 derive_builder = "0.20.2"
 diffusion-rs-sys = { path = "sys", version = "0.1.20" }
-hf-hub = { version = "0.4.2", default-features = false, features = ["ureq"] }
-image = "0.25.5"
-libc = "0.2.161"
-little_exif = "0.6.21"
-num_cpus = "1.16.0"
+hf-hub = { version = "1.0.0", default-features = false, features = [
+    "blocking",
+] }
+image = "0.25.10"
+libc = "0.2.186"
+little_exif = "0.6.23"
+num_cpus = "1.17.0"
 strum.workspace = true
-subenum = "1.1.3"
-thiserror = "2.0.3"
+subenum = "1.2.0"
+thiserror = "2.0.19"
 walkdir = "2.5.0"
 
 [workspace.dependencies]
-chrono = "0.4.42"
-clap = { version = "4.5.53", features = ["default", "derive"] }
+chrono = "0.4.45"
+clap = { version = "4.6.2", features = ["default", "derive"] }
 execution-time = "0.3.1"
-strum = { version = "0.27", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 
 [features]
 cuda = ["diffusion-rs-sys/cuda"]

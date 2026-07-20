@@ -12,6 +12,7 @@ use std::sync::mpsc::Sender;
 
 use chrono::Local;
 use derive_builder::Builder;
+use diffusion_rs_sys::free_sd_images;
 use diffusion_rs_sys::free_upscaler_ctx;
 use diffusion_rs_sys::generate_image;
 use diffusion_rs_sys::new_upscaler_ctx;
@@ -549,7 +550,7 @@ pub struct ModelConfig {
 
     /// Select the runtime backend used to execute model graphs
     #[builder(default = "(None, CLibString::default())", setter(custom))]
-    backend: (Option<HashMap<Module, BackendDevice>>, CLibString),
+    backend: (Option<HashMap<Module, Vec<BackendDevice>>>, CLibString),
 
     /// Select the backend used to allocate model parameters
     #[builder(default = "(None, CLibString::default())", setter(custom))]
@@ -579,11 +580,19 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     eager_load: bool,
 
+    /// Number of Qwen Image Layered layers; latent/output count is layers + 1 (default: 3)
+    #[builder(default = "3")]
+    qwen_image_layers: i32,
+
+    /// Pick the diffusion/te/vae device placements automatically from the model size and the per-device memory budgets (max_vram; defaults to free memory minus a small margin). Overrides backend and params-backend; may split modules across GPUs (split-mode still selects layer or row)
+    #[builder(default = "false")]
+    auto_fit: bool,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
     #[builder(default = "None", private)]
-    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t)>,
+    diffusion_ctx: Option<(*mut sd_ctx_t, sd_ctx_params_t, CLibString)>,
 }
 
 impl ModelConfigBuilder {
@@ -710,10 +719,20 @@ impl ModelConfigBuilder {
         )
     }
 
-    pub fn backend(&mut self, backend_map: HashMap<Module, BackendDevice>) -> &mut Self {
+    pub fn backend(&mut self, backend_map: HashMap<Module, Vec<BackendDevice>>) -> &mut Self {
         let backend_str = backend_map
             .iter()
-            .map(|(key, value)| format!("{}={}", key, value))
+            .map(|(key, value)| {
+                format!(
+                    "{}={}",
+                    key,
+                    value
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
+                        .join("&")
+                )
+            })
             .collect::<Vec<String>>()
             .join(",");
         self.backend = Some((Some(backend_map), CLibString::from(backend_str)));
@@ -813,12 +832,13 @@ impl ModelConfig {
             // This is required to support img2img after text2img generation
             // otherwise the context is cached and won't have a decode graph
             // leading to an assertion error in sdcpp
-            if let Some((sd_ctx, _)) = self.diffusion_ctx.as_ref() {
+            if let Some((sd_ctx, _, _)) = self.diffusion_ctx.as_ref() {
                 sd_set_progress_callback(None, null_mut());
                 free_sd_ctx(*sd_ctx);
                 self.diffusion_ctx = None;
             }
             if self.diffusion_ctx.is_none() {
+                let model_args = self.model_args();
                 let sd_ctx_params = sd_ctx_params_t {
                     model_path: self.model.as_ptr(),
                     llm_path: self.llm.as_ptr(),
@@ -842,9 +862,6 @@ impl ModelConfig {
                     diffusion_flash_attn: self.diffusion_flash_attention,
                     flash_attn: self.flash_attention,
                     diffusion_conv_direct: self.diffusion_conv_direct,
-                    chroma_use_dit_mask: !self.chroma_disable_dit_mask,
-                    chroma_use_t5_mask: self.chroma_enable_t5_mask,
-                    chroma_t5_mask_pad: self.chroma_t5_mask_pad,
                     vae_conv_direct: self.vae_conv_direct,
                     prediction: self.prediction,
                     force_sdxl_vae_conv_scale: self.force_sdxl_vae_conv_scale,
@@ -852,9 +869,6 @@ impl ModelConfig {
                     lora_apply_mode: self.lora_apply_mode,
                     tensor_type_rules: null_mut(),
                     sampler_rng_type: self.sampler_rng_type,
-                    circular_x: self.circular || self.circular_x,
-                    circular_y: self.circular || self.circular_y,
-                    qwen_image_zero_cond_t: self.use_qwen_image_zero_cond_true,
                     enable_mmap: self.enable_mmap,
                     max_vram: self.max_vram.1.as_ptr(),
                     backend: self.backend.1.as_ptr(),
@@ -864,14 +878,25 @@ impl ModelConfig {
                     vae_format: self.vae_format,
                     stream_layers: self.stream_layers,
                     rpc_servers: null(),
+                    split_mode: null(),
                     pulid_weights_path: self.pulid_weights_path.as_ptr(),
                     eager_load: self.eager_load,
+                    auto_fit: self.auto_fit,
+                    model_args: model_args.as_ptr(),
+                    motion_module_path: null(),
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
-                self.diffusion_ctx = Some((ctx, sd_ctx_params))
+                self.diffusion_ctx = Some((ctx, sd_ctx_params, model_args))
             }
-            self.diffusion_ctx.unwrap().0
+            self.diffusion_ctx.as_ref().unwrap().0
         }
+    }
+
+    fn model_args(&self) -> CLibString {
+        format!("chroma_use_dit_mask={}, chroma_use_t5_mask={}, chroma_t5_mask_pad={}, qwen_image_zero_cond_t={}", 
+        !self.chroma_disable_dit_mask, self.chroma_enable_t5_mask,
+        self.chroma_t5_mask_pad, self.use_qwen_image_zero_cond_true
+    ).into()
     }
 }
 
@@ -879,7 +904,7 @@ impl Drop for ModelConfig {
     fn drop(&mut self) {
         //Cleanup CTX section
         unsafe {
-            if let Some((sd_ctx, _)) = self.diffusion_ctx {
+            if let Some((sd_ctx, _, _)) = self.diffusion_ctx {
                 free_sd_ctx(sd_ctx);
             }
 
@@ -952,7 +977,8 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .extra_sample_params(value.extra_sample_params.clone())
             .backend(value.backend.0.clone().unwrap_or_default())
             .params_backend(value.params_backend.0.clone().unwrap_or_default())
-            .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default());
+            .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default())
+            .qwen_image_layers(value.qwen_image_layers);
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1094,6 +1120,10 @@ pub struct Config {
     /// Disable auto resize of ref images
     #[builder(default = "false")]
     disable_auto_resize_ref_image: bool,
+
+    /// Automatically increase the indices of references images based on the order they are listed (starting with 1).
+    #[builder(default = "true")]
+    increase_ref_index: bool,
 
     #[builder(default = "Self::cache_init()", private)]
     cache: (sd_cache_params_t, Option<CLibString>),
@@ -1250,6 +1280,7 @@ impl From<&Config> for ConfigBuilder {
             .skip_layer_end(value.skip_layer_end)
             .canny(value.canny)
             .disable_auto_resize_ref_image(value.disable_auto_resize_ref_image)
+            .increase_ref_index(value.increase_ref_index)
             .preview_output(value.preview_output.clone())
             .preview_mode(value.preview_mode)
             .preview_noisy(value.preview_noisy)
@@ -1329,15 +1360,21 @@ unsafe fn upscale(
                 let upscale_factor = 4; // unused for RealESRGAN_x4plus_anime_6B.pth
                 let mut current_image = data;
                 for _ in 0..upscale_repeats {
-                    let upscaled_image =
-                        diffusion_rs_sys::upscale(upscaler_ctx, current_image, upscale_factor);
+                    let upscaled_image = null_mut();
+                    let mut upscale_count = 1;
 
-                    if upscaled_image.data.is_null() {
+                    if !diffusion_rs_sys::upscale(
+                        upscaler_ctx,
+                        current_image,
+                        upscale_factor,
+                        upscaled_image,
+                        &mut upscale_count,
+                    ) {
                         return Err(DiffusionError::Upscaler);
                     }
 
                     free(current_image.data as *mut c_void);
-                    current_image = upscaled_image;
+                    current_image = *(*(upscaled_image));
                 }
                 Ok(current_image)
             }
@@ -1598,6 +1635,22 @@ fn gen_img_maybe_progress(
             custom_sigmas_count: hires_sigmas_count,
         };
 
+        let resize_before_vae = if config.disable_auto_resize_ref_image {
+            0
+        } else {
+            1
+        };
+        let increaze_ref_index = if config.increase_ref_index {
+            ", ref_index_mode=increase"
+        } else {
+            ""
+        };
+        let ref_image_args: CLibString = format!(
+            "resize_before_vae={}{}",
+            resize_before_vae, increaze_ref_index
+        )
+        .into();
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -1605,7 +1658,6 @@ fn gen_img_maybe_progress(
             init_image,
             ref_images: ref_image_ptr,
             ref_images_count: num_ref_images as i32,
-            increase_ref_index: false,
             mask_image,
             width: config.width,
             height: config.height,
@@ -1617,7 +1669,6 @@ fn gen_img_maybe_progress(
             control_strength: config.control_strength,
             pm_params,
             vae_tiling_params,
-            auto_resize_ref_image: config.disable_auto_resize_ref_image,
             cache,
             loras: loras.as_ptr(),
             lora_count: loras.len() as u32,
@@ -1626,18 +1677,28 @@ fn gen_img_maybe_progress(
                 id_embedding_path: model_config.pulid_id_embedding_path.as_ptr(),
                 id_weight: 1.0,
             },
+            qwen_image_layers: model_config.qwen_image_layers,
+            circular_x: model_config.circular_x,
+            circular_y: model_config.circular_y,
+            ref_image_args: ref_image_args.as_ptr(),
         };
 
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
             .into_string()
             .unwrap();
-
-        let slice = generate_image(sd_ctx, &sd_img_gen_params);
+        let mut images_out = null_mut();
+        let mut images_out_count = 0;
+        let gen_result = generate_image(
+            sd_ctx,
+            &sd_img_gen_params,
+            &mut images_out,
+            &mut images_out_count,
+        );
         let ret = {
-            if slice.is_null() {
+            if !gen_result || images_out.is_null() {
                 return Err(DiffusionError::Forward);
             }
-            for (img, path) in slice::from_raw_parts(slice, config.batch_count as usize)
+            for (img, path) in slice::from_raw_parts(images_out, images_out_count as usize)
                 .iter()
                 .zip(files)
             {
@@ -1655,7 +1716,7 @@ fn gen_img_maybe_progress(
             }
             Ok(())
         };
-        free(slice as *mut c_void);
+        free_sd_images(images_out, images_out_count);
         ret
     }
 }

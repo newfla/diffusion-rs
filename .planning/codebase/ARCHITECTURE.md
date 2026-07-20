@@ -171,7 +171,7 @@
 **Modifier Functions:**
 - Purpose: Compose enhancements as FnOnce closures chained via PresetBuilder::with_modifier()
 - Examples: real_esrgan_x4plus_anime_6_b(), sdxl_vae_fp16_fix(), taesd(), lcm_lora_sd_1_5()
-- Pattern: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, ApiError>
+- Pattern: FnOnce(ConfigsBuilder) -> Result<ConfigsBuilder, HFError>
 
 **Weight Type Subenum:**
 - Purpose: Model-specific quantization options (F32, F16, Q4_0, Q8_0, etc.)
@@ -246,7 +246,7 @@
 
 **Patterns:**
 - ConfigBuilder::build() returns Result<Config, ConfigBuilderError> with validation_fn(validate = "Self::validate")
-- PresetBuilder::build() converts ApiError from downloads to ConfigBuilderError::ValidationError
+- PresetBuilder::build() converts HFError from downloads to ConfigBuilderError::ValidationError
 - gen_img() returns Result<(), DiffusionError> with enum variants: Forward, StoreImages, Io, Upscaler
 - Null pointer check after generate_image() signals OOM/backend failure; returns Err(DiffusionError::Forward)
 
@@ -261,7 +261,7 @@
 
 **Authentication:**
 - HuggingFace token stored in thread-safe static OnceLock<RwLock<String>>
-- Token optional; models marked as requiring access will fail download with ApiError if token missing
+- Token optional; models marked as requiring access will fail download with HFError if token missing
 - CLI accepts --token flag to set before config building
 
 **File I/O:**

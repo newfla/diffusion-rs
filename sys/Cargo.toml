@@ -78,6 +78,6 @@ vulkan = []
 sycl = []
 
 [build-dependencies]
-cmake = "0.1.51"
-bindgen = "0.71.1"
+cmake = "0.1.58"
+bindgen = "0.72.1"
 fs_extra = "1.3.0"

@@ -418,6 +418,7 @@ fn get_preset(args: &Args) -> Preset {
         PresetDiscriminants::LensTurbo => Preset::LensTurbo,
         PresetDiscriminants::BooguImage => Preset::BooguImage,
         PresetDiscriminants::BooguImageTurbo => Preset::BooguImageTurbo,
+        PresetDiscriminants::MiniT2I => Preset::MiniT2I,
         PresetDiscriminants::Krea2 => Preset::Krea2(
             args.weights
                 .unwrap_or_else(|| Krea2Weight::default().into())
