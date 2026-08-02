@@ -8,6 +8,7 @@ use hf_hub::{
     HFClientBuilder, HFError,
     progress::{DownloadEvent, ProgressEvent, ProgressHandler},
 };
+use human_units::FormatSize;
 
 static TOKEN: OnceLock<RwLock<String>> = OnceLock::new();
 
@@ -51,8 +52,10 @@ impl ProgressHandler for PrintProgressHandler {
                     total_bytes,
                 } => {
                     println!(
-                        "Starting download: {}/{}, {total_bytes} bytes",
-                        self.0, self.1
+                        "\nStarting download: {}/{}, {}",
+                        self.0,
+                        self.1,
+                        (*total_bytes).format_size()
                     );
                 }
                 DownloadEvent::Progress { files } => {
@@ -62,15 +65,14 @@ impl ProgressHandler for PrintProgressHandler {
                             .unwrap_or(0);
                         print!("\r");
                         print!(
-                            "  {}: {pct}% ({}/{}) bytes",
+                            "  {}: {pct}% ({}/{})",
                             format_args!("{}/{}", self.0, self.1),
-                            f.bytes_completed,
-                            f.total_bytes
+                            f.bytes_completed.format_size(),
+                            f.total_bytes.format_size()
                         );
                     }
                 }
                 DownloadEvent::Complete => {
-                    println!();
                     println!("Download complete.");
                 }
                 _ => {}
