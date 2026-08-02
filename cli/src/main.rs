@@ -144,7 +144,6 @@ fn main() {
     if args.preview.is_some() {
         println!("Image preview between inference steps will be saved as {preview_filename:#?}");
     }
-    println!();
 
     let (config, mut model_config) = PresetBuilder::default()
         .preset(preset)

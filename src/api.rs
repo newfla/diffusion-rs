@@ -38,6 +38,7 @@ use diffusion_rs_sys::sd_tiling_params_t;
 use diffusion_rs_sys::upscaler_ctx_t;
 use image::ImageBuffer;
 use image::ImageError;
+use image::ImageReader;
 use image::RgbImage;
 use libc::free;
 use little_exif::exif_tag::ExifTag;
@@ -588,6 +589,10 @@ pub struct ModelConfig {
     #[builder(default = "false")]
     auto_fit: bool,
 
+    /// Path to IP-Adapter model (requires --clip_vision)
+    #[builder(default = "CLibPath::default()")]
+    ip_adapter: CLibPath,
+
     #[builder(default = "None", private)]
     upscaler_ctx: Option<*mut upscaler_ctx_t>,
 
@@ -884,6 +889,7 @@ impl ModelConfig {
                     auto_fit: self.auto_fit,
                     model_args: model_args.as_ptr(),
                     motion_module_path: null(),
+                    ip_adapter_path: self.ip_adapter.as_ptr(),
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params, model_args))
@@ -978,7 +984,8 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .backend(value.backend.0.clone().unwrap_or_default())
             .params_backend(value.params_backend.0.clone().unwrap_or_default())
             .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default())
-            .qwen_image_layers(value.qwen_image_layers);
+            .qwen_image_layers(value.qwen_image_layers)
+            .pm_id_embed_path(value.ip_adapter.clone());
 
         builder.lora_models_internal(value.lora_models.clone());
 
@@ -1008,6 +1015,10 @@ pub struct Config {
     /// Path to image condition, control net
     #[builder(default = "Default::default()")]
     control_image: CLibPath,
+
+    /// Path to the IP-Adapter reference image
+    #[builder(default = "Default::default()")]
+    ip_adapter_image_path: PathBuf,
 
     /// Paths to reference images for in-context conditioning (e.g. for Flux2)
     #[builder(default = "Default::default()")]
@@ -1060,6 +1071,10 @@ pub struct Config {
     /// 1.0 corresponds to full destruction of information in init
     #[builder(default = "0.9")]
     control_strength: f32,
+
+    /// Strength to apply IP-Adapter (default: 1.0)
+    #[builder(default = "1.0")]
+    ip_adapter_strength: f32,
 
     /// Image height, in pixel space (default: 512)
     #[builder(default = "512")]
@@ -1285,7 +1300,9 @@ impl From<&Config> for ConfigBuilder {
             .preview_mode(value.preview_mode)
             .preview_noisy(value.preview_noisy)
             .preview_interval(value.preview_interval)
-            .cache(value.cache.clone());
+            .cache(value.cache.clone())
+            .ip_adapter_strength(value.ip_adapter_strength)
+            .ip_adapter_image_path(value.ip_adapter_image_path.clone());
         builder
     }
 }
@@ -1651,6 +1668,28 @@ fn gen_img_maybe_progress(
         )
         .into();
 
+        let (ip_image, _img_data) = if config.ip_adapter_image_path.exists() {
+            let img = ImageReader::open(&config.ip_adapter_image_path)?.decode()?;
+            let mut img_data = img.to_rgb8().into_raw();
+            let ip_image = sd_image_t {
+                width: img.width(),
+                height: img.height(),
+                channel: 3,
+                data: img_data.as_mut_ptr(),
+            };
+            (ip_image, Some(img_data))
+        } else {
+            (
+                sd_image_t {
+                    width: 0,
+                    height: 0,
+                    channel: 0,
+                    data: null_mut(),
+                },
+                None,
+            )
+        };
+
         let sd_img_gen_params = sd_img_gen_params_t {
             prompt: prompt.as_ptr(),
             negative_prompt: config.negative_prompt.as_ptr(),
@@ -1681,6 +1720,8 @@ fn gen_img_maybe_progress(
             circular_x: model_config.circular_x,
             circular_y: model_config.circular_y,
             ref_image_args: ref_image_args.as_ptr(),
+            ip_adapter_strength: config.ip_adapter_strength,
+            ip_adapter_image: ip_image,
         };
 
         let params_str = CString::from_raw(sd_img_gen_params_to_str(&sd_img_gen_params))
