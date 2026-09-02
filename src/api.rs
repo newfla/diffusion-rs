@@ -569,7 +569,7 @@ pub struct ModelConfig {
     #[builder(default = "true")]
     vae_temporal_tiling: bool,
 
-    /// Extra VAE tiling args, key=value list. LTX video VAE supports
+    /// Extra VAE tiling args, key=value list. Supported video VAEs accept temporal_tile_frames/temporal_tile_size (default: 4), temporal_tile_overlap (default: 1)
     #[builder(default = "(None, CLibString::default())", setter(custom))]
     extra_tiling_args: (Option<HashMap<String, String>>, CLibString),
 
@@ -1040,7 +1040,7 @@ pub struct Config {
     #[builder(default = "false")]
     preview_noisy: bool,
 
-    /// Interval in denoising steps between consecutive updates of the image preview file (default is 1, meaning updating at every step)
+    /// In each sampling pass, positive N updates every Nth denoiser step and -N previews only completed logical step N; 0 previews the final completed step of the first pass (base-resolution or high-noise). Default: 1
     #[builder(default = "1")]
     preview_interval: i32,
 
