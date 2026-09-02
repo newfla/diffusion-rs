@@ -1041,6 +1041,7 @@ pub struct Config {
     preview_noisy: bool,
 
     /// In each sampling pass, positive N updates every Nth denoiser step and -N previews only completed logical step N; 0 previews the final completed step of the first pass (base-resolution or high-noise). Default: 1
+    #[builder(default = "1")]
     preview_interval: i32,
 
     /// The prompt to render
