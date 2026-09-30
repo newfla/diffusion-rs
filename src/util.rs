@@ -29,7 +29,7 @@ pub fn download_file_hf_hub(repo: &str, file: &str) -> Result<PathBuf, HFError> 
             HFClientBuilder::new()
         };
     if let Some(home_dir) = env::home_dir() {
-        let cache_dir = home_dir.join(".cache/huggingface");
+        let cache_dir = home_dir.join(".cache/huggingface/hub");
         hf_client = hf_client.cache_dir(cache_dir);
     }
     hf_client
