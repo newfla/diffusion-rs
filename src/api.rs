@@ -565,6 +565,10 @@ pub struct ModelConfig {
     #[builder(default = "CLibPath::default()")]
     audio_vae: CLibPath,
 
+    /// Path to wav2vec2 audio encoder model (Wan2.2 S2V)
+    #[builder(default = "CLibPath::default()")]
+    audio_encoder: CLibPath,
+
     /// Enable temporal tiling for LTX video VAE decode
     #[builder(default = "true")]
     vae_temporal_tiling: bool,
@@ -573,9 +577,13 @@ pub struct ModelConfig {
     #[builder(default = "(None, CLibString::default())", setter(custom))]
     extra_tiling_args: (Option<HashMap<String, String>>, CLibString),
 
-    /// Enable residency+prefetch streaming on top of [ModelConfigBuilder::max_vram] (no effect without [ModelConfigBuilder::max_vram]; defaults to false)
+    /// Disable asynchronous next-segment weight prefetch
     #[builder(default = "false")]
-    stream_layers: bool,
+    disable_prefetch: bool,
+
+    // Force monolithic graph execution even when automatic graph cutting would fit memory better
+    #[builder(default = "false")]
+    disable_segmented_compute: bool,
 
     /// Load all params into the params backend at model-load time instead of lazily on first use (defaults to false)
     #[builder(default = "false")]
@@ -586,8 +594,16 @@ pub struct ModelConfig {
     qwen_image_layers: i32,
 
     /// Pick the diffusion/te/vae device placements automatically from the model size and the per-device memory budgets (max_vram; defaults to free memory minus a small margin). Overrides backend and params-backend; may split modules across GPUs (split-mode still selects layer or row)
-    #[builder(default = "false")]
+    #[builder(default = "true")]
     auto_fit: bool,
+
+    /// Linear input scale override (float, default: 0 = model default, 1 = no scaling)
+    #[builder(default = "0.0")]
+    linear_scale: f32,
+
+    /// flash-attention K/V scale override (float, default: 0 = model default, 1 = no scaling); requires [ModelConfig::flash_attention] or [ModelConfig::diffusion_flash_attention] set to true
+    #[builder(default = "0.0")]
+    attn_scale: f32,
 
     /// Path to IP-Adapter model (requires --clip_vision)
     #[builder(default = "CLibPath::default()")]
@@ -866,6 +882,8 @@ impl ModelConfig {
                     rng_type: self.rng,
                     diffusion_flash_attn: self.diffusion_flash_attention,
                     flash_attn: self.flash_attention,
+                    attn_scale: self.attn_scale,
+                    linear_scale: self.linear_scale,
                     diffusion_conv_direct: self.diffusion_conv_direct,
                     vae_conv_direct: self.vae_conv_direct,
                     prediction: self.prediction,
@@ -880,8 +898,8 @@ impl ModelConfig {
                     params_backend: self.params_backend.1.as_ptr(),
                     embeddings_connectors_path: self.embeddings_connectors.as_ptr(),
                     audio_vae_path: self.audio_vae.as_ptr(),
+                    audio_encoder_path: self.audio_encoder.as_ptr(),
                     vae_format: self.vae_format,
-                    stream_layers: self.stream_layers,
                     rpc_servers: null(),
                     split_mode: null(),
                     pulid_weights_path: self.pulid_weights_path.as_ptr(),
@@ -890,6 +908,8 @@ impl ModelConfig {
                     model_args: model_args.as_ptr(),
                     motion_module_path: null(),
                     ip_adapter_path: self.ip_adapter.as_ptr(),
+                    disable_prefetch: self.disable_prefetch,
+                    disable_segmented_compute: self.disable_segmented_compute,
                 };
                 let ctx = new_sd_ctx(&sd_ctx_params);
                 self.diffusion_ctx = Some((ctx, sd_ctx_params, model_args))
@@ -932,6 +952,8 @@ impl From<&ModelConfig> for ModelConfigBuilder {
         builder
             .n_threads(value.n_threads)
             .max_vram(value.max_vram.0.clone())
+            .disable_prefetch(value.disable_prefetch)
+            .disable_segmented_compute(value.disable_segmented_compute)
             .upscale_repeats(value.upscale_repeats)
             .model(value.model.clone())
             .diffusion_model(value.diffusion_model.clone())
@@ -985,7 +1007,13 @@ impl From<&ModelConfig> for ModelConfigBuilder {
             .params_backend(value.params_backend.0.clone().unwrap_or_default())
             .extra_tiling_args(value.extra_tiling_args.0.clone().unwrap_or_default())
             .qwen_image_layers(value.qwen_image_layers)
-            .pm_id_embed_path(value.ip_adapter.clone());
+            .pm_id_embed_path(value.ip_adapter.clone())
+            .flash_attention(value.flash_attention)
+            .diffusion_flash_attention(value.diffusion_flash_attention)
+            .attn_scale(value.attn_scale)
+            .linear_scale(value.linear_scale)
+            .audio_vae(value.audio_vae.clone())
+            .audio_encoder(value.audio_encoder.clone());
 
         builder.lora_models_internal(value.lora_models.clone());
 
